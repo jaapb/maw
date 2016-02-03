@@ -1,0 +1,54 @@
+* {
+    font-family: sans-serif;
+}
+
+div
+{
+	position: absolute;
+	margin: 0;
+	padding: 0;
+	border: solid 1px grey;
+}
+
+div#header
+{
+	width: 60%;
+	height: 10%;
+	left: 1%;
+}
+
+div#logbox
+{
+	width: 35%;
+	height: 10%;
+	right: 1%;
+}
+
+div#menu
+{
+	width: 20%;
+	height: 70%;
+	top: 15%;
+	left: 1%;
+}
+
+div#contents
+{
+	width: 75%;
+	height: 70%;
+	top: 15%;
+	right: 1%;
+}
+
+div#footer
+{
+	width: 98%;
+	height: 10%;
+	bottom: 1%;
+	left: 1%;
+}
+
+fieldset
+{
+	border-style: none;
+}
