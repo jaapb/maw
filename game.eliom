@@ -31,8 +31,12 @@ let game_page game_id () =
 				(p [pcdata (description_text d)])::
 				(match u, signed_up with
 				| None, _ -> []
-				| Some uid, [] -> [a ~service:signup_service [pcdata "Sign up for this game"] game_id]
-				| Some uid, _ -> [p [pcdata "YOU ARE SIGNED UP FOR THIS GAME"]]))
+				| Some uid, l -> 
+					if List.mem game_id l then
+				 		[p [pcdata "YOU ARE SIGNED UP FOR THIS GAME"]]
+					else
+						[a ~service:signup_service [pcdata "Sign up for this game"] game_id]
+				))
 	| _ -> unknown_game ()
 	;;
 
@@ -44,15 +48,17 @@ let signup_page game_id () =
 		lwt signed_up = Database.is_signed_up uid game_id in
 		lwt data = Database.get_game_data game_id in
 		match signed_up, data with
-		| [], [(title, Some date, loc, dsg_name, dsg_id, d)] ->
-			container (standard_menu ())
-			[
-				p [pcdata "WIP"]
-			]
-		| [_], _ -> 	container (standard_menu ())
-			[
-				p [pcdata "You have already signed up for this game."]
-			]
+		| l, [(title, Some date, loc, dsg_name, dsg_id, d)] ->
+			if List.mem game_id l then
+				container (standard_menu ())
+				[
+					p [pcdata "You have already signed up for this game."]
+				]
+			else
+				container (standard_menu ())
+				[
+					p [pcdata "WIP"]
+				]
 		| _, _ -> unknown_game ()
 	;;
 
