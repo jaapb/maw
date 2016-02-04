@@ -7,7 +7,11 @@ let db_handler = ref None;;
 let get_db () =
 	match !db_handler with
 	| Some h -> Lwt.return h
-	| None -> PGOCaml.connect ~host:"192.168.1.5" ~database:"maw" ~password:"TNnz81" ();;
+	| None -> begin
+			PGOCaml.connect ~host:"localhost" ~database:"maw" ~password:"TNnz81" () >>=
+			fun dbh -> db_handler := Some dbh; Lwt.return dbh
+		end
+;;
 
 let get_upcoming_games () =
 	let today = CalendarLib.Date.today () in
@@ -54,3 +58,35 @@ let get_nr_inscriptions game_id =
 	PGSQL(dbh) "SELECT COUNT(users.id) \
 		FROM users JOIN game_inscriptions ON users.id = user_id \
 		WHERE game_id = $game_id";;
+
+let get_game_groups game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT name \
+		FROM groups \
+		WHERE game_id = $game_id";;
+
+let remove_game_groups game_id groups =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "DELETE FROM groups \
+		WHERE game_id = $game_id AND name IN $@groups";;
+
+let add_game_group game_id group =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO groups (game_id, name) \
+		VALUES ($game_id, $group)";;
+
+let get_game_role_types game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT name \
+		FROM role_types \
+		WHERE game_id = $game_id";;
+
+let remove_game_role_types game_id role_types =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "DELETE FROM role_types \
+		WHERE game_id = $game_id AND name IN $@role_types";;
+
+let add_game_role_type game_id role_type =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO role_types (game_id, name) \
+		VALUES ($game_id, $role_type)";;
