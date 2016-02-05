@@ -53,6 +53,14 @@ let format_my_games mg dg =
 						td (location_bar id title date loc);
 						td [a ~service:Design.design_service [pcdata "Edit design"] id] 
 					]]
+				| (id, title, None, loc) ->
+					[tr [
+						td [
+							a ~service:Game.game_service [pcdata title] id;
+							pcdata (Printf.sprintf " (%s, date TBD)" loc)
+						];
+						td [a ~service:Design.design_service [pcdata "Edit design"] id] 
+					]]
 				| _ -> []
 				) l))
 			])
