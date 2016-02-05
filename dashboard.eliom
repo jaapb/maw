@@ -28,21 +28,35 @@ let format_upcoming_games ug =
 		) ug)
 	);;
 
-let format_my_games mg =
-	Lwt.return ((h1 [pcdata "My games"])::
-	(match mg with
-	| [] -> [p [pcdata "You are not signed up for any games at the moment."]]
-	| l -> [table (List.flatten (List.map
+let format_my_games mg dg =
+	Lwt.return (
+		h2 [pcdata "My games"]::
+		(match mg with
+		| [] -> p [pcdata "You are not signed up for any games at the moment."]
+		| l -> table (List.flatten (List.map
 			(function 
-			| (id, title, Some date, loc, dsg) ->
+			| (id, title, Some date, loc) ->
 				[tr [
 					td (location_bar id title date loc);
-					match dsg with
-					| Some true -> td [a ~service:Design.design_service [pcdata "Edit design"] id]
-					| _ -> td [pcdata "Edit inscription"]
+					td [pcdata "Edit inscription"]
 				]]
 			| _ -> []
-			) l))]));;
+			) l)))::
+		(match dg with
+		| [] -> []
+		| l -> [
+				h2 [pcdata "My designs"];
+				table (List.flatten (List.map
+				(function
+				| (id, title, Some date, loc) ->
+					[tr [
+						td (location_bar id title date loc);
+						td [a ~service:Design.design_service [pcdata "Edit design"] id] 
+					]]
+				| _ -> []
+				) l))
+			])
+	);;
 
 let dashboard_page () () =
 	Lwt.catch 
@@ -52,7 +66,8 @@ let dashboard_page () () =
 	| None -> Lwt.return []
 	| Some (uid, _) ->
 		Database.get_user_games uid >>=
-		format_my_games
+		fun mg -> Database.get_designer_games uid >>=
+		fun dg -> format_my_games mg dg
 	in
 	container (standard_menu ()) (
 		(h1 [pcdata "Upcoming games"])::
