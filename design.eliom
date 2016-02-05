@@ -14,6 +14,7 @@
 
 let design_service = service ~path:["design"] ~get_params:(suffix (int32 "game_id")) ();;
 let update_descr_service = post_service ~fallback:design_service ~post_params:(string "description") ();;
+let update_numbers_service = post_service ~fallback:design_service ~post_params:(int32 "min" ** int32 "max") ();;
 let remove_groups_service = post_service ~fallback:design_service ~post_params:(set string "groups") ();;
 let add_group_service = post_service ~fallback:design_service ~post_params:(string "group") ();;
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
@@ -31,13 +32,12 @@ let design_page game_id () =
 		lwt role_types = Database.get_game_role_types game_id in
 		lwt data = Database.get_game_data game_id in
 		match data with
-		| [(title, Some date, loc, _, dsg_id, d)] ->
+		| [(title, Some date, loc, _, dsg_id, d, min_nr, max_nr)] ->
 			if uid = dsg_id then
 				container (standard_menu ())
 				[
 					h1 [pcdata title];
-					p [pcdata (location_text loc);
-						pcdata (Printer.Date.sprint ", %d %B %Y" date)];
+					p [pcdata loc; pcdata (Printer.Date.sprint ", %d %B %Y" date)];
 					p [pcdata (Printf.sprintf "Currently, %Ld person(s) has/have signed up for this game." nr_inscr)];
 					Form.post_form ~service:update_descr_service (fun descr -> [
 						table [
@@ -46,10 +46,7 @@ let design_page game_id () =
 							];
 							tr [	
 								td [
-									Form.textarea ~a:[a_cols 60; a_rows 10] ~name:descr
-									~value:(match d with
-										| None -> ""
-										| Some d -> d) ()
+									Form.textarea ~a:[a_cols 60; a_rows 10] ~name:descr ~value:d ()
 								]
 							];
 							tr [
@@ -59,6 +56,20 @@ let design_page game_id () =
 							]
 						]]
 					) game_id;
+					Form.post_form ~service:update_numbers_service (fun (min, max) -> [
+					table [
+						tr [
+							td ~a:[a_colspan 5] [pcdata "Numbers:"]
+						];
+						tr [
+							td [pcdata "Minimum:"];
+							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:min ~value:min_nr Form.int32];
+							td [pcdata "Maximum:"];
+							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:max ~value:max_nr Form.int32];
+							td [Form.input ~input_type:`Submit ~value:"Update" Form.string]
+						]
+					]
+					]) game_id;
 					Form.post_form ~service:remove_groups_service (fun group -> [
 					table [
 						tr [
@@ -129,9 +140,16 @@ let update_description game_id descr =
 	lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.set_description game_id descr
+	| Some (uid, _) -> Database.set_game_description game_id descr
 ;;
-	
+
+let update_numbers game_id (min, max) =
+	lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _) -> Database.set_game_numbers game_id min max
+;;
+
 let remove_groups game_id groups =
 	lwt u = Eliom_reference.get Maw.user in
 	match u with
@@ -166,6 +184,8 @@ let () =
 	Maw_app.register ~service:design_service design_page;;
 	Eliom_registration.Action.register ~service:update_descr_service
 		update_description;
+	Eliom_registration.Action.register ~service:update_numbers_service
+		update_numbers;
 	Eliom_registration.Action.register ~service:remove_groups_service
 		remove_groups;
 	Eliom_registration.Action.register ~service:add_group_service

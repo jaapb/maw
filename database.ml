@@ -24,15 +24,23 @@ let get_upcoming_games () =
 let get_user_games uid =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, title, date, location, designer = $uid AS designer \
-		FROM games LEFT JOIN game_inscriptions ON games.id = game_id \
-		WHERE date >= $today AND (user_id = $uid OR designer = $uid)\
+	PGSQL(dbh) 
+		"SELECT id, title, date, location \
+		FROM games JOIN game_inscriptions ON games.id = game_id \
+		WHERE date >= $today AND user_id = $uid \
+		ORDER BY date ASC";;
+
+let get_designer_games uid =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT id, title, date, location \
+		FROM games \
+		WHERE designer = $uid \
 		ORDER BY date ASC";;
 
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT title, date, location, name AS des_name, \
-		designer AS des_id, description \
+	PGSQL(dbh) "SELECT title, date, location, name, designer,
+		description, min_players, max_players \
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id";;
 
@@ -45,10 +53,10 @@ let check_password name password =
 let is_signed_up uid game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT game_id \
-		FROM games LEFT JOIN game_inscriptions ON games.id = game_id \
-		WHERE user_id = $uid OR designer = $uid";;
+		FROM games JOIN game_inscriptions ON games.id = game_id \
+		WHERE user_id = $uid";;
 
-let set_description game_id descr =
+let set_game_description game_id descr =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE games SET description = $descr \
 		WHERE id = $game_id";;
@@ -90,3 +98,28 @@ let add_game_role_type game_id role_type =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO role_types (game_id, name) \
 		VALUES ($game_id, $role_type)";;
+
+let set_game_numbers game_id min max =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET min_players = $min, max_players = $max \
+		WHERE id = $game_id";;
+
+let signup game_id uid group role note =
+	let stamp = CalendarLib.Calendar.now () in
+	get_db () >>= fun dbh ->
+	PGOCaml.transact dbh (fun dbh ->
+	PGSQL(dbh) "INSERT INTO game_inscriptions \
+		(game_id, user_id, inscription_time, note) \
+		VALUES \
+		($game_id, $uid, $stamp, $note)" >>=
+	fun () -> (match group with
+	| None -> Lwt.return ()
+	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
+			SET group_name = $g WHERE game_id = $game_id AND user_id = $uid") >>=
+	fun () -> match role with
+	| None -> Lwt.return ()
+	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
+			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid"
+	)
+;;
