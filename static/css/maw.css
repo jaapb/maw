@@ -38,6 +38,7 @@ div#contents
 	height: 70%;
 	top: 15%;
 	right: 1%;
+	overflow-y: scroll;
 }
 
 div#footer

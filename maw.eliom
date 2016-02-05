@@ -12,23 +12,13 @@ module Maw_app =
       let application_name = "maw"
     end)
 
-(* Simple conversion functions *)
-
-let location_text =
-	function
-	| None -> "Location TBD"
-	| Some x -> x;;
-
-let description_text =
-	function
-	| None -> "No description yet"
-	| Some x -> x;;
-
 (* Services *)
 
 let dashboard_service = service ~path:[] ~get_params:unit ();;
 let login_service = post_coservice'
 	~post_params:(string "name" ** string "password") ();;
+let logout_service = post_coservice'
+	~post_params:unit ();;
 
 (* Login bits and pieces *)
 
@@ -45,24 +35,42 @@ begin
 	| _ -> Eliom_reference.set login_err (Some "Unknown user")
 end;;
 
+let logout_action () () =
+begin
+	Eliom_reference.set user None
+end;;
+
 let login_box () =
 	lwt u = Eliom_reference.get user in
+	lwt err = Eliom_reference.get login_err in
 	Lwt.return (match u with
 	| None -> [Form.post_form ~service:login_service (fun (name, password) ->
-		[table [
+		[table (
 			tr [
 				td [pcdata "Username"];
 				td [Form.input ~input_type:`Text ~name:name Form.string];
 				td [Form.input ~input_type:`Submit ~value:"Login" Form.string]
-			];
+			]::
 			tr [
 				td [pcdata "Password"];
 				td ~a:[a_colspan 2]
 					[Form.input ~input_type:`Password ~name:password Form.string]
+			]::
+			(match err with
+			| None -> []
+			| Some e -> [tr [td ~a:[a_colspan 3] [pcdata e]]]
+			)
+		)]) ()]
+	| Some (_, n) -> [Form.post_form ~service:logout_service (fun () ->
+		[table [
+			tr [
+			 	td [pcdata (Printf.sprintf "Logged in as %s" n)]
+			];
+			tr [
+				td [Form.input ~input_type:`Submit ~value:"Logout" Form.string]
 			]
 		]]) ()]
-	| Some (_, n) -> [p [pcdata (Printf.sprintf "Logged in as %s" n)]]
-	);;
+	);;	
 
 (* The standard webpage container *)
 
@@ -91,6 +99,13 @@ let container menu_div cts_div =
 		])
 	);;
 
+let error_page e =
+	container (standard_menu ())
+	[
+		h1 [pcdata "Error"];
+		p [pcdata e]
+	];;
+
 (* Generic messages *)
 
 let not_logged_in () =
@@ -107,4 +122,6 @@ let unknown_game () =
 	];;
 
 let () =
-	Eliom_registration.Action.register ~service:login_service login_action;;
+	Eliom_registration.Action.register ~service:login_service login_action;
+	Eliom_registration.Action.register ~service:logout_service logout_action
+;;

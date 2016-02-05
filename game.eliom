@@ -22,17 +22,19 @@ let game_page game_id () =
 	| Some (uid, _) -> Database.is_signed_up uid game_id in
 	lwt data = Database.get_game_data game_id in
 	match data with 
-	| [(title, Some date, loc, dsg_name, _, d)] ->
+	| [(title, Some date, loc, dsg_name, dsg, d, _, _)] ->
 			container (standard_menu ()) 
 				((h1 [pcdata title])::
-				(p [pcdata (Printf.sprintf "%s, " (location_text loc));
+				(p [pcdata (Printf.sprintf "%s, " loc);
 					pcdata (Printer.Date.sprint "%d %B %Y" date)])::
 				(p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]])::
-				(p [pcdata (description_text d)])::
+				(p [pcdata d])::
 				(match u, signed_up with
 				| None, _ -> []
-				| Some uid, l -> 
-					if List.mem game_id l then
+				| Some (uid, _), l -> 
+					if uid = dsg then
+						[p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id]]
+					else if List.mem game_id l then
 				 		[p [pcdata "YOU ARE SIGNED UP FOR THIS GAME"]]
 					else
 						[a ~service:signup_service [pcdata "Sign up for this game"] game_id]
@@ -48,7 +50,7 @@ let signup_page game_id () =
 		lwt signed_up = Database.is_signed_up uid game_id in
 		lwt data = Database.get_game_data game_id in
 		match signed_up, data with
-		| l, [(title, Some date, loc, dsg_name, dsg_id, d)] ->
+		| l, [(title, Some date, loc, dsg_name, dsg_id, d, _, _)] ->
 			if List.mem game_id l then
 				container (standard_menu ())
 				[

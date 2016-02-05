@@ -32,7 +32,7 @@ let get_user_games uid =
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT title, date, location, name AS des_name, \
-		designer AS des_id, description \
+		designer AS des_id, description, min_players, max_players \
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id";;
 
@@ -48,7 +48,7 @@ let is_signed_up uid game_id =
 		FROM games LEFT JOIN game_inscriptions ON games.id = game_id \
 		WHERE user_id = $uid OR designer = $uid";;
 
-let set_description game_id descr =
+let set_game_description game_id descr =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE games SET description = $descr \
 		WHERE id = $game_id";;
@@ -90,3 +90,9 @@ let add_game_role_type game_id role_type =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO role_types (game_id, name) \
 		VALUES ($game_id, $role_type)";;
+
+let set_game_numbers game_id min max =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET min_players = $min, max_players = $max \
+		WHERE id = $game_id";;

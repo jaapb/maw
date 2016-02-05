@@ -15,7 +15,7 @@
 let location_bar id title date loc =
 	[
 		a ~service:Game.game_service [pcdata title] id;
-		pcdata (Printf.sprintf " (%s, " (location_text loc));
+		pcdata (Printf.sprintf " (%s, " loc);
 		pcdata (Printer.Date.sprint "%d %b %Y)" date)
 	];;
 
@@ -45,8 +45,9 @@ let format_my_games mg =
 			) l))]));;
 
 let dashboard_page () () =
-	lwt ug = Database.get_upcoming_games () in
-	lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch 
+	(fun () -> Database.get_upcoming_games () >>=
+	fun ug -> lwt u = Eliom_reference.get Maw.user in
 	lwt mg_fmt = match u with
 	| None -> Lwt.return []
 	| Some (uid, _) ->
@@ -57,7 +58,8 @@ let dashboard_page () () =
 		(h1 [pcdata "Upcoming games"])::
 		(format_upcoming_games ug)::
 		mg_fmt
-	);;
+	))
+	(fun e -> error_page (Printexc.to_string e));;
 
 let () =
 	Maw_app.register ~service:dashboard_service dashboard_page;;
