@@ -14,7 +14,7 @@
 
 let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_signup_service = post_service ~fallback:signup_service ~post_params:(string "group" ** string "role_type" ** string "note") ();;
+let do_signup_service = post_service ~fallback:signup_service ~post_params:(bool "edit" ** string "group" ** string "role_type" ** string "note") ();;
 
 let game_page game_id () =
 	Lwt.catch (fun () -> Eliom_reference.get Maw.user >>=
@@ -71,9 +71,9 @@ let signup_page game_id () =
 						pcdata (Printer.Date.sprint "%d %B %Y" date)];
 				  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]];
 					p [pcdata d];
-					h2 [pcdata "Sign up"];
+					h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 					Form.post_form ~service:do_signup_service
-					(fun (group, (role_type, note)) ->
+					(fun (edit, (group, (role_type, note))) ->
 					[table [	
 						tr [
 							td [pcdata "Group preference:"];
@@ -99,21 +99,28 @@ let signup_page game_id () =
 						];
 						tr [
 							td ~a:[a_colspan 2]
-								[Form.input ~input_type:`Submit ~value:"Sign up" Form.string]
+								[Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string;
+								Form.input ~input_type:`Hidden ~name:edit ~value:signed_up Form.bool]
 						]
 					]]) game_id
 				]
 		| _ -> unknown_game ()
 	;;
 
-let do_signup game_id (group, (role_type, note)) =
+let do_signup game_id (edit, (group, (role_type, note))) =
 	lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.signup game_id uid
-		(if String.lowercase group = "any" then None else Some group)
-		(if String.lowercase role_type = "any" then None else Some role_type)
-		note;;
+	| Some (uid, _) -> if edit then
+			Database.edit_inscription game_id uid
+				(if String.lowercase group = "any" then None else Some group)
+				(if String.lowercase role_type = "any" then None else Some role_type)
+				note
+		else
+			Database.signup game_id uid
+				(if String.lowercase group = "any" then None else Some group)
+				(if String.lowercase role_type = "any" then None else Some role_type)
+				note;;
 
 let _ =
 	Maw_app.register ~service:game_service game_page;
