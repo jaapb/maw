@@ -18,38 +18,53 @@ let do_signup_service = post_service ~fallback:signup_service ~post_params:(bool
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
 
 let game_page game_id () =
+  let standard_game_data title loc date dsg_name d full =
+		h1 [pcdata title]::
+		p [pcdata (Printf.sprintf "%s, " loc);
+			pcdata (Printer.Date.sprint "%d %B %Y" date)]::
+		p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]]::
+		p [pcdata d]::
+    (if full
+    then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
+    else []) in
 	Lwt.catch (fun () -> Eliom_reference.get Maw.user >>=
-	fun u -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _) ->
-		lwt signed_up = Database.get_inscription uid game_id in
-		lwt data = Database.get_game_data game_id in
-		(match data with 
-		| [(title, Some date, loc, dsg_name, dsg, d, _, _)] ->
-			container (standard_menu ()) 
-				(h1 [pcdata title]::
-				p [pcdata (Printf.sprintf "%s, " loc);
-					pcdata (Printer.Date.sprint "%d %B %Y" date)]::
-				p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]]::
-				p [pcdata d]::
-				(match u with
-				| None -> []
-				| Some (uid, _) -> 
-					if uid = dsg then
-					[
-						p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
-						p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id]
-					]
-					else (match signed_up with
-					| (g, r, _)::_ ->
-				 		[p
-							[i [pcdata "You are signed up for this game. ";
-						pcdata (Printf.sprintf "Your group preference is %s and your role preference is %s." (default "Any" g) (default "Any" r))]];
-						a ~service:signup_service [pcdata "Edit my inscription"] game_id
-						]
-					| _ ->	[a ~service:signup_service [pcdata "Sign up for this game"] game_id]
-				)))
-		| _ -> unknown_game ()))
+	fun u -> lwt data = Database.get_game_data game_id in
+    lwt nil = Database.get_nr_inscriptions game_id in
+    let nr_inscr = match nil with [Some n] -> Int64.to_int32 n | _ -> 0l in
+    match u with
+	  | None -> begin
+      match data with
+		  | [(title, Some date, loc, dsg_name, dsg, d, _, max_pl)] ->
+			  container (standard_menu ()) 
+          (standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
+      | _ -> unknown_game ()
+      end
+	  | Some (uid, _) -> lwt signed_up = Database.get_inscription uid game_id in
+      begin
+		    match data with 
+		    | [(title, Some date, loc, dsg_name, dsg, d, _, max_pl)] ->
+			    container (standard_menu ()) 
+            (standard_game_data title loc date dsg_name d (nr_inscr >= max_pl) @
+				    (match u with
+				    | None -> []
+				    | Some (uid, _) -> 
+					    if uid = dsg then
+					    [
+						    p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
+						    p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id]
+					    ]
+					    else (match signed_up with
+					    | (g, r, _)::_ ->
+				 		    [p
+							    [i [pcdata "You are signed up for this game. ";
+						    pcdata (Printf.sprintf "Your group preference is %s and your role preference is %s." (default "Any" g) (default "Any" r))]];
+						    a ~service:signup_service [pcdata "Edit my inscription"] game_id
+						    ]
+					    | _ ->	[a ~service:signup_service [pcdata "Sign up for this game"] game_id]
+              )
+            ))
+		    | _ -> unknown_game ()
+      end)
 	(fun e -> error_page (Printexc.to_string e))
 	;;
 
@@ -151,7 +166,8 @@ let show_inscriptions_page game_id () =
 				container (standard_menu ())
 				(
 					(h1 [pcdata	title])::
-					[table
+					[p [pcdata (Printf.sprintf "There are currently %d inscriptions." (List.length inscr))];
+          table
 						(tr [
 							th [pcdata "Name"];
 							th [pcdata "Group"];

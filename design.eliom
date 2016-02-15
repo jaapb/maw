@@ -24,10 +24,7 @@ let design_page game_id () =
 	lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> lwt ni = Database.get_nr_inscriptions game_id in
-		let nr_inscr = match ni with
-		| [Some x] -> x
-		| _ -> 0L in
+	| Some (uid, _) -> 
 		lwt groups = Database.get_game_groups game_id in
 		lwt role_types = Database.get_game_role_types game_id in
 		lwt data = Database.get_game_data game_id in
@@ -38,7 +35,6 @@ let design_page game_id () =
 				[
 					h1 [pcdata title];
 					p [pcdata loc; pcdata (Printer.Date.sprint ", %d %B %Y" date)];
-					p [pcdata (Printf.sprintf "Currently, %Ld person(s) has/have signed up for this game." nr_inscr)];
 					Form.post_form ~service:update_descr_service (fun descr -> [
 						table [
 							tr [
