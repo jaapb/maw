@@ -138,3 +138,10 @@ let get_inscription uid game_id =
 	PGSQL(dbh) "SELECT group_name, role_type, note \
 		FROM game_inscriptions \
 		WHERE user_id = $uid AND game_id = $game_id";;
+
+let get_inscription_list game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT name, group_name, role_type, note \
+		FROM game_inscriptions JOIN users ON user_id = users.id \
+		WHERE game_id = $game_id \
+		ORDER BY inscription_time ASC";;
