@@ -163,7 +163,7 @@ let show_inscriptions_page game_id () =
 								td [pcdata nm];
 								td [pcdata (default "Any" g)];
 								td [pcdata (default "Any" r)];
-								td [pcdata nt]
+								td [i [pcdata nt]]
 							]) inscr)
 					]
 				)
