@@ -44,63 +44,66 @@ let game_page game_id () =
 	(fun e -> error_page (Printexc.to_string e))
 	;;
 
+let default d o =
+	match o with
+	| None -> d
+	| Some x -> x;;
+
 let signup_page game_id () =
 	lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> not_logged_in ()
 	| Some (uid, _) ->
-		lwt signed_up = Database.is_signed_up uid game_id in
 		lwt data = Database.get_game_data game_id in
     lwt groups = Database.get_game_groups game_id in
 		lwt role_types = Database.get_game_role_types game_id in
-		match signed_up, data with
-		| l, [(title, Some date, loc, dsg_name, dsg_id, d, _, _)] ->
-			if List.mem game_id l then
-				container (standard_menu ())
+		lwt inscription = Database.get_inscription uid game_id in
+		let ex_group, ex_role, ex_note, signed_up =
+			match inscription with
+			| [(g, r, n)] -> default "Any" g, default "Any" r, n, true
+			| _ -> "Any", "Any", "", true in
+		match data with
+		| [(title, Some date, loc, dsg_name, dsg_id, d, _, _)] ->
+			container (standard_menu ())
 				[
-					p [pcdata "You have signed up for this game."]
-				]
-			else
-				container (standard_menu ())
-					[
-						h1 [pcdata title];
-						p [pcdata (Printf.sprintf "%s, " loc);
-							pcdata (Printer.Date.sprint "%d %B %Y" date)];
-					  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]];
-						p [pcdata d];
-						h2 [pcdata "Sign up"];
-						Form.post_form ~service:do_signup_service
-						(fun (group, (role_type, note)) ->
-						[table [	
-							tr [
-								td [pcdata "Group preference:"];
-								td [Form.select ~name:group Form.string
-									(Form.Option ([], "Any", None, false))
-									(List.map (fun g ->
-										Form.Option ([], g, None, false)
-									) groups)
-								]
-							];
-							tr [
-								td [pcdata "Role type preference:"];
-								td [Form.select ~name:role_type Form.string
-									(Form.Option ([], "Any", None, false))
-									(List.map (fun r ->
-										Form.Option ([], r, None, false)
-									) role_types)
-								]
-							];
-							tr [
-								td [pcdata "Note:"];
-								td [Form.input ~input_type:`Text ~name:note Form.string]
-							];
-							tr [
-								td ~a:[a_colspan 2]
-									[Form.input ~input_type:`Submit ~value:"Sign up" Form.string]
+					h1 [pcdata title];
+					p [pcdata (Printf.sprintf "%s, " loc);
+						pcdata (Printer.Date.sprint "%d %B %Y" date)];
+				  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]];
+					p [pcdata d];
+					h2 [pcdata "Sign up"];
+					Form.post_form ~service:do_signup_service
+					(fun (group, (role_type, note)) ->
+					[table [	
+						tr [
+							td [pcdata "Group preference:"];
+							td [Form.select ~name:group Form.string
+								(Form.Option ([], "Any", None, ex_group = "Any"))
+								(List.map (fun g ->
+									Form.Option ([], g, None, ex_group = g)
+								) groups)
 							]
-						]]) game_id
-					]
-		| _, _ -> unknown_game ()
+						];
+						tr [
+							td [pcdata "Role type preference:"];
+							td [Form.select ~name:role_type Form.string
+								(Form.Option ([], "Any", None, ex_role = "Any"))
+									(List.map (fun r ->
+										Form.Option ([], r, None, ex_role = r)
+									) role_types)
+							]
+						];
+						tr [
+							td [pcdata "Note:"];
+							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string]
+						];
+						tr [
+							td ~a:[a_colspan 2]
+								[Form.input ~input_type:`Submit ~value:"Sign up" Form.string]
+						]
+					]]) game_id
+				]
+		| _ -> unknown_game ()
 	;;
 
 let do_signup game_id (group, (role_type, note)) =

@@ -38,7 +38,7 @@ let format_my_games mg dg =
 			| (id, title, Some date, loc) ->
 				[tr [
 					td (location_bar id title date loc);
-					td [pcdata "Edit inscription"]
+					td [a ~service:Game.signup_service [pcdata "Edit inscription"] id]
 				]]
 			| _ -> []
 			) l)))::
