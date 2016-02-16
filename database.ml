@@ -44,7 +44,12 @@ let get_game_data game_id =
 	PGSQL(dbh) "SELECT title, date, location, name, designer,
 		description, min_players, max_players \
 		FROM games JOIN users ON designer = users.id \
-		WHERE games.id = $game_id";;
+		WHERE games.id = $game_id" >>=
+	fun l -> match l with
+	| [] -> Lwt.fail Not_found
+	| [x] -> Lwt.return x
+	| _ -> Lwt.fail_with "Inconsistent database"
+;;
 
 let check_password name password =
 	get_db () >>= fun dbh ->

@@ -22,37 +22,36 @@ let add_role_type_service = post_service ~fallback:design_service ~post_params:(
 
 let design_page game_id () = 
 	lwt u = Eliom_reference.get Maw.user in
-	match u with
+	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _) -> 
 		lwt groups = Database.get_game_groups game_id in
 		lwt role_types = Database.get_game_role_types game_id in
-		lwt data = Database.get_game_data game_id in
-		match data with
-		| [(title, Some date, loc, _, dsg_id, d, min_nr, max_nr)] ->
-			if uid = dsg_id then
-				container (standard_menu ())
-				[
-					h1 [pcdata title];
-					p [pcdata loc; pcdata (Printer.Date.sprint ", %d %B %Y" date)];
-					Form.post_form ~service:update_descr_service (fun descr -> [
-						table [
-							tr [
-								td [pcdata "Game description:"]
-							];
-							tr [	
-								td [
-									Form.textarea ~a:[a_cols 60; a_rows 10] ~name:descr ~value:d ()
-								]
-							];
-							tr [
-								td [
-									Form.input ~input_type:`Submit ~value:"Update" Form.string
-								]
+		lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
+			Database.get_game_data game_id in
+		if uid = dsg_id then
+			container (standard_menu ())
+			[
+				h1 [pcdata title];
+				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
+				Form.post_form ~service:update_descr_service (fun descr -> [
+					table [
+						tr [
+							td [pcdata "Game description:"]
+						];
+						tr [	
+							td [
+								Form.textarea ~a:[a_cols 60; a_rows 10] ~name:descr ~value:d ()
 							]
-						]]
-					) game_id;
-					Form.post_form ~service:update_numbers_service (fun (min, max) -> [
+						];
+						tr [
+							td [
+								Form.input ~input_type:`Submit ~value:"Update" Form.string
+							]
+						]
+					]
+				]) game_id;
+				Form.post_form ~service:update_numbers_service (fun (min, max) -> [
 					table [
 						tr [
 							td ~a:[a_colspan 5] [pcdata "Numbers:"]
@@ -65,8 +64,8 @@ let design_page game_id () =
 							td [Form.input ~input_type:`Submit ~value:"Update" Form.string]
 						]
 					]
-					]) game_id;
-					Form.post_form ~service:remove_groups_service (fun group -> [
+				]) game_id;
+				Form.post_form ~service:remove_groups_service (fun group -> [
 					table [
 						tr [
 							td [pcdata "Groups:"]
@@ -86,50 +85,57 @@ let design_page game_id () =
 									]
 								]
 						)
-					]]) game_id;
-					Form.post_form ~service:add_group_service (fun group -> [
+					]
+				]) game_id;
+				Form.post_form ~service:add_group_service (fun group -> [
 					table [
 						tr [
 							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:group
 								Form.string];
 							td [Form.input ~input_type:`Submit ~value:"Add" Form.string]
 						]
-					]]) game_id;
-					Form.post_form ~service:remove_role_types_service (fun role_type -> [
+					]
+				]) game_id;
+				Form.post_form ~service:remove_role_types_service (fun role_type -> [
 					table [
 						tr [
 							td [pcdata "Role types:"]
 						];
-						tr (
-							match role_types with
-							| [] -> [td [pcdata "No role types have been entered"]]
-							| h::t -> 
-								[
-									td [
-										Form.multiple_select ~name:role_type Form.string
-										(Form.Option ([], h, None, false))
-										(List.map (fun x -> (Form.Option ([], x, None, false))) t)
-									];
-									td [
-										Form.input ~input_type:`Submit ~value:"Remove" Form.string
-									]
+						tr (match role_types with
+						| [] -> [td [pcdata "No role types have been entered"]]
+						| h::t -> 
+							[
+								td [
+									Form.multiple_select ~name:role_type Form.string
+									(Form.Option ([], h, None, false))
+									(List.map (fun x -> (Form.Option ([], x, None, false))) t)
+								];
+								td [
+									Form.input ~input_type:`Submit ~value:"Remove" Form.string
 								]
+							]
 						)
-					]]) game_id;
-					Form.post_form ~service:add_role_type_service (fun role_type -> [
+					]
+				]) game_id;
+				Form.post_form ~service:add_role_type_service (fun role_type -> [
 					table [
 						tr [
 							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:role_type
 								Form.string];
 							td [Form.input ~input_type:`Submit ~value:"Add" Form.string]
 						]
-					]]) game_id
-				]
+					]
+				]) game_id
+			]
 			else container (standard_menu ())
-				[
-					p [pcdata "You are not the designer of this game."]
-				]
-		| _ -> unknown_game ()
+			[
+				p [pcdata "You are not the designer of this game."]
+			]
+	)
+	(function
+	| Not_found -> unknown_game ()
+	| e -> error_page (Printexc.to_string e)
+	)
 ;;
 
 let update_description game_id descr =

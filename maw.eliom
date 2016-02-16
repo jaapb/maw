@@ -17,7 +17,14 @@ module Maw_app =
 let default d o =
 	match o with
 	| None -> d
-	| Some x -> x;;
+	| Some x -> x
+;;
+
+let date_or_tbd date =
+	match date with
+	| None -> "date TBD"
+	| Some d -> CalendarLib.Printer.Date.sprint "%d %B %Y" d
+;;
 
 (* Services *)
 
