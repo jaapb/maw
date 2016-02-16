@@ -8,7 +8,9 @@ let get_db () =
 	match !db_handler with
 	| Some h -> Lwt.return h
 	| None -> begin
-			PGOCaml.connect ~host:"localhost" ~database:"maw" ~password:"TNnz81" () >>=
+			PGOCaml.connect ~host:(Sys.getenv "PGHOST")
+				~database:(Sys.getenv "PGDATABASE")
+				~password:(Sys.getenv "PGPASSWORD") () >>=
 			fun dbh -> db_handler := Some dbh; Lwt.return dbh
 		end
 ;;
