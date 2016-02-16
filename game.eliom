@@ -16,6 +16,7 @@ let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id"))
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
 let do_signup_service = post_service ~fallback:signup_service ~post_params:(bool "edit" ** string "group" ** string "role_type" ** string "note") ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
+(*let add_friend_service = post_service ~fallback:signup_service ~post_params:(string "identifier") ();;*)
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_name d full =
@@ -29,8 +30,7 @@ let game_page game_id () =
 	lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> lwt (title, date, loc, dsg_name, dsg, d, _, max_pl) =
 		Database.get_game_data game_id in
-    lwt nil = Database.get_nr_inscriptions game_id in
-    let nr_inscr = match nil with [Some n] -> Int64.to_int32 n | _ -> 0l in
+    lwt nr_inscr = Database.get_nr_inscriptions game_id in
     match u with
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
@@ -43,7 +43,7 @@ let game_page game_id () =
 				p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id]
 			]
 			else (match signed_up with
-			| (g, r, _)::_ -> [
+			| (g, r, _, _)::_ -> [
 					p [
 						i [pcdata "You are signed up for this game. "];
 						pcdata (Printf.sprintf "Your group preference is %s and your role preference is %s." (default "Any" g) (default "Any" r))
@@ -66,16 +66,16 @@ let signup_page game_id () =
 	lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> 
+	| Some (uid, uname) -> 
 		lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
 			Database.get_game_data game_id in
     lwt groups = Database.get_game_groups game_id in
 		lwt role_types = Database.get_game_role_types game_id in
 		lwt inscription = Database.get_inscription uid game_id in
-		let ex_group, ex_role, ex_note, signed_up =
+		let ex_group, ex_role, ex_note, gid, signed_up =
 			match inscription with
-			| [(g, r, n)] -> default "Any" g, default "Any" r, n, true
-			| _ -> "Any", "Any", "", false in
+			| [(g, r, n, x)] -> default "Any" g, default "Any" r, n, x, true
+			| _ -> "Any", "Any", "", None, false in
 		container (standard_menu ())
 		[
 			h1 [pcdata title];
@@ -85,35 +85,38 @@ let signup_page game_id () =
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
 			(fun (edit, (group, (role_type, note))) -> [
-				table [	
+				table [
 					tr [
-						td [pcdata "Group preference:"];
+						th [pcdata "Name"];
+						th [pcdata "Group preference"];
+						th [pcdata "Role type preference"];
+						th [pcdata "Note"];
+					];
+					tr [
+						td [pcdata uname]; 
 						td [
 							Form.select ~name:group Form.string
 							(Form.Option ([], "Any", None, ex_group = "Any"))
 							(List.map (fun g ->
 								Form.Option ([], g, None, ex_group = g)
 							) groups)
-						]
-					];
-					tr [
-						td [pcdata "Role type preference:"];
+						];
 						td [
 							Form.select ~name:role_type Form.string
 							(Form.Option ([], "Any", None, ex_role = "Any"))
 							(List.map (fun r ->
 								Form.Option ([], r, None, ex_role = r)
 							) role_types)
-						]
-					];
-					tr [
-						td [pcdata "Note:"];
+						];
 						td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string]
 					];
 					tr [
-						td ~a:[a_colspan 2]
-							[Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string;
-							Form.input ~input_type:`Hidden ~name:edit ~value:signed_up Form.bool]
+						td ~a:[a_colspan 4] (
+							Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+							if signed_up
+							then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
+							else []
+						)
 					]
 				]
 			]) game_id
@@ -176,7 +179,7 @@ let show_inscriptions_page game_id () =
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (nm, g, r, nt) ->
+						List.map (fun (nm, g, r, nt, _) ->
 							tr [
 								td [pcdata nm];
 								td [pcdata (default "Any" g)];

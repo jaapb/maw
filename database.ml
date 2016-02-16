@@ -72,7 +72,10 @@ let get_nr_inscriptions game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT COUNT(users.id) \
 		FROM users JOIN game_inscriptions ON users.id = user_id \
-		WHERE game_id = $game_id";;
+		WHERE game_id = $game_id" >>=
+	function
+	| [Some n] -> Lwt.return (Int64.to_int32 n)
+	| _ -> Lwt.return 0l;;
 
 let get_game_groups game_id =
 	get_db () >>= fun dbh ->
@@ -142,13 +145,13 @@ let edit_inscription game_id uid group role note =
 
 let get_inscription uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT group_name, role_type, note \
+	PGSQL(dbh) "SELECT group_name, role_type, note, group_id \
 		FROM game_inscriptions \
 		WHERE user_id = $uid AND game_id = $game_id";;
 
 let get_inscription_list game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name, group_name, role_type, note \
+	PGSQL(dbh) "SELECT name, group_name, role_type, note, group_id \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY inscription_time ASC";;

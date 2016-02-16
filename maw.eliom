@@ -109,7 +109,11 @@ let container menu_div cts_div =
 			div ~a:[a_id "logbox"] box;
 			div ~a:[a_id "menu"] menu_div;
 			div ~a:[a_id "contents"] cts_div;
-			div ~a:[a_id "footer"] [p [pcdata "This is not a footer"]];
+			div ~a:[a_id "footer"] [
+				img ~alt:"Powered by Ocsigen"
+				~src:(make_uri ~service:(Eliom_service.static_dir ())
+					["ocsigen-powered.png"]) ()
+			]
 		])
 	);;
 
