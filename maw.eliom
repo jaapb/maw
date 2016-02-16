@@ -12,6 +12,13 @@ module Maw_app =
       let application_name = "maw"
     end)
 
+(* Utility functions *)
+
+let default d o =
+	match o with
+	| None -> d
+	| Some x -> x;;
+
 (* Services *)
 
 let dashboard_service = service ~path:[] ~get_params:unit ();;

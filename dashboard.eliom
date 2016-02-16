@@ -38,7 +38,7 @@ let format_my_games mg dg =
 			| (id, title, Some date, loc) ->
 				[tr [
 					td (location_bar id title date loc);
-					td [pcdata "Edit inscription"]
+					td [a ~service:Game.signup_service [pcdata "Edit inscription"] id]
 				]]
 			| _ -> []
 			) l)))::
@@ -51,7 +51,8 @@ let format_my_games mg dg =
 				| (id, title, Some date, loc) ->
 					[tr [
 						td (location_bar id title date loc);
-						td [a ~service:Design.design_service [pcdata "Edit design"] id] 
+						td [a ~service:Design.design_service [pcdata "Edit design"] id];
+						td [a ~service:Game.show_inscriptions_service [pcdata "Show inscriptions"] id]
 					]]
 				| (id, title, None, loc) ->
 					[tr [
@@ -59,9 +60,9 @@ let format_my_games mg dg =
 							a ~service:Game.game_service [pcdata title] id;
 							pcdata (Printf.sprintf " (%s, date TBD)" loc)
 						];
-						td [a ~service:Design.design_service [pcdata "Edit design"] id] 
+						td [a ~service:Design.design_service [pcdata "Edit design"] id];
+						td [a ~service:Game.show_inscriptions_service [pcdata "Show inscriptions"] id]
 					]]
-				| _ -> []
 				) l))
 			])
 	);;
