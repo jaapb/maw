@@ -143,11 +143,17 @@ let edit_inscription game_id uid group role note =
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh -> change_things dbh game_id uid group role note);;
 
-let get_inscription uid game_id =
+let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT group_name, role_type, note, group_id \
-		FROM game_inscriptions \
-		WHERE user_id = $uid AND game_id = $game_id";;
+	PGSQL(dbh) "SELECT g2.user_id, name, g2.group_name, g2.role_type, g2.note, g2.group_id \
+		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
+		ON g1.user_id = g2.user_id OR g1.group_id = g2.group_id 
+		JOIN users ON g2.user_id = users.id \
+		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
+	function
+	| [] -> Lwt.return (false, [])
+	| l -> Lwt.return (true, l)
+;;
 
 let get_inscription_list game_id =
 	get_db () >>= fun dbh ->
