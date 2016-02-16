@@ -15,7 +15,7 @@
 let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
 let do_signup_service = post_service ~fallback:signup_service ~post_params:(
-	bool "edit" **
+	bool "edit" ** bool "is_group" **
 	list "person" (sum (string "search") (int32 "uid") ** string "group" ** string "role_type" ** string "note")
 ) ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
@@ -84,7 +84,12 @@ let signup_page game_id () =
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
-			(fun (edit, person) -> [
+			(fun (edit, (is_group, person)) -> [
+        p [
+          Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1)
+            ();
+          pcdata "This is a group inscription"
+        ];
 				table (
 					tr [
 						th [pcdata "Name"];
@@ -155,23 +160,33 @@ let signup_page game_id () =
 					(if String.lowercase role_type = "any" then None else Some role_type)
 					note*)
 
-let do_signup_page game_id (edit, users) =
-	let rec handle_inscriptions edit users =
+let do_signup_page game_id (edit, (is_group, users)) =
+	let rec handle_inscriptions uid edit users =
 		match users with
-		| (Inj1 s, (g, (r, n)))::t ->
-			Ocsigen_messages.console (fun () -> Printf.sprintf "%s, %s, %s, %s"
-				s g r n);
-			handle_inscriptions edit t
-		| (Inj2 s, (g, (r, n)))::t ->
-			Ocsigen_messages.console (fun () -> Printf.sprintf "%ld, %s, %s, %s"
-				s g r n);
-			handle_inscriptions edit t
+		| (Inj1 s, (g, (r, n)))::t -> (* new user *)
+        Database.add_user game_id s
+         (if String.lowercase g = "any" then None else Some g)
+			   (if String.lowercase r = "any" then None else Some r)
+			   n >>=
+        fun () -> handle_inscriptions uid edit t
+		| (Inj2 s, (g, (r, n)))::t -> (* new user *)
+      (if edit then
+        Database.edit_inscription game_id s
+  			  (if String.lowercase g = "any" then None else Some g)
+				  (if String.lowercase r = "any" then None else Some r)
+				  n
+      else
+        Database.signup game_id s
+  			  (if String.lowercase g = "any" then None else Some g)
+				  (if String.lowercase r = "any" then None else Some r)
+				  n) >>=
+			  fun () -> handle_inscriptions uid edit t
 		| _ -> Lwt.return ()
 	in
 	lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> handle_inscriptions edit users >>=
+	| Some (uid, _) -> handle_inscriptions uid edit users >>=
 		fun () -> container (standard_menu ())
 		[
 			p [
