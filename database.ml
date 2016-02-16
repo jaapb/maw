@@ -131,17 +131,31 @@ let signup game_id uid group role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
-	PGSQL(dbh) "INSERT INTO game_inscriptions \
-		(game_id, user_id, inscription_time, note) \
-		VALUES \
-		($game_id, $uid, $stamp, $note)" >>=
-	fun () -> change_things dbh game_id uid group role note
+	  PGSQL(dbh) "INSERT INTO game_inscriptions \
+		  (game_id, user_id, inscription_time, note) \
+		  VALUES \
+		  ($game_id, $uid, $stamp, $note)" >>=
+	  fun () -> change_things dbh game_id uid group role note
 	)
 ;;
 
 let edit_inscription game_id uid group role note =
 	get_db () >>= fun dbh ->
-	PGOCaml.transact dbh (fun dbh -> change_things dbh game_id uid group role note);;
+	PGOCaml.transact dbh (fun dbh ->
+    change_things dbh game_id uid group role note);;
+
+let add_user game_id search group role note =
+  let stamp = CalendarLib.Calendar.now () in
+  get_db () >>= fun dbh ->
+  PGOCaml.transact dbh (fun dbh ->
+    PGSQL(dbh) "INSERT INTO game_inscriptions \
+      (game_id, user_id, inscription_time, note) \
+      SELECT $game_id, id, $stamp, $note \
+      FROM users \
+      WHERE username = $search OR email = $search \
+      LIMIT 1"
+  )
+;;
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
