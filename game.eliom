@@ -1,16 +1,16 @@
-{shared{
-  open Eliom_lib
-  open Eliom_content
-  open Html5.D
+[%%shared
+	open Eliom_lib
+	open Eliom_content
+	open Html5.D
 	open Eliom_service.App
 	open Eliom_parameter
-}}
+]
 
-{server{
+[%%server
 	open CalendarLib
 	open Maw
 	open Database
-}}
+]
 
 let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
@@ -30,15 +30,15 @@ let game_page game_id () =
     (if full
     then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
     else []) in
-	lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> lwt (title, date, loc, dsg_name, dsg, d, _, max_pl) =
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_name, dsg, d, _, max_pl) =
 		Database.get_game_data game_id in
-    lwt nr_inscr = Database.get_nr_inscriptions game_id in
+    let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
     match u with
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
 	  | Some (uid, _) ->
-			lwt (signed_up, l) = Database.get_inscription_data uid game_id in
+			let%lwt (signed_up, l) = Database.get_inscription_data uid game_id in
 			container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl) @
 		  	if uid = dsg then
@@ -67,15 +67,18 @@ let game_page game_id () =
 ;;
 
 let signup_page game_id () =
-	lwt u = Eliom_reference.get Maw.user in
+	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, uname) -> 
-		lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
+		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
 			Database.get_game_data game_id in
-    lwt groups = Database.get_game_groups game_id in
-		lwt role_types = Database.get_game_role_types game_id in
-		lwt (signed_up, inscr) = Database.get_inscription_data uid game_id in
+    let%lwt groups = Database.get_game_groups game_id in
+		let%lwt role_types = Database.get_game_role_types game_id in
+		let%lwt (signed_up, inscr) = Database.get_inscription_data uid game_id in
+		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
+			then inscr
+			else (uid, uname, None, None, "", None)::inscr in
 		container (standard_menu ())
 		[
 			h1 [pcdata title];
@@ -85,11 +88,6 @@ let signup_page game_id () =
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
 			(fun (edit, (is_group, person)) -> [
-        p [
-          Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1)
-            ();
-          pcdata "This is a group inscription"
-        ];
 				table (
 					tr [
 						th [pcdata "Name"];
@@ -102,15 +100,10 @@ let signup_page game_id () =
 						let ex_group = default "Any" g in
 						let ex_role = default "Any" r in
 						tr [
-							if Int32.compare ex_uid 0l = 0 then
-								td [
-									Form.input ~input_type:`Text ~name:search Form.string
-								]
-							else
-								td [
-									Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
-									pcdata ex_name
-								]; 
+							td [
+								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
+								pcdata ex_name
+							]; 
 							td [
 								Form.select ~name:group Form.string
 								(Form.Option ([], "Any", None, ex_group = "Any"))
@@ -128,8 +121,14 @@ let signup_page game_id () =
 							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string]
 						]::
 						init
-					) (inscr @ [0l, "", None, None, "", None])
+					) me_inscr
 					[
+        		tr [
+							td ~a:[a_colspan 4] [
+          			Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ();
+          			pcdata "This is a group inscription"
+							]
+						];
 						tr [
 							td ~a:[a_colspan 4] (
 								Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
@@ -183,7 +182,7 @@ let do_signup_page game_id (edit, (is_group, users)) =
 			  fun () -> handle_inscriptions uid edit t
 		| _ -> Lwt.return ()
 	in
-	lwt u = Eliom_reference.get Maw.user in
+	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _) -> handle_inscriptions uid edit users >>=
@@ -202,12 +201,12 @@ let do_signup_page game_id (edit, (is_group, users)) =
 ;;
 
 let show_inscriptions_page game_id () =
-	lwt u = Eliom_reference.get Maw.user in
+	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
+	| Some (uid, _) -> let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
 			Database.get_game_data game_id in
-		lwt inscr = Database.get_inscription_list game_id in
+		let%lwt inscr = Database.get_inscription_list game_id in
 		if uid = dsg_id then
 			container (standard_menu ())
 			(

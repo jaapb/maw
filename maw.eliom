@@ -1,10 +1,10 @@
-{shared{
-  open Eliom_lib
-  open Eliom_content
-  open Html5.D
+[%%shared
+	open Eliom_lib
+	open Eliom_content
+	open Html5.D
 	open Eliom_service.App
 	open Eliom_parameter
-}}
+]
 
 module Maw_app =
   Eliom_registration.App (
@@ -42,12 +42,11 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 	None;;
 
 let login_action () (name, password) =
-begin
-	lwt u = Database.check_password name password in
+	let%lwt u = Database.check_password name password in
 	match u with
 	| [(uid, name)] -> Eliom_reference.set user (Some (uid, name))
 	| _ -> Eliom_reference.set login_err (Some "Unknown user")
-end;;
+;;
 
 let logout_action () () =
 begin
@@ -55,8 +54,8 @@ begin
 end;;
 
 let login_box () =
-	lwt u = Eliom_reference.get user in
-	lwt err = Eliom_reference.get login_err in
+	let%lwt u = Eliom_reference.get user in
+	let%lwt err = Eliom_reference.get login_err in
 	Lwt.return (match u with
 	| None -> [Form.post_form ~service:login_service (fun (name, password) ->
 		[table (
@@ -99,7 +98,7 @@ let standard_menu () =
 	]];;
 
 let container menu_div cts_div =
-	lwt box = login_box () in
+	let%lwt box = login_box () in
 	Lwt.return
 	(Eliom_tools.F.html
 		~title:"maw"

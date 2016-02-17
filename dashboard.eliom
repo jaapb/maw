@@ -1,16 +1,14 @@
-{shared{
-  open Eliom_lib
-  open Eliom_content
-  open Html5.D
-	open Eliom_service.App
-	open Eliom_parameter
-}}
+open Eliom_lib
+open Eliom_content
+open Html5.D
+open Eliom_service.App
+open Eliom_parameter
 
-{server{
+[%%server
 	open CalendarLib
 	open Maw
 	open Database
-}}
+]
 
 let location_bar id title date loc =
 	[
@@ -57,9 +55,9 @@ let format_my_games mg dg =
 
 let dashboard_page () () =
 	Lwt.catch (fun () ->
-	 	lwt ug = Database.get_upcoming_games () in
-		lwt u = Eliom_reference.get Maw.user in
-		lwt mg_fmt = match u with
+	 	let%lwt ug = Database.get_upcoming_games () in
+		let%lwt u = Eliom_reference.get Maw.user in
+		let%lwt mg_fmt = match u with
 		| None -> Lwt.return []
 		| Some (uid, _) -> Database.get_user_games uid >>=
 				fun mg -> Database.get_designer_games uid >>=
