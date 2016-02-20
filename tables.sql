@@ -4,12 +4,19 @@ CREATE TABLE game_inscriptions (
     inscription_time timestamp without time zone NOT NULL,
     group_name character varying(50),
     role_type character varying(50),
-    note character varying(150)
+    note character varying(150) NOT NULL,
+    group_id integer
 );
 
+CREATE SEQUENCE games_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 CREATE TABLE games (
-    id integer NOT NULL,
+    id integer DEFAULT nextval('games_id_seq'::regclass) NOT NULL,
     title text NOT NULL,
     date date,
     description text DEFAULT 'No description yet.'::text NOT NULL,
@@ -19,32 +26,15 @@ CREATE TABLE games (
     max_players integer DEFAULT 0 NOT NULL
 );
 
-
-CREATE SEQUENCE games_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
 CREATE TABLE groups (
     name character varying(50) NOT NULL,
     game_id integer NOT NULL
 );
 
-
 CREATE TABLE role_types (
     name character varying(50) NOT NULL,
     game_id integer NOT NULL
 );
-
-CREATE TABLE users (
-    id integer NOT NULL,
-    name text NOT NULL,
-    username character varying(32) NOT NULL,
-    is_admin boolean NOT NULL
-);
-
 
 CREATE SEQUENCE users_id_seq
     START WITH 1
@@ -53,10 +43,13 @@ CREATE SEQUENCE users_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE ONLY games ALTER COLUMN id SET DEFAULT nextval('games_id_seq'::regclass);
-ALTER TABLE ONLY users ALTER COLUMN id SET DEFAULT nextval('users_id_seq'::regclass);
-
+CREATE TABLE users (
+    id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL,
+    name text NOT NULL,
+    username character varying(32) NOT NULL,
+    is_admin boolean NOT NULL,
+    email text NOT NULL
+);
 
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_game_id_user_id_key UNIQUE (game_id, user_id);
