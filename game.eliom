@@ -1,7 +1,7 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content
-	open Html5.D
+	open Eliom_content.Html5
+	open Eliom_content.Html5.D
 	open Eliom_service.App
 	open Eliom_parameter
 ]
@@ -16,7 +16,7 @@ let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id"))
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
 let do_signup_service = post_service ~fallback:signup_service ~post_params:(
 	bool "edit" ** bool "is_group" **
-	list "person" (sum (string "search") (int32 "uid") ** string "group" ** string "role_type" ** string "note")
+	list "person" (sum (string "search") (int32 "uid") ** string "team" ** string "role_type" ** string "note")
 ) ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
 (*let add_friend_service = post_service ~fallback:signup_service ~post_params:(string "identifier") ();;*)
@@ -50,7 +50,7 @@ let game_page game_id () =
 				[
 					p [
 						i [pcdata "You are signed up for this game. "] (*;
-						pcdata (Printf.sprintf "Your group preference is %s and your role preference is %s." (default "Any" g) (default "Any" r))*)
+						pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" g) (default "Any" r))*)
 					];
 					a ~service:signup_service [pcdata "Edit my inscription"] game_id
 				]
@@ -66,6 +66,15 @@ let game_page game_id () =
 	)
 ;;
 
+[%%client
+  let row =
+  tr [ 
+    td [pcdata "One"];
+    td [pcdata "Two"];
+    td [pcdata "Three"];
+    td [pcdata "Four"]
+  ]]
+
 let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -73,7 +82,7 @@ let signup_page game_id () =
 	| Some (uid, uname) -> 
 		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
 			Database.get_game_data game_id in
-    let%lwt groups = Database.get_game_groups game_id in
+    let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt (signed_up, inscr) = Database.get_inscription_data uid game_id in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
@@ -87,17 +96,18 @@ let signup_page game_id () =
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
-			(fun (edit, (is_group, person)) -> [
-				table (
+			(fun (edit, (is_group, person)) ->
+      [
+				table ~a:[a_id "inscription_table"] (
 					tr [
 						th [pcdata "Name"];
-						th [pcdata "Group preference"];
+						th [pcdata "Team preference"];
 						th [pcdata "Role type preference"];
 						th [pcdata "Note"];
 					]::
-					person.it (fun ((search, uid), (group, (role_type, note))) v init ->
-						let (ex_uid, ex_name, g, r, ex_note, _) = v in
-						let ex_group = default "Any" g in
+					person.it (fun ((search, uid), (team, (role_type, note))) v init ->
+						let (ex_uid, ex_name, t, r, ex_note, _) = v in
+						let ex_team = default "Any" t in
 						let ex_role = default "Any" r in
 						tr [
 							td [
@@ -105,11 +115,11 @@ let signup_page game_id () =
 								pcdata ex_name
 							]; 
 							td [
-								Form.select ~name:group Form.string
-								(Form.Option ([], "Any", None, ex_group = "Any"))
-								(List.map (fun g ->
-									Form.Option ([], g, None, ex_group = g)
-								) groups)
+								Form.select ~name:team Form.string
+								(Form.Option ([], "Any", None, ex_team = "Any"))
+								(List.map (fun t ->
+									Form.Option ([], t, None, ex_team = t)
+								) teams)
 							];
 							td [
 								Form.select ~name:role_type Form.string
@@ -125,11 +135,20 @@ let signup_page game_id () =
 					[
         		tr [
 							td ~a:[a_colspan 4] [
-          			Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ();
+       	        Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ~a:[a_onclick [%client (fun ev ->
+                  Js.Opt.iter (ev##.target) (fun x ->
+                    Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
+                      let it = Dom_html.getElementById "inscription_table" in
+                      let br = Dom_html.getElementById "button_row" in
+                      if Js.to_bool i##.checked then
+                        Dom.insertBefore it (To_dom.of_element row) (Js.some br)
+                    )
+                  )
+                )]] (); 
           			pcdata "This is a group inscription"
 							]
 						];
-						tr [
+						tr ~a:[a_id "button_row"] [
 							td ~a:[a_colspan 4] (
 								Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 								if signed_up
@@ -147,17 +166,6 @@ let signup_page game_id () =
 	| e -> error_page (Printexc.to_string e)
 	)
 ;;
-
-			(*if edit then
-				Database.edit_inscription game_id uid
-					(if String.lowercase group = "any" then None else Some group)
-					(if String.lowercase role_type = "any" then None else Some role_type)
-					note
-			else
-				Database.signup game_id uid
-					(if String.lowercase group = "any" then None else Some group)
-					(if String.lowercase role_type = "any" then None else Some role_type)
-					note*)
 
 let do_signup_page game_id (edit, (is_group, users)) =
 	let rec handle_inscriptions uid edit users =
@@ -216,7 +224,7 @@ let show_inscriptions_page game_id () =
 					table (
 						tr [
 							th [pcdata "Name"];
-							th [pcdata "Group"];
+							th [pcdata "Team"];
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::

@@ -77,21 +77,21 @@ let get_nr_inscriptions game_id =
 	| [Some n] -> Lwt.return (Int64.to_int32 n)
 	| _ -> Lwt.return 0l;;
 
-let get_game_groups game_id =
+let get_game_teams game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT name \
-		FROM groups \
+		FROM teams \
 		WHERE game_id = $game_id";;
 
-let remove_game_groups game_id groups =
+let remove_game_teams game_id teams =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "DELETE FROM groups \
-		WHERE game_id = $game_id AND name IN $@groups";;
+	PGSQL(dbh) "DELETE FROM teams \
+		WHERE game_id = $game_id AND name IN $@teams";;
 
-let add_game_group game_id group =
+let add_game_team game_id team =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO groups (game_id, name) \
-		VALUES ($game_id, $group)";;
+	PGSQL(dbh) "INSERT INTO teams (game_id, name) \
+		VALUES ($game_id, $team)";;
 
 let get_game_role_types game_id =
 	get_db () >>= fun dbh ->
@@ -115,11 +115,11 @@ let set_game_numbers game_id min max =
 		SET min_players = $min, max_players = $max \
 		WHERE id = $game_id";;
 
-let change_things dbh game_id uid group role note =
-	(match group with
+let change_things dbh game_id uid team role note =
+	(match team with
 	| None -> Lwt.return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET group_name = $g WHERE game_id = $game_id AND user_id = $uid") >>=
+			SET team_name = $g WHERE game_id = $game_id AND user_id = $uid") >>=
 	fun () -> (match role with
 	| None -> Lwt.return ()
 	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
@@ -127,7 +127,7 @@ let change_things dbh game_id uid group role note =
 	fun () -> PGSQL(dbh) "UPDATE game_inscriptions \
 		SET note = $note WHERE game_id = $game_id AND user_id = $uid";;
 
-let signup game_id uid group role note =
+let signup game_id uid team role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -135,16 +135,16 @@ let signup game_id uid group role note =
 		  (game_id, user_id, inscription_time, note) \
 		  VALUES \
 		  ($game_id, $uid, $stamp, $note)" >>=
-	  fun () -> change_things dbh game_id uid group role note
+	  fun () -> change_things dbh game_id uid team role note
 	)
 ;;
 
-let edit_inscription game_id uid group role note =
+let edit_inscription game_id uid team role note =
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
-    change_things dbh game_id uid group role note);;
+    change_things dbh game_id uid team role note);;
 
-let add_user game_id search group role note =
+let add_user game_id search team role note =
   let stamp = CalendarLib.Calendar.now () in
   get_db () >>= fun dbh ->
   PGOCaml.transact dbh (fun dbh ->
@@ -159,7 +159,7 @@ let add_user game_id search group role note =
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT g2.user_id, name, g2.group_name, g2.role_type, g2.note, g2.group_id \
+	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_id \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
 		ON g1.user_id = g2.user_id OR g1.group_id = g2.group_id 
 		JOIN users ON g2.user_id = users.id \
@@ -171,7 +171,7 @@ let get_inscription_data uid game_id =
 
 let get_inscription_list game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name, group_name, role_type, note, group_id \
+	PGSQL(dbh) "SELECT name, team_name, role_type, note, group_id \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY inscription_time ASC";;

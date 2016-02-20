@@ -15,8 +15,8 @@
 let design_service = service ~path:["design"] ~get_params:(suffix (int32 "game_id")) ();;
 let update_descr_service = post_service ~fallback:design_service ~post_params:(string "description") ();;
 let update_numbers_service = post_service ~fallback:design_service ~post_params:(int32 "min" ** int32 "max") ();;
-let remove_groups_service = post_service ~fallback:design_service ~post_params:(set string "groups") ();;
-let add_group_service = post_service ~fallback:design_service ~post_params:(string "group") ();;
+let remove_teams_service = post_service ~fallback:design_service ~post_params:(set string "teams") ();;
+let add_team_service = post_service ~fallback:design_service ~post_params:(string "team") ();;
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
 
@@ -25,7 +25,7 @@ let design_page game_id () =
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _) -> 
-		let%lwt groups = Database.get_game_groups game_id in
+		let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
 			Database.get_game_data game_id in
@@ -65,18 +65,18 @@ let design_page game_id () =
 						]
 					]
 				]) game_id;
-				Form.post_form ~service:remove_groups_service (fun group -> [
+				Form.post_form ~service:remove_teams_service (fun team -> [
 					table [
 						tr [
-							td [pcdata "Groups:"]
+							td [pcdata "Teams:"]
 						];
 						tr (
-							match groups with
-							| [] -> [td [pcdata "No groups have been entered"]]
+							match teams with
+							| [] -> [td [pcdata "No teams have been entered"]]
 							| h::t -> 
 								[
 									td [
-										Form.multiple_select ~name:group Form.string
+										Form.multiple_select ~name:team Form.string
 										(Form.Option ([], h, None, false))
 										(List.map (fun x -> (Form.Option ([], x, None, false))) t)
 									];
@@ -87,10 +87,10 @@ let design_page game_id () =
 						)
 					]
 				]) game_id;
-				Form.post_form ~service:add_group_service (fun group -> [
+				Form.post_form ~service:add_team_service (fun team -> [
 					table [
 						tr [
-							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:group
+							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:team
 								Form.string];
 							td [Form.input ~input_type:`Submit ~value:"Add" Form.string]
 						]
@@ -152,19 +152,18 @@ let update_numbers game_id (min, max) =
 	| Some (uid, _) -> Database.set_game_numbers game_id min max
 ;;
 
-let remove_groups game_id groups =
+let remove_teams game_id teams =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.remove_game_groups game_id groups
+	| Some (uid, _) -> Database.remove_game_teams game_id teams
 ;;
 
-let add_group game_id group =
-	Lwt_log.ign_info_f "ADD_GROUP %ld %s" game_id group;
+let add_team game_id team =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.add_game_group game_id group
+	| Some (uid, _) -> Database.add_game_team game_id team
 ;;
 
 let remove_role_types game_id role_types =
@@ -188,10 +187,10 @@ let () =
 		update_description;
 	Eliom_registration.Action.register ~service:update_numbers_service
 		update_numbers;
-	Eliom_registration.Action.register ~service:remove_groups_service
-		remove_groups;
-	Eliom_registration.Action.register ~service:add_group_service
-		add_group;
+	Eliom_registration.Action.register ~service:remove_teams_service
+		remove_teams;
+	Eliom_registration.Action.register ~service:add_team_service
+		add_team;
 	Eliom_registration.Action.register ~service:remove_role_types_service
 		remove_role_types;
 	Eliom_registration.Action.register ~service:add_role_type_service
