@@ -15,8 +15,8 @@
 let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
 let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
 let do_signup_service = post_service ~fallback:signup_service ~post_params:(
-	bool "edit" ** bool "is_group" **
-	list "person" (sum (string "search") (int32 "uid") ** string "team" ** string "role_type" ** string "note")
+	bool "edit" ** bool "is_group" ** string "team" **
+	list "person" (sum (string "search") (int32 "uid") ** string "role_type" ** string "note")
 ) ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
 (*let add_friend_service = post_service ~fallback:signup_service ~post_params:(string "identifier") ();;*)
@@ -66,14 +66,30 @@ let game_page game_id () =
 	)
 ;;
 
-[%%client
-  let row =
-  tr [ 
-    td [pcdata "One"];
-    td [pcdata "Two"];
-    td [pcdata "Three"];
-    td [pcdata "Four"]
-  ]]
+let%client new_row id teams =
+  tr ~a:[a_class ["group_inscription_row"]] [ 
+    td [Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id)] ()];
+    td [];
+    td [Raw.select (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
+    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id)] ()]
+  ]
+;;
+
+let%client nr_ids = ref 0
+
+let%client group_inscription_handler teams ev =
+	Js.Opt.iter (ev##.target) (fun x ->
+		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
+			let it = Dom_html.getElementById "inscription_table" in
+			let br = Dom_html.getElementById "button_row" in
+			if Js.to_bool i##.checked then
+			begin
+				incr nr_ids;
+				Dom.insertBefore it (To_dom.of_element (new_row !nr_ids teams)) (Js.some br)
+			end
+		)
+	)
+;;
 
 let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -96,7 +112,7 @@ let signup_page game_id () =
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
-			(fun (edit, (is_group, person)) ->
+			(fun (edit, (is_group, (team, person))) ->
       [
 				table ~a:[a_id "inscription_table"] (
 					tr [
@@ -105,7 +121,7 @@ let signup_page game_id () =
 						th [pcdata "Role type preference"];
 						th [pcdata "Note"];
 					]::
-					person.it (fun ((search, uid), (team, (role_type, note))) v init ->
+					person.it (fun ((search, uid), (role_type, note)) v init ->
 						let (ex_uid, ex_name, t, r, ex_note, _) = v in
 						let ex_team = default "Any" t in
 						let ex_role = default "Any" r in
@@ -135,16 +151,7 @@ let signup_page game_id () =
 					[
         		tr [
 							td ~a:[a_colspan 4] [
-       	        Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ~a:[a_onclick [%client (fun ev ->
-                  Js.Opt.iter (ev##.target) (fun x ->
-                    Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
-                      let it = Dom_html.getElementById "inscription_table" in
-                      let br = Dom_html.getElementById "button_row" in
-                      if Js.to_bool i##.checked then
-                        Dom.insertBefore it (To_dom.of_element row) (Js.some br)
-                    )
-                  )
-                )]] (); 
+       	        Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ~a:[a_onclick [%client (group_inscription_handler ~%teams)]] (); 
           			pcdata "This is a group inscription"
 							]
 						];
@@ -167,24 +174,24 @@ let signup_page game_id () =
 	)
 ;;
 
-let do_signup_page game_id (edit, (is_group, users)) =
+let do_signup_page game_id (edit, (is_group, (team, users))) =
 	let rec handle_inscriptions uid edit users =
 		match users with
-		| (Inj1 s, (g, (r, n)))::t -> (* new user *)
+		| (Inj1 s, (r, n))::t -> (* new user *)
         Database.add_user game_id s
-         (if String.lowercase g = "any" then None else Some g)
+         (if String.lowercase team = "any" then None else Some team)
 			   (if String.lowercase r = "any" then None else Some r)
 			   n >>=
         fun () -> handle_inscriptions uid edit t
-		| (Inj2 s, (g, (r, n)))::t -> (* new user *)
+		| (Inj2 s, (r, n))::t -> (* new user *)
       (if edit then
         Database.edit_inscription game_id s
-  			  (if String.lowercase g = "any" then None else Some g)
+  			  (if String.lowercase team = "any" then None else Some team)
 				  (if String.lowercase r = "any" then None else Some r)
 				  n
       else
         Database.signup game_id s
-  			  (if String.lowercase g = "any" then None else Some g)
+  			  (if String.lowercase team = "any" then None else Some team)
 				  (if String.lowercase r = "any" then None else Some r)
 				  n) >>=
 			  fun () -> handle_inscriptions uid edit t
