@@ -81,11 +81,11 @@ let%client remove_my_row ev =
 
 let%client new_row id teams =
   tr ~a:[a_class ["group_inscription_row"]] [ 
-    td [Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id)] ()];
+    td [Raw.input ~a:[a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Text; a_value ""] ()];
     td [];
-    td [Raw.select (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
-    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id)] ()];
-    td [Raw.input ~a:[a_input_type `Submit; a_value "Remove"; a_onclick remove_my_row] ()]
+    td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
+    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
+    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
   ]
 ;;
 
@@ -100,7 +100,7 @@ let%client add_inscription_row it teams =
 ;;
 
 let%client new_button it teams =
-  Raw.input ~a:[a_id "add_button"; a_input_type `Submit; a_value "Add group member"; a_onclick (fun ev -> add_inscription_row it teams)] ()
+  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick (fun ev -> add_inscription_row it teams)] ()
 ;;
 
 let%client group_inscription_handler teams ev =
@@ -115,6 +115,8 @@ let%client group_inscription_handler teams ev =
         Dom.insertBefore bf (To_dom.of_element (new_button it teams)) (Js.some sb)
       end
       else
+      begin
+        nr_ids := 0;
         List.iter (fun x ->
           Js.Opt.iter (Dom_html.CoerceTo.element x) (fun e ->
             if (Js.to_string e##.className) = "group_inscription_row" ||
@@ -122,6 +124,7 @@ let%client group_inscription_handler teams ev =
               Dom.removeChild it e
           )
         ) (Dom.list_of_nodeList it##.childNodes)
+      end
 		)
 	)
 ;;
@@ -214,20 +217,23 @@ let signup_page game_id () =
 let do_signup_page game_id (edit, (is_group, (team, users))) =
 	let rec handle_inscriptions uid edit users =
 		match users with
-		| (Inj1 s, (r, n))::t -> (* new user *)
-        Database.add_user game_id s
-         (if String.lowercase team = "any" then None else Some team)
-			   (if String.lowercase r = "any" then None else Some r)
-			   n >>=
+		| (Inj1 search, (r, n))::t -> (* new user *)
+        Database.search_for_user search >>=
+        (function
+        | [] -> Lwt.return (Ocsigen_messages.console (fun () -> Printf.sprintf "MAIL %s" search))
+        | [guest_id] ->  Database.add_user game_id guest_id
+            (if String.lowercase team = "any" then None else Some team)
+			      (if String.lowercase r = "any" then None else Some r) n 
+        | _ -> Lwt.return (Ocsigen_messages.console (fun () -> "Eh?"))) >>=
         fun () -> handle_inscriptions uid edit t
-		| (Inj2 s, (r, n))::t -> (* new user *)
+		| (Inj2 uid, (r, n))::t -> (* new user *)
       (if edit then
-        Database.edit_inscription game_id s
+        Database.edit_inscription uid game_id 
   			  (if String.lowercase team = "any" then None else Some team)
 				  (if String.lowercase r = "any" then None else Some r)
 				  n
       else
-        Database.signup game_id s
+        Database.signup game_id uid
   			  (if String.lowercase team = "any" then None else Some team)
 				  (if String.lowercase r = "any" then None else Some r)
 				  n) >>=

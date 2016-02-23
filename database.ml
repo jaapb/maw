@@ -144,17 +144,14 @@ let edit_inscription game_id uid team role note =
 	PGOCaml.transact dbh (fun dbh ->
     change_things dbh game_id uid team role note);;
 
-let add_user game_id search team role note =
+let add_user game_id uid team role note =
   let stamp = CalendarLib.Calendar.now () in
   get_db () >>= fun dbh ->
-  PGOCaml.transact dbh (fun dbh ->
-    PGSQL(dbh) "INSERT INTO game_inscriptions \
-      (game_id, user_id, inscription_time, note) \
-      SELECT $game_id, id, $stamp, $note \
-      FROM users \
-      WHERE username = $search OR email = $search \
-      LIMIT 1"
-  )
+  PGSQL(dbh) "INSERT INTO game_inscriptions \
+    (game_id, user_id, inscription_time, note) \
+    SELECT $game_id, id, $stamp, $note \
+    FROM users \
+    WHERE id = $uid"
 ;;
 
 let get_inscription_data uid game_id =
@@ -175,3 +172,10 @@ let get_inscription_list game_id =
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY inscription_time ASC";;
+
+
+let search_for_user search =
+  get_db () >>= fun dbh ->
+  PGSQL(dbh) "SELECT id \
+    FROM users
+    WHERE username = $search OR email = $search";;
