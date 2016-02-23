@@ -66,27 +66,62 @@ let game_page game_id () =
 	)
 ;;
 
+let%client remove_my_row ev =
+  (* button -> in td -> in tr: delete this tr! *)
+  Js.Opt.iter (ev##.target) (fun e ->
+    Js.Opt.iter (e##.parentNode) (fun p -> (* this is the td *)
+      Js.Opt.iter (p##.parentNode) (fun gp -> (* this is the tr *)
+        Js.Opt.iter (gp##.parentNode) (fun ggp -> (* this is the table *)
+          Dom.removeChild ggp gp
+        )
+      )
+    )
+  )
+;; 
+
 let%client new_row id teams =
   tr ~a:[a_class ["group_inscription_row"]] [ 
     td [Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id)] ()];
     td [];
     td [Raw.select (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
-    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id)] ()]
+    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id)] ()];
+    td [Raw.input ~a:[a_input_type `Submit; a_value "Remove"; a_onclick remove_my_row] ()]
   ]
 ;;
 
 let%client nr_ids = ref 0
 
+let%client add_inscription_row it teams =
+	let br = Dom_html.getElementById "button_row" in
+  begin
+    incr nr_ids;
+    Dom.insertBefore it (To_dom.of_element (new_row !nr_ids teams)) (Js.some br);
+  end
+;;
+
+let%client new_button it teams =
+  Raw.input ~a:[a_id "add_button"; a_input_type `Submit; a_value "Add group member"; a_onclick (fun ev -> add_inscription_row it teams)] ()
+;;
+
 let%client group_inscription_handler teams ev =
 	Js.Opt.iter (ev##.target) (fun x ->
 		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
 			let it = Dom_html.getElementById "inscription_table" in
-			let br = Dom_html.getElementById "button_row" in
+	    let bf = Dom_html.getElementById "button_field" in
+      let sb = Dom_html.getElementById "submit_button" in
 			if Js.to_bool i##.checked then
-			begin
-				incr nr_ids;
-				Dom.insertBefore it (To_dom.of_element (new_row !nr_ids teams)) (Js.some br)
-			end
+      begin
+        add_inscription_row it teams;
+        Dom.insertBefore bf (To_dom.of_element (new_button it teams)) (Js.some sb)
+      end
+      else
+        List.iter (fun x ->
+          Js.Opt.iter (Dom_html.CoerceTo.element x) (fun e ->
+            if (Js.to_string e##.className) = "group_inscription_row" ||
+              (Js.to_string e##.className) = "add_button" then
+              Dom.removeChild it e
+          )
+        ) (Dom.list_of_nodeList it##.childNodes)
 		)
 	)
 ;;
@@ -120,6 +155,7 @@ let signup_page game_id () =
 						th [pcdata "Team preference"];
 						th [pcdata "Role type preference"];
 						th [pcdata "Note"];
+            th [];
 					]::
 					person.it (fun ((search, uid), (role_type, note)) v init ->
 						let (ex_uid, ex_name, t, r, ex_note, _) = v in
@@ -144,20 +180,21 @@ let signup_page game_id () =
 									Form.Option ([], r, None, ex_role = r)
 								) role_types)
 							];
-							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string]
+							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string];
+              td []
 						]::
 						init
 					) me_inscr
 					[
         		tr [
-							td ~a:[a_colspan 4] [
+							td ~a:[a_colspan 5] [
        	        Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ~a:[a_onclick [%client (group_inscription_handler ~%teams)]] (); 
           			pcdata "This is a group inscription"
 							]
 						];
 						tr ~a:[a_id "button_row"] [
-							td ~a:[a_colspan 4] (
-								Form.input ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+							td ~a:[a_id "button_field"; a_colspan 5] (
+								Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 								if signed_up
 								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
 								else []
