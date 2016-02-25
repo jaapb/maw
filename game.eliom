@@ -111,19 +111,21 @@ let%client group_inscription_handler teams ev =
       let sb = Dom_html.getElementById "submit_button" in
 			if Js.to_bool i##.checked then
       begin
+				nr_ids := 0;
         add_inscription_row it teams;
         Dom.insertBefore bf (To_dom.of_element (new_button it teams)) (Js.some sb)
       end
       else
       begin
+			let ab = Dom_html.getElementById "add_button" in
         nr_ids := 0;
         List.iter (fun x ->
           Js.Opt.iter (Dom_html.CoerceTo.element x) (fun e ->
-            if (Js.to_string e##.className) = "group_inscription_row" ||
-              (Js.to_string e##.className) = "add_button" then
+            if Js.to_string e##.className = "group_inscription_row" then
               Dom.removeChild it e
           )
-        ) (Dom.list_of_nodeList it##.childNodes)
+        ) (Dom.list_of_nodeList it##.childNodes);
+				Dom.removeChild bf ab
       end
 		)
 	)
@@ -215,45 +217,51 @@ let signup_page game_id () =
 ;;
 
 let do_signup_page game_id (edit, (is_group, (team, users))) =
-	let rec handle_inscriptions uid edit users =
-		match users with
-		| (Inj1 search, (r, n))::t -> (* new user *)
-        Database.search_for_user search >>=
-        (function
-        | [] -> Lwt.return (Ocsigen_messages.console (fun () -> Printf.sprintf "MAIL %s" search))
-        | [guest_id] ->  Database.add_user game_id guest_id
-            (if String.lowercase team = "any" then None else Some team)
-			      (if String.lowercase r = "any" then None else Some r) n 
-        | _ -> Lwt.return (Ocsigen_messages.console (fun () -> "Eh?"))) >>=
-        fun () -> handle_inscriptions uid edit t
-		| (Inj2 uid, (r, n))::t -> (* new user *)
-      (if edit then
-        Database.edit_inscription uid game_id 
-  			  (if String.lowercase team = "any" then None else Some team)
-				  (if String.lowercase r = "any" then None else Some r)
-				  n
-      else
-        Database.signup game_id uid
-  			  (if String.lowercase team = "any" then None else Some team)
-				  (if String.lowercase r = "any" then None else Some r)
-				  n) >>=
-			  fun () -> handle_inscriptions uid edit t
-		| _ -> Lwt.return ()
+	let rec handle_inscriptions edit users prefs =
+		match users, prefs with
+		| uid::uids, (r, n)::prefs ->
+      (Ocsigen_messages.console (fun () -> Printf.sprintf "Handling user id %ld" uid);
+      Database.add_user game_id uid
+  		  (if String.lowercase team = "any" then None else Some team)
+			  (if String.lowercase r = "any" then None else Some r)
+			  n) >>=
+			fun () -> handle_inscriptions edit uids prefs
+		| _, _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> handle_inscriptions uid edit users >>=
-		fun () -> container (standard_menu ())
-		[
-			p [
-				pcdata (
-					if edit
-					then "Changes successfully saved."
-					else "You have successfully signed up for this game."
-				)
+	| Some (uid, _) -> 
+		begin
+			Lwt_list.fold_left_s (fun (uids, prefs) x ->
+				match x with
+				| (Inj1 search, p) -> Ocsigen_messages.console (fun () -> Printf.sprintf "Searching for user %s" search);
+					Database.search_for_user search >>=
+					fun res -> Lwt.return (res::uids, p::prefs)
+				| (Inj2 uid, p) -> Lwt.return (uid::uids, p::prefs)) ([], []) users >>=
+			fun (uid_list, pref_list) -> (if is_group
+			then
+			begin
+				Database.get_group_id game_id uid_list >>=
+				(function
+				| None -> Database.get_new_group_id game_id
+				| Some l -> Lwt.return l) >>=
+				fun x -> Lwt.return (Some x)
+			end
+			else
+				Lwt.return None) >>=
+			fun gid -> handle_inscriptions edit uid_list pref_list >>=
+			fun () -> container (standard_menu ())
+			[
+				p [
+					pcdata (
+						if edit
+						then "Changes successfully saved."
+						else "You have successfully signed up for this game."
+					)
+				]
 			]
-		]
+		end
 	)
 	(fun e -> error_page (Printexc.to_string e))
 ;;

@@ -127,7 +127,7 @@ let change_things dbh game_id uid team role note =
 	fun () -> PGSQL(dbh) "UPDATE game_inscriptions \
 		SET note = $note WHERE game_id = $game_id AND user_id = $uid";;
 
-let signup game_id uid team role note =
+let add_user game_id uid team role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -137,21 +137,6 @@ let signup game_id uid team role note =
 		  ($game_id, $uid, $stamp, $note)" >>=
 	  fun () -> change_things dbh game_id uid team role note
 	)
-;;
-
-let edit_inscription game_id uid team role note =
-	get_db () >>= fun dbh ->
-	PGOCaml.transact dbh (fun dbh ->
-    change_things dbh game_id uid team role note);;
-
-let add_user game_id uid team role note =
-  let stamp = CalendarLib.Calendar.now () in
-  get_db () >>= fun dbh ->
-  PGSQL(dbh) "INSERT INTO game_inscriptions \
-    (game_id, user_id, inscription_time, note) \
-    SELECT $game_id, id, $stamp, $note \
-    FROM users \
-    WHERE id = $uid"
 ;;
 
 let get_inscription_data uid game_id =
@@ -173,9 +158,35 @@ let get_inscription_list game_id =
 		WHERE game_id = $game_id \
 		ORDER BY inscription_time ASC";;
 
-
 let search_for_user search =
   get_db () >>= fun dbh ->
   PGSQL(dbh) "SELECT id \
-    FROM users
-    WHERE username = $search OR email = $search";;
+    FROM users \
+    WHERE username = $search OR email = $search" >>=
+	function
+	| [] -> fail Not_found
+	| [uid] -> Lwt.return uid
+	| _ -> fail_with "Inconsistency in database"
+;;
+
+let get_group_id game_id uid_list =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT group_id \
+		FROM game_inscriptions \
+		WHERE game_id = $game_id AND user_id IN $@uid_list" >>=
+	function
+	| [] | [None] -> Lwt.return None
+	| [uid] -> Lwt.return uid
+	| _ -> fail (Invalid_argument "Group members in two groups")
+;;
+
+let get_new_group_id game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT MAX(group_id) \
+		FROM game_inscriptions \
+		WHERE game_id = $game_id" >>=
+	function
+	| [] | [None] -> Lwt.return 1l
+	| [Some m] -> Lwt.return (Int32.add m 1l)
+	| _ -> fail_with "This should not happen"
+;;
