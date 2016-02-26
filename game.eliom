@@ -79,13 +79,12 @@ let%client remove_my_row ev =
   )
 ;; 
 
-let%client new_row id teams =
+let%shared new_row id teams =
   tr ~a:[a_class ["group_inscription_row"]] [ 
     td [Raw.input ~a:[a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Text; a_value ""] ()];
-    td [];
     td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
     td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
-    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
+    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
   ]
 ;;
 
@@ -99,8 +98,8 @@ let%client add_inscription_row it teams =
   end
 ;;
 
-let%client new_button it teams =
-  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick (fun ev -> add_inscription_row it teams)] ()
+let%shared new_button teams =
+  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%teams)]] ()
 ;;
 
 let%client group_inscription_handler teams ev =
@@ -113,7 +112,7 @@ let%client group_inscription_handler teams ev =
       begin
 				nr_ids := 0;
         add_inscription_row it teams;
-        Dom.insertBefore bf (To_dom.of_element (new_button it teams)) (Js.some sb)
+        Dom.insertBefore bf (To_dom.of_element (new_button teams)) (Js.some sb)
       end
       else
       begin
@@ -131,6 +130,8 @@ let%client group_inscription_handler teams ev =
 	)
 ;;
 
+let cond_list c h t =
+	if c then h::t else t
 let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -142,7 +143,7 @@ let signup_page game_id () =
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt (signed_up, inscr) = Database.get_inscription_data uid game_id in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
-			then inscr
+			then inscr 
 			else (uid, uname, None, None, "", None)::inscr in
 		container (standard_menu ())
 		[
@@ -155,29 +156,36 @@ let signup_page game_id () =
 			(fun (edit, (is_group, (team, person))) ->
       [
 				table ~a:[a_id "inscription_table"] (
+        	tr [
+						td ~a:[a_colspan 4] [
+       	       Form.bool_checkbox_one ~name:is_group ~checked:(List.length me_inscr > 1) ~a:[a_onclick [%client (group_inscription_handler ~%teams)]] (); 
+          		pcdata "This is a group inscription"
+						]
+					]::
+					tr [
+						td ~a:[a_colspan 4] [
+							pcdata "Team preference: ";
+							Form.select ~name:team Form.string
+							(Form.Option ([], "Any", None, false))
+							(List.map (fun t ->
+								Form.Option ([], t, None, false)
+							) teams)
+						]
+					]::
 					tr [
 						th [pcdata "Name"];
-						th [pcdata "Team preference"];
 						th [pcdata "Role type preference"];
 						th [pcdata "Note"];
             th [];
 					]::
 					person.it (fun ((search, uid), (role_type, note)) v init ->
-						let (ex_uid, ex_name, t, r, ex_note, _) = v in
-						let ex_team = default "Any" t in
+						let (ex_uid, ex_name, _, r, ex_note, _) = v in
 						let ex_role = default "Any" r in
 						tr [
 							td [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
 								pcdata ex_name
 							]; 
-							td [
-								Form.select ~name:team Form.string
-								(Form.Option ([], "Any", None, ex_team = "Any"))
-								(List.map (fun t ->
-									Form.Option ([], t, None, ex_team = t)
-								) teams)
-							];
 							td [
 								Form.select ~name:role_type Form.string
 								(Form.Option ([], "Any", None, ex_role = "Any"))
@@ -186,26 +194,31 @@ let signup_page game_id () =
 								) role_types)
 							];
 							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string];
-              td []
+    					td (if (List.length me_inscr > 1) then
+								[Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
+							else
+								[]
+							)
 						]::
 						init
 					) me_inscr
-					[
-        		tr [
-							td ~a:[a_colspan 5] [
-       	        Form.bool_checkbox_one ~name:is_group ~checked:(List.length inscr > 1) ~a:[a_onclick [%client (group_inscription_handler ~%teams)]] (); 
-          			pcdata "This is a group inscription"
+					(
+						cond_list
+							(List.length me_inscr > 1)
+							(new_row (List.length me_inscr) teams)
+							[
+								tr ~a:[a_id "button_row"] [
+									td ~a:[a_id "button_field"; a_colspan 4] (
+									cond_list
+										(List.length me_inscr > 1)
+										(new_button teams)
+										(Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+										if signed_up
+										then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
+										else [])
+								)]	
 							]
-						];
-						tr ~a:[a_id "button_row"] [
-							td ~a:[a_id "button_field"; a_colspan 5] (
-								Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
-								if signed_up
-								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
-								else []
-							)
-						]	
-					]
+					)
 				)
 			]) game_id
 		]
