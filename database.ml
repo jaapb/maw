@@ -153,7 +153,8 @@ let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_id \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
-		ON g1.user_id = g2.user_id OR g1.group_id = g2.group_id 
+		ON g1.game_id = g2.game_id AND \
+			(g1.user_id = g2.user_id OR g1.group_id = g2.group_id) \
 		JOIN users ON g2.user_id = users.id \
 		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
 	function
