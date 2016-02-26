@@ -33,6 +33,7 @@ let login_service = post_coservice'
 	~post_params:(string "name" ** string "password") ();;
 let logout_service = post_coservice'
 	~post_params:unit ();;
+let account_service = service ~path:["account"] ~get_params:unit ();;
 
 (* Login bits and pieces *)
 
@@ -88,17 +89,23 @@ let login_box () =
 (* The standard webpage container *)
 
 let standard_menu () = 
-	[table [
-		tr [
-			td [a ~service:dashboard_service [pcdata "Dashboard"] ()]
-		];
-		tr [
-			td [pcdata "My account"]
-		]
-	]];;
+	let%lwt u = Eliom_reference.get user in
+	match u with
+	| None -> Lwt.return []
+	| _ -> Lwt.return [
+		table [
+			tr [
+				td [a ~service:dashboard_service [pcdata "Dashboard"] ()]
+			];
+			tr [
+				td [a ~service:account_service [pcdata "My account"] ()]
+			]
+		]]
+;;
 
-let container menu_div cts_div =
+let container menu_thread cts_div =
 	let%lwt box = login_box () in
+	let%lwt menu_div = menu_thread in
 	Lwt.return
 	(Eliom_tools.F.html
 		~title:"maw"

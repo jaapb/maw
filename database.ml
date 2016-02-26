@@ -6,12 +6,12 @@ let db_handler = ref None;;
 
 let get_db () =
 	match !db_handler with
-	| Some h -> Lwt.return h
+	| Some h -> return h
 	| None -> begin
 			PGOCaml.connect ~host:(Sys.getenv "PGHOST")
 				~database:(Sys.getenv "PGDATABASE")
 				~password:(Sys.getenv "PGPASSWORD") () >>=
-			fun dbh -> db_handler := Some dbh; Lwt.return dbh
+			fun dbh -> db_handler := Some dbh; return dbh
 		end
 ;;
 
@@ -46,9 +46,9 @@ let get_game_data game_id =
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id" >>=
 	fun l -> match l with
-	| [] -> Lwt.fail Not_found
-	| [x] -> Lwt.return x
-	| _ -> Lwt.fail_with "Inconsistent database"
+	| [] -> fail Not_found
+	| [x] -> return x
+	| _ -> fail_with "Inconsistent database"
 ;;
 
 let check_password name password =
@@ -74,8 +74,8 @@ let get_nr_inscriptions game_id =
 		FROM users JOIN game_inscriptions ON users.id = user_id \
 		WHERE game_id = $game_id" >>=
 	function
-	| [Some n] -> Lwt.return (Int64.to_int32 n)
-	| _ -> Lwt.return 0l;;
+	| [Some n] -> return (Int64.to_int32 n)
+	| _ -> return 0l;;
 
 let get_game_teams game_id =
 	get_db () >>= fun dbh ->
@@ -117,15 +117,15 @@ let set_game_numbers game_id min max =
 
 let change_things dbh game_id uid group_id team role =
 	(match team with
-	| None -> Lwt.return ()
+	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
 			SET team_name = $g WHERE game_id = $game_id AND user_id = $uid") >>=
 	fun () -> (match role with
-	| None -> Lwt.return ()
+	| None -> return ()
 	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
 			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid") >>=
 	fun () -> (match group_id with
-	| None -> Lwt.return ()
+	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
 			SET group_id = $g WHERE game_id = $game_id AND user_id = $uid")
 ;;
@@ -158,8 +158,8 @@ let get_inscription_data uid game_id =
 		JOIN users ON g2.user_id = users.id \
 		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
 	function
-	| [] -> Lwt.return (false, [])
-	| l -> Lwt.return (true, l)
+	| [] -> return (false, [])
+	| l -> return (true, l)
 ;;
 
 let get_inscription_list game_id =
@@ -176,7 +176,7 @@ let search_for_user search =
     WHERE username = $search OR email = $search" >>=
 	function
 	| [] -> fail Not_found
-	| [uid] -> Lwt.return uid
+	| [uid] -> return uid
 	| _ -> fail_with "Inconsistency in database"
 ;;
 
@@ -186,8 +186,8 @@ let get_group_id game_id uid_list =
 		FROM game_inscriptions \
 		WHERE game_id = $game_id AND user_id IN $@uid_list" >>=
 	function
-	| [] | [None] -> Lwt.return None
-	| [uid] -> Lwt.return uid
+	| [] | [None] -> return None
+	| [uid] -> return uid
 	| _ -> fail (Invalid_argument "Group members in two groups")
 ;;
 
@@ -197,7 +197,18 @@ let get_new_group_id game_id =
 		FROM game_inscriptions \
 		WHERE game_id = $game_id" >>=
 	function
-	| [] | [None] -> Lwt.return 1l
-	| [Some m] -> Lwt.return (Int32.add m 1l)
+	| [] | [None] -> return 1l
+	| [Some m] -> return (Int32.add m 1l)
 	| _ -> fail_with "This should not happen"
+;;
+
+let get_user_data uid =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT name, email \
+		FROM users \
+		WHERE id = $uid" >>=
+	function
+	| [] -> fail Not_found
+	| [u] -> return u
+	| _ -> fail_with "Inconsistency in database"
 ;;
