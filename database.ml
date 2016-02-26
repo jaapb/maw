@@ -212,3 +212,10 @@ let get_user_data uid =
 	| [u] -> return u
 	| _ -> fail_with "Inconsistency in database"
 ;;
+
+let update_user_data uid email =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE users \
+		SET email = $email \
+		WHERE id = $uid"
+;;
