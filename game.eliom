@@ -37,7 +37,7 @@ let game_page game_id () =
     match u with
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
-	  | Some (uid, _) ->
+	  | Some (uid, _, _) ->
 			let%lwt (signed_up, l) = Database.get_inscription_data uid game_id in
 			container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl) @
@@ -136,7 +136,7 @@ let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, uname) -> 
+	| Some (uid, uname, _) -> 
 		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
 			Database.get_game_data game_id in
     let%lwt teams = Database.get_game_teams game_id in
@@ -243,7 +243,7 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> 
+	| Some (uid, _, _) -> 
 		begin
 			Lwt_list.fold_left_s (fun (uids, prefs) x ->
 				match x with
@@ -282,7 +282,7 @@ let show_inscriptions_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
+	| Some (uid, _, _) -> let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
 			Database.get_game_data game_id in
 		let%lwt inscr = Database.get_inscription_list game_id in
 		if uid = dsg_id then

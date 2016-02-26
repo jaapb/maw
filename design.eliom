@@ -24,7 +24,7 @@ let design_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _) -> 
+	| Some (uid, _, _) -> 
 		let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
@@ -142,35 +142,35 @@ let update_description game_id descr =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.set_game_description game_id descr
+	| Some (uid, _, _) -> Database.set_game_description game_id descr
 ;;
 
 let update_numbers game_id (min, max) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.set_game_numbers game_id min max
+	| Some (uid, _, _) -> Database.set_game_numbers game_id min max
 ;;
 
 let remove_teams game_id teams =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.remove_game_teams game_id teams
+	| Some (uid, _, _) -> Database.remove_game_teams game_id teams
 ;;
 
 let add_team game_id team =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.add_game_team game_id team
+	| Some (uid, _, _) -> Database.add_game_team game_id team
 ;;
 
 let remove_role_types game_id role_types =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.remove_game_role_types game_id role_types
+	| Some (uid, _, _) -> Database.remove_game_role_types game_id role_types
 ;;
 
 let add_role_type game_id role_type =
@@ -178,7 +178,7 @@ let add_role_type game_id role_type =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _) -> Database.add_game_role_type game_id role_type
+	| Some (uid, _, _) -> Database.add_game_role_type game_id role_type
 ;;
 
 let () =

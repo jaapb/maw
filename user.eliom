@@ -20,7 +20,7 @@ let account_page () () =
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _) -> 
+		| Some (uid, _, _) -> 
 			let%lwt (name, ex_email) = Database.get_user_data uid in
 			container (standard_menu ())
 			[
@@ -56,7 +56,7 @@ let update_user_page () email =
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _) -> Database.update_user_data uid email >>=
+		| Some (uid, _, _) -> Database.update_user_data uid email >>=
 		fun () -> container (standard_menu ())
 		[
 			p [pcdata "Changes successfully saved."]

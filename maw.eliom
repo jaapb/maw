@@ -45,7 +45,7 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 let login_action () (name, password) =
 	let%lwt u = Database.check_password name password in
 	match u with
-	| [(uid, name)] -> Eliom_reference.set user (Some (uid, name))
+	| [(uid, name, is_admin)] -> Eliom_reference.set user (Some (uid, name, is_admin))
 	| _ -> Eliom_reference.set login_err (Some "Unknown user")
 ;;
 
@@ -75,7 +75,7 @@ let login_box () =
 			| Some e -> [tr [td ~a:[a_colspan 3] [pcdata e]]]
 			)
 		)]) ()]
-	| Some (_, n) -> [Form.post_form ~service:logout_service (fun () ->
+	| Some (_, n, _) -> [Form.post_form ~service:logout_service (fun () ->
 		[table [
 			tr [
 			 	td [pcdata (Printf.sprintf "Logged in as %s" n)]
@@ -92,15 +92,18 @@ let standard_menu () =
 	let%lwt u = Eliom_reference.get user in
 	match u with
 	| None -> Lwt.return []
-	| _ -> Lwt.return [
-		table [
+	| Some (_, _, is_admin) -> Lwt.return [
+		table (
 			tr [
 				td [a ~service:dashboard_service [pcdata "Dashboard"] ()]
-			];
+			]::
 			tr [
 				td [a ~service:account_service [pcdata "My account"] ()]
-			]
-		]]
+			]::
+			(if is_admin
+			then [tr [td [pcdata "Admin"]]]
+			else [])
+		)]
 ;;
 
 let container menu_thread cts_div =

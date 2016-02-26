@@ -53,7 +53,7 @@ let get_game_data game_id =
 
 let check_password name password =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, name \
+	PGSQL(dbh) "SELECT id, name, is_admin \
 		FROM users \
 		WHERE username = $name";;
 
