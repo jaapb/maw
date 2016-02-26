@@ -217,15 +217,14 @@ let signup_page game_id () =
 ;;
 
 let do_signup_page game_id (edit, (is_group, (team, users))) =
-	let rec handle_inscriptions edit users prefs =
+	let rec handle_inscriptions edit group_id users prefs =
 		match users, prefs with
 		| uid::uids, (r, n)::prefs ->
-      (Ocsigen_messages.console (fun () -> Printf.sprintf "Handling user id %ld" uid);
-      Database.add_user game_id uid
+      Database.add_user game_id uid group_id
   		  (if String.lowercase team = "any" then None else Some team)
 			  (if String.lowercase r = "any" then None else Some r)
-			  n) >>=
-			fun () -> handle_inscriptions edit uids prefs
+			  n >>=
+			fun () -> handle_inscriptions edit group_id uids prefs
 		| _, _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -235,7 +234,7 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 		begin
 			Lwt_list.fold_left_s (fun (uids, prefs) x ->
 				match x with
-				| (Inj1 search, p) -> Ocsigen_messages.console (fun () -> Printf.sprintf "Searching for user %s" search);
+				| (Inj1 search, p) -> 
 					Database.search_for_user search >>=
 					fun res -> Lwt.return (res::uids, p::prefs)
 				| (Inj2 uid, p) -> Lwt.return (uid::uids, p::prefs)) ([], []) users >>=
@@ -250,7 +249,7 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 			end
 			else
 				Lwt.return None) >>=
-			fun gid -> handle_inscriptions edit uid_list pref_list >>=
+			fun gid -> handle_inscriptions edit gid uid_list pref_list >>=
 			fun () -> container (standard_menu ())
 			[
 				p [

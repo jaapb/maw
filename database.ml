@@ -115,7 +115,7 @@ let set_game_numbers game_id min max =
 		SET min_players = $min, max_players = $max \
 		WHERE id = $game_id";;
 
-let change_things dbh game_id uid team role =
+let change_things dbh game_id uid group_id team role =
 	(match team with
 	| None -> Lwt.return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
@@ -123,9 +123,14 @@ let change_things dbh game_id uid team role =
 	fun () -> (match role with
 	| None -> Lwt.return ()
 	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid");;
+			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid") >>=
+	fun () -> (match group_id with
+	| None -> Lwt.return ()
+	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
+			SET group_id = $g WHERE game_id = $game_id AND user_id = $uid")
+;;
 
-let add_user game_id uid team role note =
+let add_user game_id uid group_id team role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -140,7 +145,7 @@ let add_user game_id uid team role note =
 		| _ -> PGSQL(dbh) "UPDATE game_inscriptions \
 				SET note = $note \
 				WHERE game_id = $game_id AND user_id = $uid") >>=
-	  fun () -> change_things dbh game_id uid team role
+	  fun () -> change_things dbh game_id uid group_id team role
 	)
 ;;
 
