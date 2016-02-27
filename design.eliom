@@ -9,7 +9,6 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
 ]
 
 let design_service = service ~path:["design"] ~get_params:(suffix (int32 "game_id")) ();;
@@ -19,21 +18,24 @@ let remove_teams_service = post_service ~fallback:design_service ~post_params:(s
 let add_team_service = post_service ~fallback:design_service ~post_params:(string "team") ();;
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
+let casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _) -> 
-		let%lwt teams = Database.get_game_teams game_id in
-		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
 			Database.get_game_data game_id in
-		if uid = dsg_id then
+		if uid <> dsg_id then error_page "You are not the designer of this game."
+    else
+		let%lwt teams = Database.get_game_teams game_id in
+		let%lwt role_types = Database.get_game_role_types game_id in
 			container (standard_menu ())
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
+        p [a ~service:casting_service [pcdata "Cast this game"] game_id];
 				Form.post_form ~service:update_descr_service (fun descr -> [
 					table [
 						tr [
@@ -127,10 +129,6 @@ let design_page game_id () =
 					]
 				]) game_id
 			]
-			else container (standard_menu ())
-			[
-				p [pcdata "You are not the designer of this game."]
-			]
 	)
 	(function
 	| Not_found -> unknown_game ()
@@ -181,6 +179,52 @@ let add_role_type game_id role_type =
 	| Some (uid, _, _) -> Database.add_game_role_type game_id role_type
 ;;
 
+let casting_page game_id () =
+  let color_of group =
+    match group with
+    | None -> "white"
+    | Some 1l -> "red"
+    | Some 2l -> "orange"
+    | Some 3l -> "yellow"
+    | Some 4l -> "green"
+    | Some 5l -> "cyan"
+    | Some 6l -> "blue"
+    | Some 7l -> "magenta"
+    | _ -> "grey"
+  in
+  let%lwt u = Eliom_reference.get Maw.user in
+  match u with
+  | None -> not_logged_in ()
+  | Some (uid, _, _) -> let%lwt (title, _, _, _, dsg_id, _, _, _) =
+      Database.get_game_data game_id in
+    if uid <> dsg_id then error_page "You are not the designer of this game."
+    else
+    let%lwt inscr = Database.get_inscription_list game_id in
+    let%lwt teams = Database.get_game_teams game_id in
+    container (standard_menu ())
+    [
+      table ~a:[a_id "inscr_table"]
+      (tr [
+        th [pcdata "Players:"]
+       ]:: 
+       (List.map (fun (n, _, _, _, g) ->
+         tr [
+           td ~a:[a_style (Printf.sprintf "background-color: %s" (color_of g))]
+             [pcdata n]
+         ] 
+       ) inscr)
+      );
+      div ~a:[a_id "groups"]
+      (List.map (fun t ->
+        table ~a:[a_class ["group_table"]] [
+          tr [
+            th [pcdata t]
+          ]
+        ]
+      ) teams)
+    ]
+;;
+
 let () =
 	Maw_app.register ~service:design_service design_page;;
 	Eliom_registration.Action.register ~service:update_descr_service
@@ -194,5 +238,6 @@ let () =
 	Eliom_registration.Action.register ~service:remove_role_types_service
 		remove_role_types;
 	Eliom_registration.Action.register ~service:add_role_type_service
-		add_role_type
+		add_role_type;
+  Maw_app.register ~service:casting_service casting_page
 ;;

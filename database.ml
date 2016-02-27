@@ -173,7 +173,7 @@ let get_inscription_list game_id =
 	PGSQL(dbh) "SELECT name, team_name, role_type, note, group_id \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
-		ORDER BY inscription_time ASC";;
+		ORDER BY group_id ASC, inscription_time ASC";;
 
 let search_for_user search =
   get_db () >>= fun dbh ->
