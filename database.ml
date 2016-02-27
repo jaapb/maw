@@ -15,13 +15,19 @@ let get_db () =
 		end
 ;;
 
-let get_upcoming_games () =
+let get_upcoming_games ?no_date () =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, title, date, location \
+  match no_date with
+  | Some true -> PGSQL(dbh) "SELECT id, title, date, location \
+    FROM games \
+    WHERE date >= $today OR DATE IS NULL \
+    ORDER BY date ASC"
+  | _ -> PGSQL(dbh) "SELECT id, title, date, location \
 		FROM games \
 		WHERE date >= $today \
-		ORDER BY date ASC";;
+		ORDER BY date ASC"
+;;
 
 let get_user_games uid =
 	let today = CalendarLib.Date.today () in
@@ -218,4 +224,10 @@ let update_user_data uid email =
 	PGSQL(dbh) "UPDATE users \
 		SET email = $email \
 		WHERE id = $uid"
+;;
+
+let get_user_list () =
+  get_db () >>= fun dbh ->
+  PGSQL(dbh) "SELECT id, name \
+    FROM users"
 ;;

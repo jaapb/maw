@@ -34,6 +34,7 @@ let login_service = post_coservice'
 let logout_service = post_coservice'
 	~post_params:unit ();;
 let account_service = service ~path:["account"] ~get_params:unit ();;
+let admin_service = service ~path:["admin"] ~get_params:unit ();;
 
 (* Login bits and pieces *)
 
@@ -101,7 +102,7 @@ let standard_menu () =
 				td [a ~service:account_service [pcdata "My account"] ()]
 			]::
 			(if is_admin
-			then [tr [td [pcdata "Admin"]]]
+			then [tr [td [a ~service:admin_service [b [pcdata "Admin"]] ()]]]
 			else [])
 		)]
 ;;
