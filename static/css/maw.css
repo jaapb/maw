@@ -49,6 +49,27 @@ div#footer
 	left: 1%;
 }
 
+table#inscr_table
+{
+  border: solid 1px black;
+}
+
+div#groups
+{
+  border: none;
+}
+
+div#groups table
+{
+  border: solid 1px black;
+}
+
+div#groups th
+{
+  background-color: black;
+  color: white;
+}
+
 fieldset
 {
 	border-style: none;
