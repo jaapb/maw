@@ -9,7 +9,6 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
 ]
 
 let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
@@ -19,7 +18,6 @@ let do_signup_service = post_service ~fallback:signup_service ~post_params:(
 	list "person" (sum (string "search") (int32 "uid") ** string "role_type" ** string "note")
 ) ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
-(*let add_friend_service = post_service ~fallback:signup_service ~post_params:(string "identifier") ();;*)
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_name d full =
