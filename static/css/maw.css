@@ -70,7 +70,57 @@ div#groups th
   color: white;
 }
 
-fieldset
+table#inscr_table td
 {
-	border-style: none;
+  border-width: 3px;
+  border-style: solid;
+  border-color: white;
+}
+
+table#inscr_table td.active
+{
+  border-color: #000000;
+}
+
+table#inscr_table td.group0
+{
+  background-color: #ffffff;
+  color: white;
+}
+
+table#inscr_table td.group1
+{
+  background-color: #0000ff;
+  border-color: #0000ff;
+  color: white;
+}
+
+table#inscr_table td.group1.active
+{
+  border-color: #000080;
+}
+
+table#inscr_table td.group2
+{
+  background-color: #ff0000;
+}
+
+table#inscr_table td.group3
+{
+  background-color: #ff00ff;
+}
+
+table#inscr_table td.group4
+{
+  background-color: #00ff00;
+}
+
+table#inscr_table td.group5
+{
+  background-color: #00ffff;
+}
+
+table#inscr_table td.group6
+{
+  background-color: #ffff00;
 }

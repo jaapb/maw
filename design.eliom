@@ -180,18 +180,6 @@ let add_role_type game_id role_type =
 ;;
 
 let casting_page game_id () =
-  let color_of group =
-    match group with
-    | None -> "white"
-    | Some 1l -> "red"
-    | Some 2l -> "orange"
-    | Some 3l -> "yellow"
-    | Some 4l -> "green"
-    | Some 5l -> "cyan"
-    | Some 6l -> "blue"
-    | Some 7l -> "magenta"
-    | _ -> "grey"
-  in
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
@@ -209,7 +197,18 @@ let casting_page game_id () =
        ]:: 
        (List.map (fun (n, _, _, _, g) ->
          tr [
-           td ~a:[a_style (Printf.sprintf "background-color: %s" (color_of g))]
+           td ~a:[
+            a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
+            a_onclick [%client (fun ev -> 
+              Js.Opt.iter (ev##.target) (fun e ->
+                if Js.to_bool (e##.classList##contains (Js.string "active"))
+                then
+                  e##.classList##remove (Js.string "active")
+                else
+                  e##.classList##add (Js.string "active") 
+              )
+            )]
+           ]
              [pcdata n]
          ] 
        ) inscr)
