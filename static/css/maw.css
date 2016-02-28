@@ -68,6 +68,7 @@ div#groups th
 {
   background-color: black;
   color: white;
+  cursor: default;
 }
 
 table#inscr_table td
@@ -75,8 +76,14 @@ table#inscr_table td
   border-width: 3px;
   border-style: solid;
   border-color: white;
+  cursor: default;
 }
 
+table#inscr_table td:hover
+{
+  background-color: #c0c0c0;
+}
+  
 table#inscr_table td.active
 {
   border-color: #000000;
@@ -98,6 +105,11 @@ table#inscr_table td.group1
   background-color: #0000ff;
   border-color: #0000ff;
   color: white;
+}
+
+table#inscr_table td.group1:hover
+{
+  background-color: #add8e6;
 }
 
 table#inscr_table td.group1.active
