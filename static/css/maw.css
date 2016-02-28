@@ -88,6 +88,11 @@ table#inscr_table td.group0
   color: white;
 }
 
+table#inscr_table td.group1.active
+{
+  border-color: #000080;
+}
+
 table#inscr_table td.group1
 {
   background-color: #0000ff;
@@ -105,9 +110,19 @@ table#inscr_table td.group2
   background-color: #ff0000;
 }
 
+table#inscr_table td.group2.active
+{
+  border-color: #800000;
+}
+
 table#inscr_table td.group3
 {
   background-color: #ff00ff;
+}
+
+table#inscr_table td.group3.active
+{
+  border-color: #800080;
 }
 
 table#inscr_table td.group4
@@ -115,12 +130,27 @@ table#inscr_table td.group4
   background-color: #00ff00;
 }
 
+table#inscr_table td.group4.active
+{
+  border-color: #008000;
+}
+
 table#inscr_table td.group5
 {
   background-color: #00ffff;
 }
 
+table#inscr_table td.group5.active
+{
+  border-color: #008080;
+}
+
 table#inscr_table td.group6
 {
   background-color: #ffff00;
+}
+
+table#inscr_table td.group6.active
+{
+  border-color: #808000;
 }
