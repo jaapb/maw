@@ -2,7 +2,7 @@
     font-family: sans-serif;
 }
 
-div
+div.layout
 {
 	position: absolute;
 	margin: 0;
@@ -49,14 +49,28 @@ div#footer
 	left: 1%;
 }
 
-table#inscr_table
+div#players
 {
-  border: solid 1px black;
+	position: absolute;
+	left: 1%;
+	top: 1%;
+	height: 98%;
+	width: 20%;
 }
 
 div#groups
 {
-  border: none;
+	position: absolute;
+	right: 1%;
+	top: 1%;
+	height: 98%;
+	width: 75%;
+}
+
+table#inscr_table
+{
+  border: solid 1px black;
+	width: 100%;
 }
 
 div#groups table
@@ -71,7 +85,7 @@ div#groups th
   cursor: default;
 }
 
-table#inscr_table td
+table.casting td
 {
   border-width: 3px;
   border-style: solid;
@@ -79,90 +93,95 @@ table#inscr_table td
   cursor: default;
 }
 
-table#inscr_table td:hover
+table.casting td:hover
 {
   background-color: #c0c0c0;
 }
   
-table#inscr_table td.active
+table.casting td.active
 {
   border-color: #000000;
 }
 
-table#inscr_table td.group0
+table.casting td.group0
 {
   background-color: #ffffff;
   color: white;
 }
 
-table#inscr_table td.group1.active
+table.casting td.group1.active
 {
   border-color: #000080;
 }
 
-table#inscr_table td.group1
+table.casting td.group1
 {
   background-color: #0000ff;
   border-color: #0000ff;
   color: white;
 }
 
-table#inscr_table td.group1:hover
+table.casting td.group1:hover
 {
   background-color: #add8e6;
 }
 
-table#inscr_table td.group1.active
+table.casting td.group1.active
 {
   border-color: #000080;
 }
 
-table#inscr_table td.group2
+table.casting td.group2
 {
   background-color: #ff0000;
 }
 
-table#inscr_table td.group2.active
+table.casting td.group2.active
 {
   border-color: #800000;
 }
 
-table#inscr_table td.group3
+table.casting td.group3
 {
   background-color: #ff00ff;
 }
 
-table#inscr_table td.group3.active
+table.casting td.group3.active
 {
   border-color: #800080;
 }
 
-table#inscr_table td.group4
+table.casting td.group4
 {
   background-color: #00ff00;
 }
 
-table#inscr_table td.group4.active
+table.casting td.group4.active
 {
   border-color: #008000;
 }
 
-table#inscr_table td.group5
+table.casting td.group5
 {
   background-color: #00ffff;
 }
 
-table#inscr_table td.group5.active
+table.casting td.group5.active
 {
   border-color: #008080;
 }
 
-table#inscr_table td.group6
+table.casting td.group6
 {
   background-color: #ffff00;
 }
 
-table#inscr_table td.group6.active
+table.casting td.group6.active
 {
   border-color: #808000;
+}
+
+div#groups table
+{
+	margin: 5px;
 }

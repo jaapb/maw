@@ -179,6 +179,14 @@ let add_role_type game_id role_type =
 	| Some (uid, _, _) -> Database.add_game_role_type game_id role_type
 ;;
 
+let%client switch_active ev =
+ 	Js.Opt.iter (ev##.target) (fun e ->
+		if Js.to_bool (e##.classList##contains (Js.string "active"))
+		then e##.classList##remove (Js.string "active")
+		else e##.classList##add (Js.string "active") 
+	)
+;;
+
 let casting_page game_id () =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
@@ -191,36 +199,28 @@ let casting_page game_id () =
     let%lwt teams = Database.get_game_teams game_id in
     container (standard_menu ())
     [
-      table ~a:[a_id "inscr_table"]
-      (tr [
-        th [pcdata "Players:"]
-       ]:: 
-       (List.map (fun (n, _, _, _, g) ->
-         tr [
-           td ~a:[
-            a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
-            a_onclick [%client (fun ev -> 
-              Js.Opt.iter (ev##.target) (fun e ->
-                if Js.to_bool (e##.classList##contains (Js.string "active"))
-                then
-                  e##.classList##remove (Js.string "active")
-                else
-                  e##.classList##add (Js.string "active") 
-              )
-            )]
-           ]
-             [pcdata n]
+			div ~a:[a_id "players"]
+			[
+				h2 [pcdata "Players"];
+      	table ~a:[a_id "inscr_table"]
+       	(List.map (fun (n, _, _, _, g) ->
+       		tr [
+       	  	td ~a:[
+         	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
+         	   	a_onclick [%client switch_active]
+           	] [pcdata n]
          ] 
        ) inscr)
-      );
-      div ~a:[a_id "groups"]
-      (List.map (fun t ->
-        table ~a:[a_class ["group_table"]] [
-          tr [
+			];
+      div ~a:[a_id "groups"] (
+				h2 [pcdata "Groups"]::
+      	List.map (fun t ->
+       	 table ~a:[a_class ["group_table"]] [
+         	tr [
             th [pcdata t]
-          ]
-        ]
-      ) teams)
+          ]]
+      	) teams
+			)
     ]
 ;;
 

@@ -115,11 +115,11 @@ let container menu_thread cts_div =
 		~title:"maw"
 		~css:[["css";"maw.css"]]
 		Html5.F.(body [
-			div ~a:[a_id "header"] [h1 [pcdata "MAW"]];
-			div ~a:[a_id "logbox"] box;
-			div ~a:[a_id "menu"] menu_div;
-			div ~a:[a_id "contents"] cts_div;
-			div ~a:[a_id "footer"] [
+			div ~a:[a_class ["layout"]; a_id "header"] [h1 [pcdata "MAW"]];
+			div ~a:[a_class ["layout"]; a_id "logbox"] box;
+			div ~a:[a_class ["layout"]; a_id "menu"] menu_div;
+			div ~a:[a_class ["layout"]; a_id "contents"] cts_div;
+			div ~a:[a_class ["layout"]; a_id "footer"] [
 				img ~alt:"Powered by Ocsigen"
 				~src:(make_uri ~service:(Eliom_service.static_dir ())
 					["ocsigen-powered.png"]) ()
