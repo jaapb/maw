@@ -187,6 +187,27 @@ let%client switch_active ev =
 	)
 ;;
 
+let%client do_move ev =
+	let it = Dom_html.getElementById "inscr_table" in
+	Js.Opt.iter (ev##.target) (fun x ->
+		Js.Opt.iter (x##.parentNode) (fun y ->
+			Js.Opt.iter (y##.parentNode) (fun dst ->
+				List.iter (fun tr ->
+					List.iter (fun td ->
+						Js.Opt.iter (Dom_html.CoerceTo.element td) (fun e ->
+							if Js.to_bool (e##.classList##contains (Js.string "active"))
+							then begin
+								Dom.appendChild dst tr;
+								e##.classList##remove (Js.string "active")
+							end
+						)
+					) (Dom.list_of_nodeList tr##.childNodes)
+				) (Dom.list_of_nodeList it##.childNodes)
+			)
+		)
+	)
+;;
+
 let casting_page game_id () =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
@@ -202,7 +223,7 @@ let casting_page game_id () =
 			div ~a:[a_id "players"]
 			[
 				h2 [pcdata "Players"];
-      	table ~a:[a_id "inscr_table"]
+      	table ~a:[a_class ["casting"]; a_id "inscr_table"]
        	(List.map (fun (n, _, _, _, g) ->
        		tr [
        	  	td ~a:[
@@ -215,9 +236,9 @@ let casting_page game_id () =
       div ~a:[a_id "groups"] (
 				h2 [pcdata "Groups"]::
       	List.map (fun t ->
-       	 table ~a:[a_class ["group_table"]] [
+       	 table ~a:[a_class ["casting"; "group_table"]] [
          	tr [
-            th [pcdata t]
+            th ~a:[a_onclick [%client do_move]] [pcdata t]
           ]]
       	) teams
 			)
