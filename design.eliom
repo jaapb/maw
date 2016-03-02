@@ -189,22 +189,36 @@ let%client switch_active ev =
 
 let%client do_move ev =
 	let it = Dom_html.getElementById "inscr_table" in
-	Js.Opt.iter (ev##.target) (fun x ->
-		Js.Opt.iter (x##.parentNode) (fun y ->
-			Js.Opt.iter (y##.parentNode) (fun dst ->
-				List.iter (fun tr ->
-					List.iter (fun td ->
-						Js.Opt.iter (Dom_html.CoerceTo.element td) (fun e ->
+	let gd = Dom_html.getElementById "groups" in
+	Js.Opt.iter (ev##.target) (fun gt_th ->
+		Js.Opt.iter (gt_th##.parentNode) (fun gt_tr ->
+			Js.Opt.iter (gt_tr##.parentNode) (fun dst ->
+				List.iter (fun it_tr ->
+					List.iter (fun it_td ->
+						Js.Opt.iter (Dom_html.CoerceTo.element it_td) (fun e ->
 							if Js.to_bool (e##.classList##contains (Js.string "active"))
 							then begin
-								Dom.appendChild dst tr;
+								Dom.appendChild dst it_tr;
 								e##.classList##remove (Js.string "active")
 							end
 						)
-					) (Dom.list_of_nodeList tr##.childNodes)
-				) (Dom.list_of_nodeList it##.childNodes)
+					) (Dom.list_of_nodeList it_tr##.childNodes)
+				) (Dom.list_of_nodeList it##.childNodes);
+				List.iter (fun gd_table ->
+					List.iter (fun gd_tr -> 
+						List.iter (fun gd_td -> 
+							Js.Opt.iter (Dom_html.CoerceTo.element gd_td) (fun e ->
+								if Js.to_bool (e##.classList##contains (Js.string "active"))
+								then begin
+									Dom.appendChild dst gd_tr;
+									e##.classList##remove (Js.string "active")
+								end
+							)
+						) (Dom.list_of_nodeList gd_tr##.childNodes)
+					) (Dom.list_of_nodeList gd_table##.childNodes)
+				) (Dom.list_of_nodeList gd##.childNodes)
 			)
-		)
+		);
 	)
 ;;
 
@@ -224,12 +238,13 @@ let casting_page game_id () =
 			[
 				h2 [pcdata "Players"];
       	table ~a:[a_class ["casting"]; a_id "inscr_table"]
-       	(List.map (fun (n, _, _, _, g) ->
+       	(List.map (fun (nm, _, _, n, g) ->
        		tr [
        	  	td ~a:[
          	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
-         	   	a_onclick [%client switch_active]
-           	] [pcdata n]
+         	   	a_onclick [%client switch_active];
+							a_title n
+           	] [pcdata nm]
          ] 
        ) inscr)
 			];
