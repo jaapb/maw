@@ -176,16 +176,16 @@ ${ELIOM_SERVER_DIR}/%.cmi: %.eliomi
 
 ## Special rule for SQL files
 ${ELIOM_SERVER_DIR}/database.cmo: database.ml
-	PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD} \
-    ocamlfind ocamlc -package pgocaml.syntax,lwt \
+#	PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
+	ocamlfind ocamlc -package pgocaml.syntax,lwt \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 ${ELIOM_SERVER_DIR}/database.cmx: database.ml
-	PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD} \
-    ocamlfind ocamlopt -package pgocaml.syntax,lwt \
+# PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
+	ocamlfind ocamlopt -package pgocaml.syntax,lwt \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 $(DEPSDIR)/database.ml.server: database.ml | $(DEPSDIR)
-	PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD} \
-    ocamlfind ocamldep -package pgocaml.syntax \
+# PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
+	ocamlfind ocamldep -package pgocaml.syntax \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} $< > $@
 
 ${ELIOM_SERVER_DIR}/%.cmo: %.ml
