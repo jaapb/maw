@@ -64,13 +64,34 @@ let game_page game_id () =
 	)
 ;;
 
+let%client rec renumber_children n trs =
+	match trs with
+	| [] -> ()
+	| h::t -> Js.Opt.iter (Dom_html.CoerceTo.element h) (fun tr ->
+			if Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
+			begin
+				let td_name::td_role::td_note::_ =
+					Dom.list_of_nodeList tr##.childNodes in
+				let input_name::_ = Dom.list_of_nodeList td_name##.childNodes in	
+				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
+				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
+					Js.Unsafe.set input_name "name" (Printf.sprintf "person.uid[%d]" n);
+					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
+					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
+					renumber_children (n+1) t
+			end
+			else renumber_children n t
+		)
+;;
+
 let%client remove_my_row ev =
   (* button -> in td -> in tr: delete this tr! *)
   Js.Opt.iter (ev##.target) (fun e ->
-    Js.Opt.iter (e##.parentNode) (fun p -> (* this is the td *)
-      Js.Opt.iter (p##.parentNode) (fun gp -> (* this is the tr *)
-        Js.Opt.iter (gp##.parentNode) (fun ggp -> (* this is the table *)
-          Dom.removeChild ggp gp
+    Js.Opt.iter (e##.parentNode) (fun td ->
+      Js.Opt.iter (td##.parentNode) (fun tr ->
+        Js.Opt.iter (tr##.parentNode) (fun table ->
+          Dom.removeChild table tr;
+					renumber_children 1 (Dom.list_of_nodeList table##.childNodes)
         )
       )
     )
