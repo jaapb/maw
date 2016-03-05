@@ -19,6 +19,7 @@ let add_team_service = post_service ~fallback:design_service ~post_params:(strin
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
 let casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
+let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (list "member" (string "role" ** int32 "user_id"))) ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -260,6 +261,13 @@ let casting_page game_id () =
     ]
 ;;
 
+let do_casting_page game_id gniarf =
+	container (standard_menu ())
+	[
+		p [pcdata "Yeah, okay."]
+	]
+;;
+
 let () =
 	Maw_app.register ~service:design_service design_page;;
 	Eliom_registration.Action.register ~service:update_descr_service
@@ -274,5 +282,6 @@ let () =
 		remove_role_types;
 	Eliom_registration.Action.register ~service:add_role_type_service
 		add_role_type;
-  Maw_app.register ~service:casting_service casting_page
+  Maw_app.register ~service:casting_service casting_page;
+	Maw_app.register ~service:do_casting_service do_casting_page
 ;;
