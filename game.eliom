@@ -75,7 +75,7 @@ let%client rec renumber_children n trs =
 				let input_name::_ = Dom.list_of_nodeList td_name##.childNodes in	
 				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
-					Js.Unsafe.set input_name "name" (Printf.sprintf "person.uid[%d]" n);
+					Js.Unsafe.set input_name "name" (Printf.sprintf "person.search[%d]" n);
 					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
 					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
 					renumber_children (n+1) t
@@ -164,6 +164,7 @@ let signup_page game_id () =
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
 			then inscr 
 			else (uid, uname, None, None, "", None)::inscr in
+		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
 		container (standard_menu ())
 		[
 			h1 [pcdata title];
@@ -221,23 +222,18 @@ let signup_page game_id () =
 						]::
 						init
 					) me_inscr
-					(
-						cond_list
-							(List.length me_inscr > 1)
-							(new_row (List.length me_inscr) teams)
-							[
-								tr ~a:[a_id "button_row"] [
-									td ~a:[a_id "button_field"; a_colspan 4] (
-									cond_list
-										(List.length me_inscr > 1)
-										(new_button teams)
-										(Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
-										if signed_up
-										then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
-										else [])
-								)]	
-							]
-					)
+					[
+						tr ~a:[a_id "button_row"] [
+							td ~a:[a_id "button_field"; a_colspan 4] (
+							cond_list
+								(List.length me_inscr > 1)
+								(new_button teams)
+								(Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+								if signed_up
+								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
+								else [])
+						)]	
+					]
 				)
 			]) game_id
 		]
