@@ -26,6 +26,9 @@ let date_or_tbd date =
 	| Some d -> CalendarLib.Printer.Date.sprint "%d %B %Y" d
 ;;
 
+let cond_list c h t =
+	if c then h::t else t
+
 (* Services *)
 
 let dashboard_service = service ~path:[] ~get_params:unit ();;

@@ -149,8 +149,6 @@ let%client group_inscription_handler teams ev =
 	)
 ;;
 
-let cond_list c h t =
-	if c then h::t else t
 let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
