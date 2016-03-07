@@ -54,7 +54,7 @@ div#players
 	position: absolute;
 	left: 1%;
 	top: 1%;
-	height: 98%;
+	height: 86%;
 	width: 20%;
 }
 
@@ -65,6 +65,15 @@ div#teams
 	top: 1%;
 	height: 98%;
 	width: 75%;
+}
+
+div#buttons
+{
+  position: absolute;
+  right: 1%;
+  top: 88%;
+  height: 10%;
+  width: 98%;
 }
 
 table#inscr_table
@@ -88,6 +97,8 @@ div#teams th.team_name
 
 div#teams th.header
 {
+  font-size: small;
+  font-style: italic;
 }
 
 table.casting td

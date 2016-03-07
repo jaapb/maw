@@ -181,6 +181,7 @@ let add_role_type game_id role_type =
 ;;
 
 let%client switch_active ev =
+  Eliom_lib.alert "switch_active";
  	Js.Opt.iter (ev##.target) (fun e ->
 		if Js.to_bool (e##.classList##contains (Js.string "active"))
 		then e##.classList##remove (Js.string "active")
@@ -241,38 +242,44 @@ let casting_page game_id () =
     let%lwt teams = Database.get_game_teams game_id in
     container (standard_menu ())
     [
-			div ~a:[a_id "players"]
-			[
-				h2 [pcdata "Players"];
-      	table ~a:[a_class ["casting"]; a_id "inscr_table"]
-       	(List.map (fun (nm, _, _, n, g) ->
-       		tr [
-       	  	td ~a:[
-         	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
-         	   	a_onclick [%client switch_active];
-							a_title n
-           	] [pcdata nm]
-         ] 
-       ) inscr)
-			];
-      div ~a:[a_id "teams"] (
-				h2 [pcdata "Teams"]::
-      	List.map (fun t ->
-       	 table ~a:[a_class ["casting"; "team_table"]] [
-         	tr [
-            th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
-              a_colspan 2] [pcdata t];
-          ];
-          tr [
-            th ~a:[a_class ["header"]] [pcdata "Role"];
-            th ~a:[a_class ["header"]] [pcdata "Name"]
-          ]]
-      	) teams
-			)
+      Form.post_form ~service:do_casting_service (fun team ->
+      [
+			  div ~a:[a_id "players"]
+			  [
+			  	h2 [pcdata "Players"];
+        	table ~a:[a_class ["casting"]; a_id "inscr_table"]
+        	(List.map (fun (nm, _, _, n, g) ->
+        		tr [
+        	  	td ~a:[
+          	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
+          	   	a_onclick [%client switch_active];
+							  a_title n
+            	] [pcdata nm]
+            ]
+          ) inscr)
+			  ];
+        div ~a:[a_id "teams"] (
+			  	h2 [pcdata "Teams"]::
+      	  List.map (fun t ->
+       	    table ~a:[a_class ["casting"; "team_table"]] [
+         	   tr [
+               th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
+                 a_colspan 2] [pcdata t];
+             ];
+             tr [
+               th ~a:[a_class ["header"]] [pcdata "Role"];
+               th ~a:[a_class ["header"]] [pcdata "Name"]
+             ]]
+      	  ) teams
+        );
+        div ~a:[a_id "buttons"] [
+          Form.input ~input_type:`Submit ~value:"Save casting" Form.string
+        ]
+			 ]) game_id
     ]
 ;;
 
-let do_casting_page game_id gniarf =
+let do_casting_page game_id team =
 	container (standard_menu ())
 	[
 		p [pcdata "Yeah, okay."]
