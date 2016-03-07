@@ -58,7 +58,7 @@ div#players
 	width: 20%;
 }
 
-div#groups
+div#teams
 {
 	position: absolute;
 	right: 1%;
@@ -73,16 +73,21 @@ table#inscr_table
 	width: 100%;
 }
 
-div#groups table
+div#teams table
 {
   border: solid 1px black;
+	margin: 5px;
 }
 
-div#groups th
+div#teams th.team_name
 {
   background-color: black;
   color: white;
   cursor: default;
+}
+
+div#teams th.header
+{
 }
 
 table.casting td
@@ -179,9 +184,4 @@ table.casting td.group6
 table.casting td.group6.active
 {
   border-color: #808000;
-}
-
-div#groups table
-{
-	margin: 5px;
 }

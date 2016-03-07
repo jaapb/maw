@@ -1,7 +1,7 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content
-	open Html5.D
+	open Eliom_content.Html5
+	open Eliom_content.Html5.D
 	open Eliom_service.App
 	open Eliom_parameter
 ]
@@ -188,9 +188,12 @@ let%client switch_active ev =
 	)
 ;;
 
+let%client new_input () =
+  To_dom.of_element (Raw.input ~a:[a_input_type `Text; a_value ""] ());;
+
 let%client do_move ev =
 	let it = Dom_html.getElementById "inscr_table" in
-	let gd = Dom_html.getElementById "groups" in
+	let td = Dom_html.getElementById "teams" in
 	Js.Opt.iter (ev##.target) (fun gt_th ->
 		Js.Opt.iter (gt_th##.parentNode) (fun gt_tr ->
 			Js.Opt.iter (gt_tr##.parentNode) (fun dst ->
@@ -199,25 +202,28 @@ let%client do_move ev =
 						Js.Opt.iter (Dom_html.CoerceTo.element it_td) (fun e ->
 							if Js.to_bool (e##.classList##contains (Js.string "active"))
 							then begin
+                if List.length (Dom.list_of_nodeList it_tr##.childNodes) = 1
+                then 
+                  Dom.insertBefore it_tr (new_input ()) (Js.some it_td);
 								Dom.appendChild dst it_tr;
 								e##.classList##remove (Js.string "active")
 							end
 						)
 					) (Dom.list_of_nodeList it_tr##.childNodes)
 				) (Dom.list_of_nodeList it##.childNodes);
-				List.iter (fun gd_table ->
-					List.iter (fun gd_tr -> 
-						List.iter (fun gd_td -> 
-							Js.Opt.iter (Dom_html.CoerceTo.element gd_td) (fun e ->
+				List.iter (fun td_table ->
+					List.iter (fun td_tr -> 
+						List.iter (fun td_td -> 
+							Js.Opt.iter (Dom_html.CoerceTo.element td_td) (fun e ->
 								if Js.to_bool (e##.classList##contains (Js.string "active"))
 								then begin
-									Dom.appendChild dst gd_tr;
+									Dom.appendChild dst td_tr;
 									e##.classList##remove (Js.string "active")
 								end
 							)
-						) (Dom.list_of_nodeList gd_tr##.childNodes)
-					) (Dom.list_of_nodeList gd_table##.childNodes)
-				) (Dom.list_of_nodeList gd##.childNodes)
+						) (Dom.list_of_nodeList td_tr##.childNodes)
+					) (Dom.list_of_nodeList td_table##.childNodes)
+				) (Dom.list_of_nodeList td##.childNodes)
 			)
 		);
 	)
@@ -249,12 +255,17 @@ let casting_page game_id () =
          ] 
        ) inscr)
 			];
-      div ~a:[a_id "groups"] (
-				h2 [pcdata "Groups"]::
+      div ~a:[a_id "teams"] (
+				h2 [pcdata "Teams"]::
       	List.map (fun t ->
-       	 table ~a:[a_class ["casting"; "group_table"]] [
+       	 table ~a:[a_class ["casting"; "team_table"]] [
          	tr [
-            th ~a:[a_onclick [%client do_move]] [pcdata t]
+            th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
+              a_colspan 2] [pcdata t];
+          ];
+          tr [
+            th ~a:[a_class ["header"]] [pcdata "Role"];
+            th ~a:[a_class ["header"]] [pcdata "Name"]
           ]]
       	) teams
 			)
