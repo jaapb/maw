@@ -170,7 +170,7 @@ let get_inscription_data uid game_id =
 
 let get_inscription_list game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name, team_name, role_type, note, group_id \
+	PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY group_id ASC, inscription_time ASC";;
@@ -230,4 +230,11 @@ let get_user_list () =
   get_db () >>= fun dbh ->
   PGSQL(dbh) "SELECT id, name \
     FROM users"
+;;
+
+let add_casting game_id team_name role_name user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO game_casting \
+		(game_id, team_name, role_name, user_id) \
+		VALUES ($game_id, $team_name, $role_name, $user_id)"
 ;;

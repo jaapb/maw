@@ -196,8 +196,8 @@ let signup_page game_id () =
 						th [pcdata "Note"];
             th [];
 					]::
-					person.it (fun ((search, uid), (role_type, note)) v init ->
-						let (ex_uid, ex_name, _, r, ex_note, _) = v in
+					person.it (fun ((search, uid), (role_type, note))
+						(ex_uid, ex_name, _, r, ex_note, _) init ->
 						let ex_role = default "Any" r in
 						tr [
 							td [
@@ -311,7 +311,7 @@ let show_inscriptions_page game_id () =
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (nm, g, r, nt, _) ->
+						List.map (fun (nm, _, g, r, nt, _) ->
 							tr [
 								td [pcdata nm];
 								td [pcdata (default "Any" g)];

@@ -19,7 +19,7 @@ let add_team_service = post_service ~fallback:design_service ~post_params:(strin
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
 let casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (list "member" (string "role" ** int32 "user_id"))) ();;
+let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id"))) ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -181,7 +181,6 @@ let add_role_type game_id role_type =
 ;;
 
 let%client switch_active ev =
-  Eliom_lib.alert "switch_active";
  	Js.Opt.iter (ev##.target) (fun e ->
 		if Js.to_bool (e##.classList##contains (Js.string "active"))
 		then e##.classList##remove (Js.string "active")
@@ -190,7 +189,9 @@ let%client switch_active ev =
 ;;
 
 let%client new_input () =
-  To_dom.of_element (Raw.input ~a:[a_input_type `Text; a_value ""] ());;
+  To_dom.of_element (td [
+		Raw.input ~a:[a_input_type `Text; a_value ""] ()
+	]);;
 
 let%client do_move ev =
 	let it = Dom_html.getElementById "inscr_table" in
@@ -214,20 +215,41 @@ let%client do_move ev =
 				) (Dom.list_of_nodeList it##.childNodes);
 				List.iter (fun td_table ->
 					List.iter (fun td_tr -> 
-						List.iter (fun td_td -> 
-							Js.Opt.iter (Dom_html.CoerceTo.element td_td) (fun e ->
-								if Js.to_bool (e##.classList##contains (Js.string "active"))
-								then begin
-									Dom.appendChild dst td_tr;
-									e##.classList##remove (Js.string "active")
-								end
-							)
-						) (Dom.list_of_nodeList td_tr##.childNodes)
+						List.iter (fun e -> Js.Opt.iter (Dom_html.CoerceTo.element e) (fun td_td ->
+							if Js.to_bool (td_td##.classList##contains (Js.string "active"))
+							then begin
+								Dom.appendChild dst td_tr;
+								td_td##.classList##remove (Js.string "active")
+							end
+						)) (Dom.list_of_nodeList td_tr##.childNodes)
 					) (Dom.list_of_nodeList td_table##.childNodes)
 				) (Dom.list_of_nodeList td##.childNodes)
 			)
 		);
 	)
+;;
+
+let%client before_submit ev =
+	let td = Dom_html.getElementById "teams" in
+	let team_nr = ref 0 in
+	List.iter (fun e -> Js.Opt.iter (Dom_html.CoerceTo.element e) (fun td_table ->
+		if Js.to_bool (td_table##.classList##contains (Js.string "team_table")) then
+		begin
+			let player_nr = ref 0 in
+			List.iter (fun e -> Js.Opt.iter (Dom_html.CoerceTo.element e) (fun td_tr ->
+				if Js.to_bool (td_tr##.classList##contains (Js.string "player_row")) then
+				let td_role::td_pid::_ = Dom.list_of_nodeList td_tr##.childNodes in
+				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in
+				let input_pid::_ = Dom.list_of_nodeList td_pid##.childNodes in	
+				begin
+					Js.Unsafe.set input_role "name" (Printf.sprintf "team.member[%d].role[%d]" !team_nr !player_nr);
+					Js.Unsafe.set input_pid "name" (Printf.sprintf "team.member[%d].id[%d]" !team_nr !player_nr);
+					incr player_nr
+				end
+			)) (Dom.list_of_nodeList td_table##.childNodes);
+			incr team_nr
+		end
+	)) (Dom.list_of_nodeList td##.childNodes)
 ;;
 
 let casting_page game_id () =
@@ -248,41 +270,59 @@ let casting_page game_id () =
 			  [
 			  	h2 [pcdata "Players"];
         	table ~a:[a_class ["casting"]; a_id "inscr_table"]
-        	(List.map (fun (nm, _, _, n, g) ->
-        		tr [
+        	(List.map (fun (nm, p_id, _, _, n, g) ->
+        		tr ~a:[a_class ["player_row"]] [
         	  	td ~a:[
           	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
           	   	a_onclick [%client switch_active];
 							  a_title n
-            	] [pcdata nm]
+            	] [
+								Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
+								pcdata nm
+							]
             ]
           ) inscr)
 			  ];
         div ~a:[a_id "teams"] (
 			  	h2 [pcdata "Teams"]::
-      	  List.map (fun t ->
+					team.it (fun (t_name, _) t init ->
        	    table ~a:[a_class ["casting"; "team_table"]] [
          	   tr [
                th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
-                 a_colspan 2] [pcdata t];
+                 a_colspan 2] [
+								 Form.input ~input_type:`Hidden ~name:t_name ~value:t Form.string;
+								 pcdata t
+							 ];
              ];
              tr [
                th ~a:[a_class ["header"]] [pcdata "Role"];
                th ~a:[a_class ["header"]] [pcdata "Name"]
-             ]]
+             ]]::init
       	  ) teams
+					[]
         );
         div ~a:[a_id "buttons"] [
-          Form.input ~input_type:`Submit ~value:"Save casting" Form.string
+          Form.input ~input_type:`Submit ~value:"Save casting"
+					~a:[a_onclick [%client before_submit]] Form.string
         ]
 			 ]) game_id
     ]
 ;;
 
-let do_casting_page game_id team =
-	container (standard_menu ())
+let do_casting_page game_id teams =
+	let%lwt u = Eliom_reference.get Maw.user in
+	(match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _) -> 
+		Lwt_list.iter_s (fun (name, members) ->
+			Lwt_list.iter_s (fun (role, pid) ->
+				Database.add_casting game_id name role pid
+			) members
+		) teams) >>=
+	fun () -> container (standard_menu ())
 	[
-		p [pcdata "Yeah, okay."]
+		h1 [pcdata "Casting"];
+		p [pcdata "Casting saved."]
 	]
 ;;
 
