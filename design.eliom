@@ -19,7 +19,7 @@ let add_team_service = post_service ~fallback:design_service ~post_params:(strin
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
 let casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id"))) ();;
+let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish") ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -262,9 +262,10 @@ let casting_page game_id () =
     else
     let%lwt inscr = Database.get_inscription_list game_id in
     let%lwt teams = Database.get_game_teams game_id in
+		let%lwt pub = Database.is_published game_id in
     container (standard_menu ())
     [
-      Form.post_form ~service:do_casting_service (fun team ->
+      Form.post_form ~service:do_casting_service (fun (team, publish) ->
       [
 			  div ~a:[a_id "players"]
 			  [
@@ -301,15 +302,25 @@ let casting_page game_id () =
       	  ) teams
 					[]
         );
-        div ~a:[a_id "buttons"] [
-          Form.input ~input_type:`Submit ~value:"Save casting"
-					~a:[a_onclick [%client before_submit]] Form.string
+        div ~a:[a_id "general"] [
+					table [
+						tr [
+							td [pcdata "Publish casting: ";
+								Form.input ~input_type:`Checkbox ~name:publish ~value:pub
+								~a:(if pub then [a_disabled `Disabled] else []) Form.bool]
+						];
+						tr [
+          		td [Form.input ~input_type:`Submit ~value:"Save casting"
+								~a:[a_onclick [%client before_submit]] Form.string
+							]
+						]
+					]
         ]
 			 ]) game_id
     ]
 ;;
 
-let do_casting_page game_id teams =
+let do_casting_page game_id (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
 	| None -> Lwt.return ()
@@ -319,10 +330,14 @@ let do_casting_page game_id teams =
 				Database.add_casting game_id name role pid
 			) members
 		) teams) >>=
+	fun () -> Database.set_published game_id publish >>=
 	fun () -> container (standard_menu ())
 	[
 		h1 [pcdata "Casting"];
-		p [pcdata "Casting saved."]
+		p [pcdata
+			(if publish
+			then "Casting saved and published."
+			else "Casting saved.")]
 	]
 ;;
 

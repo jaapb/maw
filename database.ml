@@ -238,3 +238,21 @@ let add_casting game_id team_name role_name user_id =
 		(game_id, team_name, role_name, user_id) \
 		VALUES ($game_id, $team_name, $role_name, $user_id)"
 ;;
+
+let is_published game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT casting_published \
+		FROM games \
+		WHERE id = $game_id" >>=
+	function
+	| [] -> Lwt.return false
+	| [b] -> Lwt.return b
+	| _ -> fail_with "Inconsistency in database"
+;;
+
+let set_published game_id b =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET casting_published = $b \
+		WHERE id = $game_id"
+;;
