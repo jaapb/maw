@@ -260,7 +260,8 @@ let casting_page game_id () =
       Database.get_game_data game_id in
     if uid <> dsg_id then error_page "You are not the designer of this game."
     else
-    let%lwt inscr = Database.get_inscription_list game_id in
+    let%lwt inscr = Database.get_inscription_list ~filter_cast:true game_id in
+		let%lwt casting = Database.get_casting game_id in
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt pub = Database.is_published game_id in
     container (standard_menu ())
@@ -286,19 +287,35 @@ let casting_page game_id () =
 			  ];
         div ~a:[a_id "teams"] (
 			  	h2 [pcdata "Teams"]::
-					team.it (fun (t_name, _) t init ->
-       	    table ~a:[a_class ["casting"; "team_table"]] [
-         	   tr [
-               th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
-                 a_colspan 2] [
-								 Form.input ~input_type:`Hidden ~name:t_name ~value:t Form.string;
-								 pcdata t
-							 ];
-             ];
-             tr [
-               th ~a:[a_class ["header"]] [pcdata "Role"];
-               th ~a:[a_class ["header"]] [pcdata "Name"]
-             ]]::init
+					team.it (fun (t_name, member) t init ->
+       	    table ~a:[a_class ["casting"; "team_table"]] (
+         	  	tr [
+								th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
+									a_colspan 2] [
+									Form.input ~input_type:`Hidden ~name:t_name ~value:t Form.string;
+									pcdata t
+							 	];
+							]::
+              tr [
+                th ~a:[a_class ["header"]] [pcdata "Role"];
+                th ~a:[a_class ["header"]] [pcdata "Name"]
+              ]::
+						  member.it (fun (p_role, p_uid) (_, rn, pn, pid, n, g) init ->
+						 		tr ~a:[a_class ["player_row"]] [
+									td [
+										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
+									];
+									td ~a:[a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
+          	   			a_onclick [%client switch_active];
+							  		a_title n]
+									[
+										Form.input ~input_type:`Hidden ~name:p_uid ~value:pid Form.int32;
+										pcdata pn
+									]
+								]::init
+						  ) (List.filter (fun (n, _, _, _, _, _) -> n = t) casting)
+							[]
+						)::init
       	  ) teams
 					[]
         );
@@ -327,7 +344,7 @@ let do_casting_page game_id (teams, publish) =
 	| Some (uid, _, _) -> 
 		Lwt_list.iter_s (fun (name, members) ->
 			Lwt_list.iter_s (fun (role, pid) ->
-				Database.add_casting game_id name role pid
+				Database.update_casting game_id name role pid
 			) members
 		) teams) >>=
 	fun () -> Database.set_published game_id publish >>=

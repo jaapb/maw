@@ -168,12 +168,19 @@ let get_inscription_data uid game_id =
 	| l -> return (true, l)
 ;;
 
-let get_inscription_list game_id =
+let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id \
+	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_id \
+		FROM game_inscriptions i JOIN users ON user_id = users.id 
+			LEFT JOIN game_casting c \
+			ON i.user_id = c.user_id AND i.game_id = c.game_id \
+		WHERE i.game_id = $game_id AND role_name IS NULL \
+		ORDER BY group_id ASC, inscription_time ASC"
+	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
-		ORDER BY group_id ASC, inscription_time ASC";;
+		ORDER BY group_id ASC, inscription_time ASC"
+;;
 
 let search_for_user search =
   get_db () >>= fun dbh ->
@@ -232,11 +239,15 @@ let get_user_list () =
     FROM users"
 ;;
 
-let add_casting game_id team_name role_name user_id =
+let update_casting game_id team_name role_name user_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO game_casting \
-		(game_id, team_name, role_name, user_id) \
-		VALUES ($game_id, $team_name, $role_name, $user_id)"
+	PGOCaml.transact dbh (fun dbh ->
+		PGSQL(dbh) "DELETE FROM game_casting \
+			WHERE game_id = $game_id" >>=
+		fun () -> PGSQL(dbh) "INSERT INTO game_casting \
+			(game_id, team_name, role_name, user_id) \
+			VALUES ($game_id, $team_name, $role_name, $user_id)"
+	)
 ;;
 
 let is_published game_id =
@@ -255,4 +266,12 @@ let set_published game_id b =
 	PGSQL(dbh) "UPDATE games \
 		SET casting_published = $b \
 		WHERE id = $game_id"
+;;
+
+let get_casting game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT c.team_name, role_name, name, c.user_id, note, group_id \
+		FROM game_casting c JOIN users ON c.user_id = users.id \
+		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
+		WHERE c.game_id = $game_id"
 ;;
