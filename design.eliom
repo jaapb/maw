@@ -272,7 +272,7 @@ let cast_page game_id () =
 			  [
 			  	h2 [pcdata "Players"];
         	table ~a:[a_class ["casting"]; a_id "inscr_table"]
-        	(List.map (fun (nm, p_id, _, _, n, g) ->
+        	(List.map (fun (nm, p_id, _, _, n, g, _) ->
         		tr ~a:[a_class ["player_row"]] [
         	  	td ~a:[
           	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);

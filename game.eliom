@@ -293,6 +293,12 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 ;;
 
 let show_inscriptions_page game_id () =
+	let status_word st =
+		match st with
+		| "I" -> "Interested"
+		| "C" -> "Confirmed"
+		| "P" -> "Paid"
+		| "N" -> "No-show" in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -308,13 +314,15 @@ let show_inscriptions_page game_id () =
 					p [pcdata (Printf.sprintf "There are currently %d inscriptions." (List.length inscr))];
 					table (
 						tr [
+							th [pcdata "Status"];
 							th [pcdata "Name"];
 							th [pcdata "Team"];
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (nm, _, g, r, nt, _) ->
+						List.map (fun (nm, _, g, r, nt, _, st) ->
 							tr [
+								td [pcdata (status_word st)];
 								td [pcdata nm];
 								td [pcdata (default "Any" g)];
 								td [pcdata (default "Any" r)];

@@ -170,13 +170,13 @@ let get_inscription_data uid game_id =
 
 let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
-	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_id \
+	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_id, status \
 		FROM game_inscriptions i JOIN users ON user_id = users.id 
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		ORDER BY group_id ASC, inscription_time ASC"
-	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id \
+	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY group_id ASC, inscription_time ASC"
