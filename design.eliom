@@ -18,15 +18,15 @@ let remove_teams_service = post_service ~fallback:design_service ~post_params:(s
 let add_team_service = post_service ~fallback:design_service ~post_params:(string "team") ();;
 let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
 let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
-let casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_casting_service = post_service ~fallback:casting_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish") ();;
+let cast_service = service ~path:["cast"] ~get_params:(suffix (int32 "game_id")) ();;
+let do_cast_service = post_service ~fallback:cast_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish") ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _) -> 
-		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
+		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
@@ -36,7 +36,7 @@ let design_page game_id () =
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
-        p [a ~service:casting_service [pcdata "Cast this game"] game_id];
+        p [a ~service:cast_service [pcdata "Cast this game"] game_id];
 				Form.post_form ~service:update_descr_service (fun descr -> [
 					table [
 						tr [
@@ -252,11 +252,11 @@ let%client before_submit ev =
 	)) (Dom.list_of_nodeList td##.childNodes)
 ;;
 
-let casting_page game_id () =
+let cast_page game_id () =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
-  | Some (uid, _, _) -> let%lwt (title, _, _, _, dsg_id, _, _, _) =
+  | Some (uid, _, _) -> let%lwt (title, _, _, _, dsg_id, _, _, _, _) =
       Database.get_game_data game_id in
     if uid <> dsg_id then error_page "You are not the designer of this game."
     else
@@ -266,7 +266,7 @@ let casting_page game_id () =
 		let%lwt pub = Database.is_published game_id in
     container (standard_menu ())
     [
-      Form.post_form ~service:do_casting_service (fun (team, publish) ->
+      Form.post_form ~service:do_cast_service (fun (team, publish) ->
       [
 			  div ~a:[a_id "players"]
 			  [
@@ -322,9 +322,16 @@ let casting_page game_id () =
         div ~a:[a_id "general"] [
 					table [
 						tr [
-							td [pcdata "Publish casting: ";
-								Form.input ~input_type:`Checkbox ~name:publish ~value:pub
-								~a:(if pub then [a_disabled `Disabled] else []) Form.bool]
+							if pub then
+								td [
+									pcdata "Casting has already been published.";
+									Form.input ~input_type:`Hidden ~name:publish ~value:true Form.bool
+								]
+							else
+								td [
+									pcdata "Publish casting: ";
+									Form.bool_checkbox_one ~name:publish ~checked:pub ()
+								]
 						];
 						tr [
           		td [Form.input ~input_type:`Submit ~value:"Save casting"
@@ -337,14 +344,15 @@ let casting_page game_id () =
     ]
 ;;
 
-let do_casting_page game_id (teams, publish) =
+let do_cast_page game_id (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
 	| None -> Lwt.return ()
 	| Some (uid, _, _) -> 
-		Lwt_list.iter_s (fun (name, members) ->
+		Database.clear_casting game_id >>=
+		fun () -> Lwt_list.iter_s (fun (name, members) ->
 			Lwt_list.iter_s (fun (role, pid) ->
-				Database.update_casting game_id name role pid
+				Database.add_casting game_id name role pid
 			) members
 		) teams) >>=
 	fun () -> Database.set_published game_id publish >>=
@@ -372,6 +380,6 @@ let () =
 		remove_role_types;
 	Eliom_registration.Action.register ~service:add_role_type_service
 		add_role_type;
-  Maw_app.register ~service:casting_service casting_page;
-	Maw_app.register ~service:do_casting_service do_casting_page
+  Maw_app.register ~service:cast_service cast_page;
+	Maw_app.register ~service:do_cast_service do_cast_page
 ;;

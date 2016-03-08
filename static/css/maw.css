@@ -82,20 +82,20 @@ table#inscr_table
 	width: 100%;
 }
 
-div#teams table
+table.team_table
 {
   border: solid 1px black;
 	margin: 5px;
 }
 
-div#teams th.team_name
+th.team_name
 {
   background-color: black;
   color: white;
   cursor: default;
 }
 
-div#teams th.header
+th.header
 {
   font-size: small;
   font-style: italic;

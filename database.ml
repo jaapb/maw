@@ -33,7 +33,7 @@ let get_user_games uid =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) 
-		"SELECT id, title, date, location \
+		"SELECT id, title, date, location, casting_published \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
 		WHERE date >= $today AND user_id = $uid \
 		ORDER BY date ASC";;
@@ -48,7 +48,7 @@ let get_designer_games uid =
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT title, date, location, name, designer,
-		description, min_players, max_players \
+		description, min_players, max_players, casting_published \
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id" >>=
 	fun l -> match l with
@@ -239,15 +239,17 @@ let get_user_list () =
     FROM users"
 ;;
 
-let update_casting game_id team_name role_name user_id =
+let clear_casting game_id =
 	get_db () >>= fun dbh ->
-	PGOCaml.transact dbh (fun dbh ->
-		PGSQL(dbh) "DELETE FROM game_casting \
-			WHERE game_id = $game_id" >>=
-		fun () -> PGSQL(dbh) "INSERT INTO game_casting \
-			(game_id, team_name, role_name, user_id) \
-			VALUES ($game_id, $team_name, $role_name, $user_id)"
-	)
+	PGSQL(dbh) "DELETE FROM game_casting \
+		WHERE game_id = $game_id"
+;;
+
+let add_casting game_id team_name role_name user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO game_casting \
+		(game_id, team_name, role_name, user_id) \
+		VALUES ($game_id, $team_name, $role_name, $user_id)"
 ;;
 
 let is_published game_id =
@@ -273,5 +275,6 @@ let get_casting game_id =
 	PGSQL(dbh) "SELECT c.team_name, role_name, name, c.user_id, note, group_id \
 		FROM game_casting c JOIN users ON c.user_id = users.id \
 		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
-		WHERE c.game_id = $game_id"
+		WHERE c.game_id = $game_id \
+		ORDER BY role_name DESC"
 ;;

@@ -31,11 +31,14 @@ let format_my_games mg dg =
 		| [] -> p [pcdata "You are not signed up for any games at the moment."]
 		| l -> table (List.flatten (List.map
 			(function 
-			| (id, title, date, loc) ->
-				[tr [
-					td (location_bar id title date loc);
-					td [a ~service:Game.signup_service [pcdata "Edit inscription"] id]
-				]]
+			| (id, title, date, loc, cast) ->
+				[tr (
+					td (location_bar id title date loc)::
+					td [a ~service:Game.signup_service [pcdata "Edit inscription"] id]::
+					if cast
+					then [td [a ~service:Game.show_casting_service [pcdata "Show casting"] id]]
+					else []
+				)]
 			) l)))::
 		(match dg with
 		| [] -> []
@@ -48,7 +51,7 @@ let format_my_games mg dg =
 						td (location_bar id title date loc);
 						td [a ~service:Design.design_service [pcdata "Edit design"] id];
 						td [a ~service:Game.show_inscriptions_service [pcdata "Show inscriptions"] id];
-						td [a ~service:Design.casting_service [pcdata "Casting"] id]
+						td [a ~service:Design.cast_service [pcdata "Casting"] id]
 					]]
 				) l))
 			])

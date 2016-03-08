@@ -18,6 +18,7 @@ let do_signup_service = post_service ~fallback:signup_service ~post_params:(
 	list "person" (sum (string "search") (int32 "uid") ** string "role_type" ** string "note")
 ) ();;
 let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
+let show_casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_name d full =
@@ -29,7 +30,7 @@ let game_page game_id () =
     then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
     else []) in
 	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_name, dsg, d, _, max_pl) =
+	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_name, dsg, d, _, max_pl, _) =
 		Database.get_game_data game_id in
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
     match u with
@@ -154,7 +155,7 @@ let signup_page game_id () =
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, uname, _) -> 
-		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _)  =
+		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _, _)  =
 			Database.get_game_data game_id in
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
@@ -295,7 +296,8 @@ let show_inscriptions_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _, _) -> let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr) =
+	| Some (uid, _, _) ->
+		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		let%lwt inscr = Database.get_inscription_list game_id in
 		if uid = dsg_id then
@@ -334,9 +336,48 @@ let show_inscriptions_page game_id () =
 	)
 ;;
 
+let show_casting_page game_id () =
+	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, _, _, cp) =
+			Database.get_game_data game_id in
+		if cp then
+		begin
+			let%lwt casting = Database.get_casting game_id in
+			let teams = List.sort_uniq (fun (t1, _, _, _, _, _) (t2, _, _, _, _, _) ->
+				compare t1 t2) casting in
+			container (standard_menu ())
+			(
+				h1 [pcdata (Printf.sprintf "Casting for %s" title)]::
+				List.map (fun (t, _, _, _, _, _) ->
+					table ~a:[a_class ["team_table"]] (
+						tr [
+							th ~a:[a_class ["team_name"]; a_colspan 2] [pcdata t]
+						]::
+						tr [
+							th ~a:[a_class ["header"]] [pcdata "Role"];
+							th ~a:[a_class ["header"]] [pcdata "Name"]
+						]::
+						List.map (fun (_, rn, n, _, _, _) ->
+							tr [
+								td [pcdata rn];
+								td [pcdata n]
+							]
+						) (List.filter (fun (x, _, _, _, _, _) -> x = t) casting)
+					)
+				) teams
+			)
+		end
+		else error_page "The casting for this game has not been published."
+	)
+	(function
+	| Not_found -> unknown_game ()
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
 let _ =
 	Maw_app.register ~service:game_service game_page;
 	Maw_app.register ~service:signup_service signup_page;
 	Maw_app.register ~service:do_signup_service do_signup_page;
-	Maw_app.register ~service:show_inscriptions_service show_inscriptions_page
+	Maw_app.register ~service:show_inscriptions_service show_inscriptions_page;
+	Maw_app.register ~service:show_casting_service show_casting_page
 ;;
