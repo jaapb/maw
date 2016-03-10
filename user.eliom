@@ -13,7 +13,9 @@
 ]
 
 let update_user_service = post_service ~fallback:account_service
-	~post_params:(string "email") ();;
+	~post_params:(string "email" ** string "password") ();;
+let add_user_service = post_service ~fallback:register_service 
+	~post_params:(string "name" ** string "username" ** string "email" ** string "password") ();;
 
 let account_page () () =
 	Lwt.catch (fun () ->
@@ -25,7 +27,7 @@ let account_page () () =
 			container (standard_menu ())
 			[
 				h1 [pcdata "Your account"];
-				Form.post_form ~service:update_user_service (fun email -> 
+				Form.post_form ~service:update_user_service (fun (email, password) -> 
 				[
 					table [
 						tr [
@@ -35,6 +37,14 @@ let account_page () () =
 						tr [
 							th [pcdata "E-mail address"];
 							td [Form.input ~input_type:`Text ~name:email ~value:ex_email Form.string] 
+						];
+						tr [
+							th [pcdata "Password"];
+							td [Form.input ~input_type:`Password ~name:password Form.string]
+						];
+						tr [
+							th [pcdata "Confirm password"];
+							td [Raw.input ~a:[a_input_type `Password; a_id "password_confirm"] ()]
 						];
 						tr 
 						[
@@ -51,12 +61,12 @@ let account_page () () =
 	)
 ;;
 
-let update_user_page () email =
+let update_user_page () (email, password) =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _, _) -> Database.update_user_data uid email >>=
+		| Some (uid, _, _) -> Database.update_user_data uid email password >>=
 		fun () -> container (standard_menu ())
 		[
 			p [pcdata "Changes successfully saved."]
@@ -67,7 +77,60 @@ let update_user_page () email =
 	)
 ;;
 
+let register_page () () =
+	Lwt.catch (fun () ->
+		container (standard_menu ())
+		[
+			h1 [pcdata "Create a new account"];
+			Form.post_form ~service:add_user_service
+			(fun (name, (username, (email, password))) -> [
+				table [
+					tr [
+						th [pcdata "Username:"];
+						td [Form.input ~input_type:`Text ~name:username Form.string]
+					];
+					tr [
+						th [pcdata "Password:"];
+						td [Form.input ~input_type:`Password ~name:password Form.string]
+					];
+					tr [
+						th [pcdata "Confirm password:"];
+						td [Raw.input ~a:[a_input_type `Password; a_id "password_confirm"] ()]
+					];
+					tr [
+						th [pcdata "Full name:"];
+						td [Form.input ~input_type:`Text ~name:name Form.string] 
+					];
+					tr [
+						th [pcdata "E-mail address:"];
+						td [Form.input ~input_type:`Text ~name:email Form.string]
+					];
+					tr [
+						td ~a:[a_colspan 2] [Form.input ~input_type:`Submit ~value:"Sign up" Form.string]
+					]
+				]
+			]) ()
+		]
+	)
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+
+let add_user_page () (name, (username, (email, password))) =
+	Lwt.catch (fun () -> Database.add_user name username email password >>=
+	fun () -> container (standard_menu ())
+	[
+		h1 [pcdata "Account created"];
+		p [pcdata "Please reply to the confirmation mail."]
+	])
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
 let _ =
 	Maw_app.register ~service:account_service account_page;
-	Maw_app.register ~service:update_user_service update_user_page
+	Maw_app.register ~service:update_user_service update_user_page;
+	Maw_app.register ~service:Maw.register_service register_page;
+	Maw_app.register ~service:add_user_service add_user_page
 ;;

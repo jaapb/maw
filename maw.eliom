@@ -38,6 +38,7 @@ let logout_service = post_coservice'
 	~post_params:unit ();;
 let account_service = service ~path:["account"] ~get_params:unit ();;
 let admin_service = service ~path:["admin"] ~get_params:unit ();;
+let register_service = service ~path:["register"] ~get_params:unit ();;
 
 (* Login bits and pieces *)
 
@@ -73,6 +74,10 @@ let login_box () =
 				td [pcdata "Password"];
 				td ~a:[a_colspan 2]
 					[Form.input ~input_type:`Password ~name:password Form.string]
+			]::
+			tr [
+				td ~a:[a_colspan 3]
+					[a ~service:register_service [pcdata "Create a new account"] ()]
 			]::
 			(match err with
 			| None -> []

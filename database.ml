@@ -136,7 +136,7 @@ let change_things dbh game_id uid group_id team role =
 			SET group_id = $g WHERE game_id = $game_id AND user_id = $uid")
 ;;
 
-let add_user game_id uid group_id team role note =
+let add_inscription game_id uid group_id team role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -226,10 +226,11 @@ let get_user_data uid =
 	| _ -> fail_with "Inconsistency in database"
 ;;
 
-let update_user_data uid email =
+let update_user_data uid email password =
+	let c_password = Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET email = $email \
+		SET email = $email, password = $c_password \
 		WHERE id = $uid"
 ;;
 
@@ -277,4 +278,11 @@ let get_casting game_id =
 		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE c.game_id = $game_id \
 		ORDER BY role_name DESC"
+;;
+
+let add_user name username email password =
+	let c_password = Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password in
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO users (name, username, email, password) \
+		VALUES ($name, $username, $email, $c_password)"
 ;;

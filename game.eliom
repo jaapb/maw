@@ -247,7 +247,7 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 	let rec handle_inscriptions edit group_id users prefs =
 		match users, prefs with
 		| uid::uids, (r, n)::prefs ->
-      Database.add_user game_id uid group_id
+      Database.add_inscription game_id uid group_id
   		  (if String.lowercase team = "any" then None else Some team)
 			  (if String.lowercase r = "any" then None else Some r)
 			  n >>=
