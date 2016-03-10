@@ -11,8 +11,6 @@
 	open Maw
 ]
 
-let add_user_service = post_service ~fallback:admin_service
-  ~post_params:(string "name" ** string "username" ** string "email") ();;
 let add_game_service = post_service ~fallback:admin_service
   ~post_params:(string "title" ** int32 "designer") ();;
 let set_game_data_service = post_service ~fallback:admin_service
@@ -60,33 +58,6 @@ let admin_page () () =
               ] 
             ]
           ]) ();
-          h2 [pcdata "Add user"];
-          Form.post_form ~service:add_user_service
-          (fun (name, (username, email)) -> [
-            table
-            [
-              tr
-              [
-                th [pcdata "Full name:"];
-                td [Form.input ~input_type:`Text ~name:name Form.string]
-              ];
-              tr
-              [
-                th [pcdata "Username:"];
-                td [Form.input ~input_type:`Text ~name:username Form.string]
-              ];
-              tr
-              [
-                th [pcdata "E-mail address:"];
-                td [Form.input ~input_type:`Text ~name:email Form.string]
-              ];
-              tr
-              [
-                td ~a:[a_colspan 2]
-                [Form.input ~input_type:`Submit ~value:"Save changes" Form.string]
-              ]
-            ]
-          ]) ();
           h2 [pcdata "Create new game"];
           Form.post_form ~service:add_game_service (fun (title, designer) -> [
             table [
@@ -121,13 +92,6 @@ let admin_page () () =
   )
 ;;
 
-let add_user_page () (name, (username, email)) =
-  container (standard_menu ())
-  [
-    p [pcdata "Yeah."]
-  ]
-;;
-
 let add_game_page () (title, designer) =
   container (standard_menu ())
   [
@@ -144,7 +108,6 @@ let set_game_data_page () (game_id, (date, location)) =
 
 let _ =
 	Maw_app.register ~service:admin_service admin_page;
-	Maw_app.register ~service:add_user_service add_user_page;
 	Maw_app.register ~service:add_game_service add_game_page;
 	Maw_app.register ~service:set_game_data_service set_game_data_page
 ;;
