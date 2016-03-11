@@ -8,12 +8,12 @@ PROJECT_NAME := maw
 ELIOM_FILES=	maw.eliom dashboard.eliom design.eliom game.eliom user.eliom \
 	admin.eliom
 # Source files for the server
-SERVER_FILES := $(ELIOM_FILES) database.ml
+SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml
 # Source files for the client
 CLIENT_FILES := $(ELIOM_FILES)
 
 # OCamlfind packages for the server
-SERVER_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx
+SERVER_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx netclient
 # OCamlfind packages for the client
 CLIENT_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx js_of_ocaml.ppx
 

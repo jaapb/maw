@@ -176,17 +176,25 @@ ${ELIOM_SERVER_DIR}/%.cmi: %.eliomi
 
 ## Special rule for SQL files
 ${ELIOM_SERVER_DIR}/database.cmo: database.ml
-#	PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
 	ocamlfind ocamlc -package pgocaml.syntax,lwt,cryptokit \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 ${ELIOM_SERVER_DIR}/database.cmx: database.ml
-# PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
 	ocamlfind ocamlopt -package pgocaml.syntax,lwt,cryptokit \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 $(DEPSDIR)/database.ml.server: database.ml | $(DEPSDIR)
-# PGHOST=${DB_HOST} PGDATABASE=${DB_NAME} PGPASSWORD=${DB_PASSWORD}
 	ocamlfind ocamldep -package pgocaml.syntax,cryptokit \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} $< > $@
+
+## Special rule for mail component
+${ELIOM_SERVER_DIR}/mail.cmo: mail.ml
+	ocamlfind ocamlc -package netclient \
+    -I ${ELIOM_SERVER_DIR} -o $@ -c $<
+${ELIOM_SERVER_DIR}/mail.cmx: mail.ml
+	ocamlfind ocamlopt -package netclient \
+    -I ${ELIOM_SERVER_DIR} -o $@ -c $<
+$(DEPSDIR)/mail.ml.server: mail.ml | $(DEPSDIR)
+	ocamlfind ocamldep -package netclient \
+    -I ${ELIOM_SERVER_DIR} $< > $@
 
 ${ELIOM_SERVER_DIR}/%.cmo: %.ml
 	${ELIOMC} -c ${SERVER_INC} $(GENERATE_DEBUG) $<

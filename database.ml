@@ -282,7 +282,9 @@ let get_casting game_id =
 
 let add_user name username email password =
 	let c_password = Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password in
+	let c_random = String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng 32)) 0 32 in
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO users (name, username, email, password) \
-		VALUES ($name, $username, $email, $c_password)"
+	PGSQL(dbh) "INSERT INTO users (name, username, email, password, confirmation) \
+		VALUES ($name, $username, $email, $c_password, $c_random)" >>=
+	fun () -> Lwt.return c_random
 ;;

@@ -16,6 +16,7 @@ let update_user_service = post_service ~fallback:account_service
 	~post_params:(string "email" ** string "password") ();;
 let add_user_service = post_service ~fallback:register_service 
 	~post_params:(string "name" ** string "username" ** string "email" ** string "password") ();;
+let confirm_user_service = service ~path:["register"] ~get_params:(suffix (int32 "user_id" ** string "random")) ();;
 
 let account_page () () =
 	Lwt.catch (fun () ->
@@ -117,8 +118,9 @@ let register_page () () =
 	)
 
 let add_user_page () (name, (username, (email, password))) =
-	Lwt.catch (fun () -> Database.add_user name username email password >>=
-	fun () -> container (standard_menu ())
+	Lwt.catch (fun () -> Mail.send_register_mail [name, email];
+	Database.add_user name username email password >>=
+	fun random -> container (standard_menu ())
 	[
 		h1 [pcdata "Account created"];
 		p [pcdata "Please reply to the confirmation mail."]
