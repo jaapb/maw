@@ -61,7 +61,7 @@ let check_password name password =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT id, name, is_admin \
 		FROM users \
-		WHERE username = $name";;
+		WHERE username = $name AND confirmation IS NULL";;
 
 let is_signed_up uid game_id =
 	get_db () >>= fun dbh ->
@@ -286,5 +286,18 @@ let add_user name username email password =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO users (name, username, email, password, confirmation) \
 		VALUES ($name, $username, $email, $c_password, $c_random)" >>=
-	fun () -> Lwt.return c_random
+	fun () -> PGSQL(dbh) "SELECT id FROM users \
+		WHERE name = $name" >>=
+	function
+	| [uid] -> Lwt.return (uid, c_random)
+	| _ -> Lwt.fail_with "Inconsistency in database"
+;;
+
+let confirm_user user_id random =
+	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id FROM users \
+		WHERE id = $user_id AND confirmation = $random" >>=
+	function
+	| [] -> Lwt.fail Not_found
+	| [i] -> PGSQL(dbh) "UPDATE users SET confirmation = NULL WHERE id = $i" 
+	| _ -> Lwt.fail_with "Inconsistency in database"
 ;;

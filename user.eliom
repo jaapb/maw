@@ -16,7 +16,7 @@ let update_user_service = post_service ~fallback:account_service
 	~post_params:(string "email" ** string "password") ();;
 let add_user_service = post_service ~fallback:register_service 
 	~post_params:(string "name" ** string "username" ** string "email" ** string "password") ();;
-let confirm_user_service = service ~path:["register"] ~get_params:(suffix (int32 "user_id" ** string "random")) ();;
+let confirm_user_service = service ~path:["confirm"] ~get_params:(suffix (int32 "user_id" ** string "random")) ();;
 
 let account_page () () =
 	Lwt.catch (fun () ->
@@ -118,12 +118,25 @@ let register_page () () =
 	)
 
 let add_user_page () (name, (username, (email, password))) =
-	Lwt.catch (fun () -> Mail.send_register_mail [name, email];
-	Database.add_user name username email password >>=
-	fun random -> container (standard_menu ())
+	Lwt.catch (fun () -> Database.add_user name username email password >>=
+	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~service:confirm_user_service (uid, random) in
+	Mail.send_register_mail name email uri;
+	container (standard_menu ())
 	[
 		h1 [pcdata "Account created"];
 		p [pcdata "Please reply to the confirmation mail."]
+	])
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
+let confirm_user_page (user_id, random) () =
+	Lwt.catch (fun () -> Database.confirm_user user_id random >>=
+	fun res -> container (standard_menu ())
+	[
+		h1 [pcdata "Account activated"];
+		p [pcdata "You can now login normally."]
 	])
 	(function
 	| e -> error_page (Printexc.to_string e)
@@ -134,5 +147,6 @@ let _ =
 	Maw_app.register ~service:account_service account_page;
 	Maw_app.register ~service:update_user_service update_user_page;
 	Maw_app.register ~service:Maw.register_service register_page;
-	Maw_app.register ~service:add_user_service add_user_page
+	Maw_app.register ~service:add_user_service add_user_page;
+	Maw_app.register ~service:confirm_user_service confirm_user_page
 ;;

@@ -14,6 +14,14 @@ let send_mail to_addrs subject contents =
 	Netsmtp.sendmail smtp msg
 ;;
 
-let send_register_mail to_addrs =
-	send_mail to_addrs "New account confirmation"
-	"Hello,"
+let send_register_mail name email uri =
+	send_mail [name, email] "New account confirmation"
+	(Printf.sprintf "Hello %s,\n
+	\n
+	To confirm your account, please click on the following link:\n
+	%s\n
+	\n
+	Kind regards,\n
+	\n
+	Maw." name uri) 
+;;
