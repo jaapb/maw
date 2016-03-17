@@ -196,3 +196,8 @@ table.casting td.group6.active
 {
   border-color: #808000;
 }
+
+p.error
+{
+	color: red;
+}
