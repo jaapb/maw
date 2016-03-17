@@ -51,8 +51,10 @@ CREATE TABLE users (
     id integer NOT NULL,
     name text NOT NULL,
     username character varying(32) NOT NULL,
-    is_admin boolean NOT NULL,
-    email text NOT NULL
+    is_admin boolean DEFAULT false NOT NULL,
+    email text NOT NULL,
+		password text,
+		confirmation character(32)
 );
 
 CREATE SEQUENCE users_id_seq
@@ -82,6 +84,9 @@ ALTER TABLE ONLY games
 
 ALTER TABLE ONLY role_types
     ADD CONSTRAINT role_types_pkey PRIMARY KEY (name, game_id);
+
+ALTER TABLE ONLY users
+    ADD CONSTRAINT users_name_key UNIQUE (name);
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
