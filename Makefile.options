@@ -13,7 +13,7 @@ SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml
 CLIENT_FILES := $(ELIOM_FILES)
 
 # OCamlfind packages for the server
-SERVER_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx netclient
+SERVER_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx netclient pgocaml.syntax
 # OCamlfind packages for the client
 CLIENT_PACKAGES := lwt.ppx js_of_ocaml.deriving.ppx js_of_ocaml.ppx
 

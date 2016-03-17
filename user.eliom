@@ -107,7 +107,8 @@ let register_page () () =
 						td [Form.input ~input_type:`Text ~name:email Form.string]
 					];
 					tr [
-						td ~a:[a_colspan 2] [Form.input ~input_type:`Submit ~value:"Sign up" Form.string]
+						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client (fun ev -> Eliom_lib.alert "znoits!"; Dom.preventDefault ev)]]
+						~input_type:`Submit ~value:"Sign up" Form.string]
 					]
 				]
 			]) ()
