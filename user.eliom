@@ -92,22 +92,42 @@ let%client check_form ev =
 	let ui = Dom_html.getElementById "username_input" in
 	let p1 = Dom_html.getElementById "password_input1" in
 	let p2 = Dom_html.getElementById "password_input2" in
+	let ni = Dom_html.getElementById "name_input" in
+	let ei = Dom_html.getElementById "email_input" in
+	Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "You might want to put in an e-mail addres...");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ni) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "You might want to put in a name...");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input p1) (fun e1 ->
+		Js.Opt.iter (Dom_html.CoerceTo.input p2) (fun e2 ->
+			if e1##.value <> e2##.value then
+			begin
+				add_or_replace (Js.string "Passwords don't match.");
+				Dom.preventDefault ev
+			end
+			else if Js.to_string e1##.value = "" then
+			begin
+				add_or_replace (Js.string "You might want to put in a password...");
+				Dom.preventDefault ev
+			end
+		)
+	);
 	Js.Opt.iter (Dom_html.CoerceTo.input ui) (fun e ->
 		if Js.to_string e##.value = "" then
 		begin
 			add_or_replace (Js.string "You might want to put in a username...");
 			Dom.preventDefault ev
 		end
-		else
-			Js.Opt.iter (Dom_html.CoerceTo.input p1) (fun e1 ->
-				Js.Opt.iter (Dom_html.CoerceTo.input p2) (fun e2 ->
-					if e1##.value <> e2##.value then
-					begin
-						add_or_replace (Js.string "Passwords don't match.");
-						Dom.preventDefault ev
-					end
-				)
-			)
 	)
 ;;
 
@@ -134,11 +154,11 @@ let register_page () () =
 					];
 					tr [
 						th [pcdata "Full name:"];
-						td [Form.input ~input_type:`Text ~name:name Form.string] 
+						td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
 					];
 					tr [
 						th [pcdata "E-mail address:"];
-						td [Form.input ~input_type:`Text ~name:email Form.string]
+						td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email Form.string]
 					];
 					tr [
 						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_form]]
