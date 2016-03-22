@@ -121,7 +121,7 @@ let set_game_numbers game_id min max =
 		SET min_players = $min, max_players = $max \
 		WHERE id = $game_id";;
 
-let change_things dbh game_id uid group_id team role =
+let change_things dbh game_id uid group_name team role =
 	(match team with
 	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
@@ -130,13 +130,13 @@ let change_things dbh game_id uid group_id team role =
 	| None -> return ()
 	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
 			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid") >>=
-	fun () -> (match group_id with
+	fun () -> (match group_name with
 	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET group_id = $g WHERE game_id = $game_id AND user_id = $uid")
+			SET group_name = $g WHERE game_id = $game_id AND user_id = $uid")
 ;;
 
-let add_inscription game_id uid group_id team role note =
+let add_inscription game_id uid group_name team role note =
 	let stamp = CalendarLib.Calendar.now () in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -151,16 +151,16 @@ let add_inscription game_id uid group_id team role note =
 		| _ -> PGSQL(dbh) "UPDATE game_inscriptions \
 				SET note = $note \
 				WHERE game_id = $game_id AND user_id = $uid") >>=
-	  fun () -> change_things dbh game_id uid group_id team role
+	  fun () -> change_things dbh game_id uid group_name team role
 	)
 ;;
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_id \
+	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_name \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
 		ON g1.game_id = g2.game_id AND \
-			(g1.user_id = g2.user_id OR g1.group_id = g2.group_id) \
+			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
 		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
 	function
@@ -170,16 +170,16 @@ let get_inscription_data uid game_id =
 
 let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
-	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_id, status \
+	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_name, status \
 		FROM game_inscriptions i JOIN users ON user_id = users.id 
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
-		ORDER BY group_id ASC, inscription_time ASC"
-	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_id, status \
+		ORDER BY group_name ASC, inscription_time ASC"
+	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
-		ORDER BY group_id ASC, inscription_time ASC"
+		ORDER BY group_name ASC, inscription_time ASC"
 ;;
 
 let search_for_user search =
@@ -193,26 +193,15 @@ let search_for_user search =
 	| _ -> fail_with "Inconsistency in database"
 ;;
 
-let get_group_id game_id uid_list =
+let get_group_name game_id uid_list =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT DISTINCT group_id \
+	PGSQL(dbh) "SELECT DISTINCT group_name \
 		FROM game_inscriptions \
 		WHERE game_id = $game_id AND user_id IN $@uid_list" >>=
 	function
-	| [] | [None] -> return None
-	| [uid] -> return uid
+	| [] | [None] -> return ""
+	| [Some gname] -> return gname
 	| _ -> fail (Invalid_argument "Group members in two groups")
-;;
-
-let get_new_group_id game_id =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT MAX(group_id) \
-		FROM game_inscriptions \
-		WHERE game_id = $game_id" >>=
-	function
-	| [] | [None] -> return 1l
-	| [Some m] -> return (Int32.add m 1l)
-	| _ -> fail_with "This should not happen"
 ;;
 
 let get_user_data uid =
@@ -273,7 +262,7 @@ let set_published game_id b =
 
 let get_casting game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT c.team_name, role_name, name, c.user_id, note, group_id \
+	PGSQL(dbh) "SELECT c.team_name, role_name, name, c.user_id, note, group_name \
 		FROM game_casting c JOIN users ON c.user_id = users.id \
 		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE c.game_id = $game_id \

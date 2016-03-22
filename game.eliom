@@ -244,14 +244,14 @@ let signup_page game_id () =
 ;;
 
 let do_signup_page game_id (edit, (is_group, (team, users))) =
-	let rec handle_inscriptions edit group_id users prefs =
+	let rec handle_inscriptions edit group_name users prefs =
 		match users, prefs with
 		| uid::uids, (r, n)::prefs ->
-      Database.add_inscription game_id uid group_id
+      Database.add_inscription game_id uid group_name
   		  (if String.lowercase team = "any" then None else Some team)
 			  (if String.lowercase r = "any" then None else Some r)
 			  n >>=
-			fun () -> handle_inscriptions edit group_id uids prefs
+			fun () -> handle_inscriptions edit group_name uids prefs
 		| _, _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -268,15 +268,12 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 			fun (uid_list, pref_list) -> (if is_group
 			then
 			begin
-				Database.get_group_id game_id uid_list >>=
-				(function
-				| None -> Database.get_new_group_id game_id
-				| Some l -> Lwt.return l) >>=
+				Database.get_group_name game_id uid_list  >>=
 				fun x -> Lwt.return (Some x)
 			end
 			else
 				Lwt.return None) >>=
-			fun gid -> handle_inscriptions edit gid uid_list pref_list >>=
+			fun gname -> handle_inscriptions edit gname uid_list pref_list >>=
 			fun () -> container (standard_menu ())
 			[
 				p [

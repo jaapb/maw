@@ -253,6 +253,18 @@ let%client before_submit ev =
 ;;
 
 let cast_page game_id () =
+	let partition_groups l =
+		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
+			match l with
+			| [] -> ((g, rhd)::res)
+			| (_, _, _, _, _, g', _) as x::l' -> 
+				if g = g' then pg_aux l' g (x::rhd) res
+				else pg_aux l' g' [x] ((g, rhd)::res)
+		in
+		match l with
+		| [] -> []
+		| (_, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
+	in
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
@@ -271,19 +283,22 @@ let cast_page game_id () =
 			  div ~a:[a_id "players"]
 			  [
 			  	h2 [pcdata "Players"];
-        	table ~a:[a_class ["casting"]; a_id "inscr_table"]
-        	(List.map (fun (nm, p_id, _, _, n, g, _) ->
-        		tr ~a:[a_class ["player_row"]] [
-        	  	td ~a:[
-          	   	a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
-          	   	a_onclick [%client switch_active];
-							  a_title n
-            	] [
-								Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
-								pcdata nm
-							]
-            ]
-          ) inscr)
+					div ~a:[a_id "inscr_div"]
+					(List.map (fun (gn, g) -> 
+						table ~a:[a_class ["casting"]]
+						(tr [th ~a:[a_class ["group_name"]; a_colspan 2] [pcdata (default "Ungrouped" gn)]]::
+        		List.map (fun (nm, p_id, _, _, n, _, _) ->
+        			tr ~a:[a_class ["player_row"]] [
+								td ~a:[
+          	   		a_onclick [%client switch_active];
+							  	a_title n
+            		] [
+									Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
+									pcdata nm
+								]
+            	]
+          	) g)
+					) (List.rev (partition_groups inscr)))
 			  ];
         div ~a:[a_id "teams"] (
 			  	h2 [pcdata "Teams"]::
@@ -305,7 +320,7 @@ let cast_page game_id () =
 									td [
 										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
 									];
-									td ~a:[a_class (match g with None -> [] | Some g -> [(Printf.sprintf "group%ld" (Int32.rem g 7l))]);
+									td ~a:[
           	   			a_onclick [%client switch_active];
 							  		a_title n]
 									[

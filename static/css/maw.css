@@ -88,7 +88,7 @@ table.team_table
 	margin: 5px;
 }
 
-th.team_name
+th.team_name, th.group_name
 {
   background-color: black;
   color: white;
@@ -101,11 +101,15 @@ th.header
   font-style: italic;
 }
 
+table.casting
+{
+	border: solid 1px black;
+	margin-bottom: 5px;
+}
+
 table.casting td
 {
-  border-width: 3px;
-  border-style: solid;
-  border-color: white;
+  border: solid 3px white;
   cursor: default;
 }
 
@@ -117,84 +121,6 @@ table.casting td:hover
 table.casting td.active
 {
   border-color: #000000;
-}
-
-table.casting td.group0
-{
-  background-color: #ffffff;
-  color: white;
-}
-
-table.casting td.group1.active
-{
-  border-color: #000080;
-}
-
-table.casting td.group1
-{
-  background-color: #0000ff;
-  border-color: #0000ff;
-  color: white;
-}
-
-table.casting td.group1:hover
-{
-  background-color: #add8e6;
-}
-
-table.casting td.group1.active
-{
-  border-color: #000080;
-}
-
-table.casting td.group2
-{
-  background-color: #ff0000;
-}
-
-table.casting td.group2.active
-{
-  border-color: #800000;
-}
-
-table.casting td.group3
-{
-  background-color: #ff00ff;
-}
-
-table.casting td.group3.active
-{
-  border-color: #800080;
-}
-
-table.casting td.group4
-{
-  background-color: #00ff00;
-}
-
-table.casting td.group4.active
-{
-  border-color: #008000;
-}
-
-table.casting td.group5
-{
-  background-color: #00ffff;
-}
-
-table.casting td.group5.active
-{
-  border-color: #008080;
-}
-
-table.casting td.group6
-{
-  background-color: #ffff00;
-}
-
-table.casting td.group6.active
-{
-  border-color: #808000;
 }
 
 p.error
