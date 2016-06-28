@@ -5,6 +5,7 @@ CREATE TABLE game_casting (
     user_id integer NOT NULL
 );
 
+
 CREATE TABLE game_inscriptions (
     game_id integer NOT NULL,
     user_id integer NOT NULL,
@@ -12,7 +13,7 @@ CREATE TABLE game_inscriptions (
     team_name character varying(50),
     role_type character varying(50),
     note character varying(150) NOT NULL,
-    group_id integer,
+    group_name character varying(50),
     status character(1) DEFAULT 'I'::bpchar NOT NULL
 );
 
@@ -20,7 +21,7 @@ CREATE TABLE games (
     id integer NOT NULL,
     title text NOT NULL,
     date date,
-    description text DEFAULT 'No description yet'::text NOT NULL,
+    description text DEFAULT 'No description yet.'::text NOT NULL,
     location text DEFAULT 'Location TBD'::text NOT NULL,
     designer integer NOT NULL,
     min_players integer DEFAULT 0 NOT NULL,
@@ -34,6 +35,7 @@ CREATE SEQUENCE games_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
+
 
 ALTER SEQUENCE games_id_seq OWNED BY games.id;
 
@@ -53,8 +55,8 @@ CREATE TABLE users (
     username character varying(32) NOT NULL,
     is_admin boolean DEFAULT false NOT NULL,
     email text NOT NULL,
-		password text,
-		confirmation character(32)
+    password text,
+    confirmation character(32)
 );
 
 CREATE SEQUENCE users_id_seq
@@ -75,6 +77,9 @@ ALTER TABLE ONLY game_casting
 
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_game_id_user_id_key UNIQUE (game_id, user_id);
+
+ALTER TABLE ONLY game_inscriptions
+    ADD CONSTRAINT game_inscriptions_user_id_game_id_key UNIQUE (user_id, game_id);
 
 ALTER TABLE ONLY teams
     ADD CONSTRAINT groups_pkey PRIMARY KEY (name, game_id);
