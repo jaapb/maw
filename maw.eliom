@@ -51,8 +51,8 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 let login_action () (name, password) =
 	let%lwt u = Database.check_password name password in
 	match u with
-	| [(uid, name, is_admin)] -> Eliom_reference.set user (Some (uid, name, is_admin))
-	| _ -> Eliom_reference.set login_err (Some "Unknown user")
+	| Some (uid, name, is_admin) -> Eliom_reference.set user (Some (uid, name, is_admin))
+	| None -> Eliom_reference.set login_err (Some "Unknown user or wrong password")
 ;;
 
 let logout_action () () =

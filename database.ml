@@ -15,6 +15,14 @@ let get_db () =
 		end
 ;;
 
+let crypt_password pwd salt =
+	Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) (salt ^ pwd))
+;;
+
+let random_string length =
+	String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng length)) 0 length
+;;
+
 let get_upcoming_games ?no_date () =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
@@ -51,7 +59,7 @@ let get_game_data game_id =
 		description, min_players, max_players, casting_published \
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id" >>=
-	fun l -> match l with
+	function
 	| [] -> fail Not_found
 	| [x] -> return x
 	| _ -> fail_with "Inconsistent database"
@@ -59,9 +67,16 @@ let get_game_data game_id =
 
 let check_password name password =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, name, is_admin \
+	PGSQL(dbh) "SELECT id, password, password_salt, name, is_admin \
 		FROM users \
-		WHERE username = $name AND confirmation IS NULL";;
+		WHERE username = $name AND confirmation IS NULL" >>=
+	function
+	| [(id, db_password, db_salt, name, is_admin)] ->
+		if crypt_password password db_salt = db_password then Lwt.return (Some (id, name, is_admin))
+		else Lwt.return None
+	| _ -> Lwt.return None (* don't want to fail with Inconsistent database here
+	  as it would give away information *)
+;;
 
 let is_signed_up uid game_id =
 	get_db () >>= fun dbh ->
@@ -213,10 +228,11 @@ let get_user_data uid =
 ;;
 
 let update_user_data uid email password =
-	let c_password = Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password) in
+	let salt = random_string 8 in
+	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET email = $email, password = $c_password \
+		SET email = $email, password = $c_password, password_salt = $salt \
 		WHERE id = $uid"
 ;;
 
@@ -267,11 +283,12 @@ let get_casting game_id =
 ;;
 
 let add_user name username email password =
-	let c_password = Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password) in
-	let c_random = String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng 32)) 0 32 in
+	let c_random = random_string 32 in
+	let salt = random_string 8 in
+	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO users (name, username, email, password, confirmation) \
-		VALUES ($name, $username, $email, $c_password, $c_random)" >>=
+	PGSQL(dbh) "INSERT INTO users (name, username, email, password, password_salt, confirmation) \
+		VALUES ($name, $username, $email, $c_password, $salt, $c_random)" >>=
 	fun () -> PGSQL(dbh) "SELECT id FROM users \
 		WHERE name = $name" >>=
 	function
