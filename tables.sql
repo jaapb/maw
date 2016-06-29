@@ -55,7 +55,8 @@ CREATE TABLE users (
     username character varying(32) NOT NULL,
     is_admin boolean DEFAULT false NOT NULL,
     email text NOT NULL,
-    password text,
+    password text NOT NULL,
+		password_salt character varying(8) NOT NULL,
     confirmation character(32)
 );
 
@@ -65,6 +66,10 @@ CREATE SEQUENCE users_id_seq
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
+
+COPY users (id, name, username, is_admin, email, password, confirmation, password_salt) FROM stdin;
+1      Administrator   admin   t       root@kerguelen.org      tdfBqVvihMVZzMwYXZ03CAatorP7Ef7Uj7Id3C4OUV3pQ0Lnts5F8+OeNvNktq3UBakUCrVh2HPNc2KQQNihvA  \N      xxxxxxxx
+\.
 
 ALTER SEQUENCE users_id_seq OWNED BY users.id;
 
