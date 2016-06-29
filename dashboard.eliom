@@ -74,9 +74,7 @@ let dashboard_page () () =
 			mg_fmt
 		)
 	)
-	(function
-	| Not_found -> error_page "Could not connect to database."
-	| e -> error_page (Printexc.to_string e));;
+	(fun e -> error_page (Printexc.to_string e));;
 
 let () =
 	Maw_app.register ~service:dashboard_service dashboard_page;;
