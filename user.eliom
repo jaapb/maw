@@ -1,8 +1,8 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content.Html5
-	open Eliom_content.Html5.D
-	open Eliom_service.App
+	open Eliom_content
+	open Html.D
+	open Eliom_service
 	open Eliom_parameter
 ]
 
@@ -12,11 +12,11 @@
 	open Database
 ]
 
-let update_user_service = post_service ~fallback:account_service
-	~post_params:(string "email" ** string "password") ();;
-let add_user_service = post_service ~fallback:register_service 
-	~post_params:(string "name" ** string "username" ** string "email" ** string "password") ();;
-let confirm_user_service = service ~path:["confirm"] ~get_params:(suffix (int32 "user_id" ** string "random")) ();;
+let update_user_service = create ~id:(Path ["account"])
+	~meth:(Post (unit, string "email" ** string "password")) ();;
+let add_user_service = create ~id:(Path ["register"])
+	~meth:(Post (unit, string "name" ** string "username" ** string "email" ** string "password")) ();;
+let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 
 let account_page () () =
 	Lwt.catch (fun () ->

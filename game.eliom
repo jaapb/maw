@@ -1,8 +1,8 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content.Html5
-	open Eliom_content.Html5.D
-	open Eliom_service.App
+	open Eliom_content
+	open Html.D
+	open Eliom_service
 	open Eliom_parameter
 ]
 
@@ -11,14 +11,14 @@
 	open Maw
 ]
 
-let game_service = service ~path:["game"] ~get_params:(suffix (int32 "game_id")) ();;
-let signup_service = service ~path:["signup"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_signup_service = post_service ~fallback:signup_service ~post_params:(
-	bool "edit" ** bool "is_group" ** string "team" **
+let game_service = create ~id:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let signup_service = create ~id:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let do_signup_service = create ~id:(Path ["signup"]) ~meth:(Post (suffix (int32 "game_id"),
+	bool "edit" ** bool "is_group" ** opt (string "group_name") ** string "team" **
 	list "person" (sum (string "search") (int32 "uid") ** string "role_type" ** string "note")
-) ();;
-let show_inscriptions_service = service ~path:["inscriptions"] ~get_params:(suffix (int32 "game_id")) ();;
-let show_casting_service = service ~path:["casting"] ~get_params:(suffix (int32 "game_id")) ();;
+)) ();;
+let show_inscriptions_service = create ~id:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let show_casting_service = create ~id:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_name d full =
@@ -37,7 +37,7 @@ let game_page game_id () =
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
 	  | Some (uid, _, _) ->
-			let%lwt (signed_up, l) = Database.get_inscription_data uid game_id in
+			let%lwt l = Database.get_inscription_data uid game_id in
 			container (standard_menu ()) 
 			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl) @
 		  	if uid = dsg then
@@ -45,7 +45,7 @@ let game_page game_id () =
 					p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
 					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id]
 				]
-				else if signed_up then
+				else if List.length l > 0 then
 				[
 					p [
 						i [pcdata "You are signed up for this game. "] (*;
@@ -114,30 +114,43 @@ let%client add_inscription_row it teams =
 	let br = Dom_html.getElementById "button_row" in
   begin
     incr nr_ids;
-    Dom.insertBefore it (To_dom.of_element (new_row !nr_ids teams)) (Js.some br);
+    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids teams)) (Js.some br);
   end
+;;
+
+let%shared group_name_row gname =
+	tr ~a:[a_id "group_name_row"] [
+		td ~a:[a_colspan 4] [
+			pcdata "Group name: ";
+			Raw.input ~a:[a_input_type `Text; a_name "group_name"; a_value gname] ()
+		]			
+	]
 ;;
 
 let%shared new_button teams =
   Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%teams)]] ()
 ;;
 
-let%client group_inscription_handler teams ev =
+let%client group_inscription_handler teams gname ev =
 	Js.Opt.iter (ev##.target) (fun x ->
 		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
 			let it = Dom_html.getElementById "inscription_table" in
 	    let bf = Dom_html.getElementById "button_field" in
-      let sb = Dom_html.getElementById "submit_button" in
 			if Js.to_bool i##.checked then
       begin
+      let sb = Dom_html.getElementById "submit_button" in
+			let tpr = Dom_html.getElementById "team_preference_row" in
 				nr_ids := 0;
-        add_inscription_row it teams;
-        Dom.insertBefore bf (To_dom.of_element (new_button teams)) (Js.some sb)
+				Dom.insertBefore it (Html.To_dom.of_element (group_name_row gname)) (Js.some tpr);
+				add_inscription_row it teams;
+				Dom.insertBefore bf (Html.To_dom.of_element (new_button teams)) (Js.some sb)
       end
       else
       begin
 			let ab = Dom_html.getElementById "add_button" in
+			let gnr = Dom_html.getElementById "group_name_row" in
         nr_ids := 0;
+				Dom.removeChild it gnr;
         List.iter (fun x ->
           Js.Opt.iter (Dom_html.CoerceTo.element x) (fun e ->
             if Js.to_string e##.className = "group_inscription_row" then
@@ -159,10 +172,18 @@ let signup_page game_id () =
 			Database.get_game_data game_id in
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
-		let%lwt (signed_up, inscr) = Database.get_inscription_data uid game_id in
+		let%lwt inscr = Database.get_inscription_data uid game_id in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
 			then inscr 
 			else (uid, uname, None, None, "", None)::inscr in
+		let signed_up = List.length inscr > 0 in
+		let multiple_inscr = List.length me_inscr > 1 in
+		let ex_group_name = if signed_up
+			then List.hd (List.map (fun (_, _, _, _, _, gn) -> gn)
+			(List.sort_uniq (fun (u1, _, _, _, _, _) (u2, _, _, _, _, _) ->
+				compare u1 u2) inscr))
+			else None in
+		let (gname: string) = default (Printf.sprintf "Team %s" uname) ex_group_name in
 		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
 		container (standard_menu ())
 		[
@@ -172,16 +193,18 @@ let signup_page game_id () =
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			Form.post_form ~service:do_signup_service
-			(fun (edit, (is_group, (team, person))) ->
+			(fun (edit, (is_group, (group_name, (team, person)))) ->
       [
 				table ~a:[a_id "inscription_table"] (
         	tr [
 						td ~a:[a_colspan 4] [
-       	       Form.bool_checkbox_one ~name:is_group ~checked:(List.length me_inscr > 1) ~a:[a_onclick [%client (group_inscription_handler ~%teams)]] (); 
+       	       Form.bool_checkbox_one ~name:is_group ~checked:multiple_inscr ~a:[a_onclick [%client (group_inscription_handler ~%teams "blerp")]] (); 
           		pcdata "This is a group inscription"
 						]
 					]::
-					tr [
+					cond_list multiple_inscr
+					(group_name_row gname)
+					(tr ~a:[a_id "team_preference_row"] [
 						td ~a:[a_colspan 4] [
 							pcdata "Team preference: ";
 							Form.select ~name:team Form.string
@@ -213,7 +236,7 @@ let signup_page game_id () =
 								) role_types)
 							];
 							td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string];
-    					td (if (List.length me_inscr > 1) then
+    					td (if multiple_inscr then
 								[Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
 							else
 								[]
@@ -232,7 +255,7 @@ let signup_page game_id () =
 								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
 								else [])
 						)]	
-					]
+					])
 				)
 			]) game_id
 		]
@@ -243,13 +266,13 @@ let signup_page game_id () =
 	)
 ;;
 
-let do_signup_page game_id (edit, (is_group, (team, users))) =
+let do_signup_page game_id (edit, (is_group, (group_name, (team, users)))) =
 	let rec handle_inscriptions edit group_name users prefs =
 		match users, prefs with
 		| uid::uids, (r, n)::prefs ->
       Database.add_inscription game_id uid group_name
-  		  (if String.lowercase team = "any" then None else Some team)
-			  (if String.lowercase r = "any" then None else Some r)
+  		  (if String.lowercase_ascii team = "any" then None else Some team)
+			  (if String.lowercase_ascii r = "any" then None else Some r)
 			  n >>=
 			fun () -> handle_inscriptions edit group_name uids prefs
 		| _, _ -> Lwt.return ()
@@ -265,15 +288,7 @@ let do_signup_page game_id (edit, (is_group, (team, users))) =
 					Database.search_for_user search >>=
 					fun res -> Lwt.return (res::uids, p::prefs)
 				| (Inj2 uid, p) -> Lwt.return (uid::uids, p::prefs)) ([], []) users >>=
-			fun (uid_list, pref_list) -> (if is_group
-			then
-			begin
-				Database.get_group_name game_id uid_list  >>=
-				fun x -> Lwt.return (Some x)
-			end
-			else
-				Lwt.return None) >>=
-			fun gname -> handle_inscriptions edit gname uid_list pref_list >>=
+			fun (uid_list, pref_list) -> handle_inscriptions edit group_name uid_list pref_list >>=
 			fun () -> container (standard_menu ())
 			[
 				p [

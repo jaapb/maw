@@ -1,7 +1,7 @@
 open Eliom_lib
 open Eliom_content
-open Html5.D
-open Eliom_service.App
+open Html.D
+open Eliom_service
 open Eliom_parameter
 
 [%%server

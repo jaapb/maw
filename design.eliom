@@ -1,8 +1,8 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content.Html5
-	open Eliom_content.Html5.D
-	open Eliom_service.App
+	open Eliom_content
+	open Html.D
+	open Eliom_service
 	open Eliom_parameter
 ]
 
@@ -11,15 +11,15 @@
 	open Maw
 ]
 
-let design_service = service ~path:["design"] ~get_params:(suffix (int32 "game_id")) ();;
-let update_descr_service = post_service ~fallback:design_service ~post_params:(string "description") ();;
-let update_numbers_service = post_service ~fallback:design_service ~post_params:(int32 "min" ** int32 "max") ();;
-let remove_teams_service = post_service ~fallback:design_service ~post_params:(set string "teams") ();;
-let add_team_service = post_service ~fallback:design_service ~post_params:(string "team") ();;
-let remove_role_types_service = post_service ~fallback:design_service ~post_params:(set string "role_types") ();;
-let add_role_type_service = post_service ~fallback:design_service ~post_params:(string "role_type") ();;
-let cast_service = service ~path:["cast"] ~get_params:(suffix (int32 "game_id")) ();;
-let do_cast_service = post_service ~fallback:cast_service ~post_params:(list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish") ();;
+let design_service = create ~id:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let update_descr_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
+let update_numbers_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
+let remove_teams_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
+let add_team_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "team")) ();;
+let remove_role_types_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "role_types")) ();;
+let add_role_type_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;
+let cast_service = create ~id:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let do_cast_service = create ~id:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -189,7 +189,7 @@ let%client switch_active ev =
 ;;
 
 let%client new_input () =
-  To_dom.of_element (td [
+  Html.To_dom.of_element (td [
 		Raw.input ~a:[a_input_type `Text; a_value ""] ()
 	]);;
 

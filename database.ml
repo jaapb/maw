@@ -162,10 +162,7 @@ let get_inscription_data uid game_id =
 		ON g1.game_id = g2.game_id AND \
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
-		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
-	function
-	| [] -> return (false, [])
-	| l -> return (true, l)
+		WHERE g1.user_id = $uid AND g1.game_id = $game_id"
 ;;
 
 let get_inscription_list ?(filter_cast = false) game_id =

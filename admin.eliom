@@ -1,8 +1,8 @@
 [%%shared
 	open Eliom_lib
-	open Eliom_content.Html5
-	open Eliom_content.Html5.D
-	open Eliom_service.App
+	open Eliom_content
+	open Html.D
+	open Eliom_service
 	open Eliom_parameter
 ]
 
@@ -11,10 +11,10 @@
 	open Maw
 ]
 
-let add_game_service = post_service ~fallback:admin_service
-  ~post_params:(string "title" ** int32 "designer") ();;
-let set_game_data_service = post_service ~fallback:admin_service
-  ~post_params:(int32 "game_id" ** string "date" ** string "location") ();;
+let add_game_service = create ~id:(Path ["admin"])
+  ~meth:(Post (unit, string "title" ** int32 "designer")) ();;
+let set_game_data_service = create ~id:(Path ["admin"])
+  ~meth:(Post (unit, int32 "game_id" ** string "date" ** string "location")) ();;
 
 let admin_page () () =
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in

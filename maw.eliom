@@ -1,15 +1,16 @@
 [%%shared
 	open Eliom_lib
 	open Eliom_content
-	open Html5.D
-	open Eliom_service.App
+	open Html.D
 	open Eliom_parameter
+	open Eliom_service
 ]
 
 module Maw_app =
   Eliom_registration.App (
     struct
       let application_name = "maw"
+			let global_data_path = None
     end)
 
 (* Utility functions *)
@@ -31,14 +32,14 @@ let cond_list c h t =
 
 (* Services *)
 
-let dashboard_service = service ~path:[] ~get_params:unit ();;
-let login_service = post_coservice'
-	~post_params:(string "name" ** string "password") ();;
-let logout_service = post_coservice'
-	~post_params:unit ();;
-let account_service = service ~path:["account"] ~get_params:unit ();;
-let admin_service = service ~path:["admin"] ~get_params:unit ();;
-let register_service = service ~path:["register"] ~get_params:unit ();;
+let dashboard_service = create ~id:(Path []) ~meth:(Get unit) ();;
+let login_service = create ~id:Global
+	~meth:(Post (unit, (string "name" ** string "password"))) ();;
+let logout_service = create ~id:Global
+	~meth:(Post (unit, unit)) ();;
+let account_service = create ~id:(Path ["account"]) ~meth:(Get unit) ();;
+let admin_service = create ~id:(Path ["admin"]) ~meth:(Get unit) ();;
+let register_service = create ~id:(Path ["register"]) ~meth:(Get unit) ();;
 
 (* Login bits and pieces *)
 
@@ -122,7 +123,7 @@ let container menu_thread cts_div =
 	(Eliom_tools.F.html
 		~title:"maw"
 		~css:[["css";"maw.css"]]
-		Html5.F.(body [
+		Html.F.(body [
 			div ~a:[a_class ["layout"]; a_id "header"] [h1 [pcdata "MAW"]];
 			div ~a:[a_class ["layout"]; a_id "logbox"] box;
 			div ~a:[a_class ["layout"]; a_id "menu"] menu_div;
