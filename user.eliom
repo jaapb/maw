@@ -12,13 +12,30 @@
 	open Database
 ]
 
-let update_user_service = create ~id:(Path ["account"])
-	~meth:(Post (unit, string "email" ** string "password")) ();;
 let add_user_service = create ~id:(Path ["register"])
 	~meth:(Post (unit, string "name" ** string "username" ** string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 
+let update_user_page () (email, password) =
+	Lwt.catch (fun () ->
+		let%lwt u = Eliom_reference.get Maw.user in
+		match u with
+		| None -> not_logged_in ()
+		| Some (uid, _, _) -> Database.update_user_data uid email password >>=
+		fun () -> container (standard_menu ())
+		[
+			p [pcdata "Changes successfully saved."]
+		]
+	)
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
 let account_page () () =
+	let update_user_service = create ~id:(Fallback account_service)
+		~meth:(Post (unit, string "email" ** string "password")) () in
+	Maw_app.register ~service:update_user_service update_user_page;
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
@@ -58,22 +75,6 @@ let account_page () () =
 	)
 	(function
 	| Not_found -> error_page "Unknown user"
-	| e -> error_page (Printexc.to_string e)
-	)
-;;
-
-let update_user_page () (email, password) =
-	Lwt.catch (fun () ->
-		let%lwt u = Eliom_reference.get Maw.user in
-		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _) -> Database.update_user_data uid email password >>=
-		fun () -> container (standard_menu ())
-		[
-			p [pcdata "Changes successfully saved."]
-		]
-	)
-	(function
 	| e -> error_page (Printexc.to_string e)
 	)
 ;;
@@ -200,7 +201,6 @@ let confirm_user_page (user_id, random) () =
 
 let _ =
 	Maw_app.register ~service:account_service account_page;
-	Maw_app.register ~service:update_user_service update_user_page;
 	Maw_app.register ~service:Maw.register_service register_page;
 	Maw_app.register ~service:add_user_service add_user_page;
 	Maw_app.register ~service:confirm_user_service confirm_user_page
