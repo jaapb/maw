@@ -213,7 +213,7 @@ let get_user_data uid =
 ;;
 
 let update_user_data uid email password =
-	let c_password = Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password in
+	let c_password = Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password) in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
 		SET email = $email, password = $c_password \
@@ -267,7 +267,7 @@ let get_casting game_id =
 ;;
 
 let add_user name username email password =
-	let c_password = Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password in
+	let c_password = Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) password) in
 	let c_random = String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng 32)) 0 32 in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO users (name, username, email, password, confirmation) \
