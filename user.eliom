@@ -32,6 +32,43 @@ let update_user_page () (email, password) =
 	)
 ;;
 
+let%client check_account_form ev =
+	let add_or_replace text = 
+	let p = Dom_html.getElementById "error_paragraph" in
+	let l = Dom.list_of_nodeList p##.childNodes in
+	let t = Dom_html.document##createTextNode text in
+	begin
+		match l with
+		| [] -> Dom.appendChild p t
+		| [c] -> Dom.replaceChild p t c
+		| _ -> ()
+	end in
+	let p1 = Dom_html.getElementById "password_input1" in
+	let p2 = Dom_html.getElementById "password_input2" in
+	let ei = Dom_html.getElementById "email_input" in
+	Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "You might want to put in an e-mail addres...");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input p1) (fun e1 ->
+		Js.Opt.iter (Dom_html.CoerceTo.input p2) (fun e2 ->
+			if e1##.value <> e2##.value then
+			begin
+				add_or_replace (Js.string "Passwords don't match.");
+				Dom.preventDefault ev
+			end
+			else if Js.to_string e1##.value = "" then
+			begin
+				add_or_replace (Js.string "You might want to put in a password...");
+				Dom.preventDefault ev
+			end
+		)
+	)
+;;
+
 let account_page () () =
 	let update_user_service = create ~id:(Fallback account_service)
 		~meth:(Post (unit, string "email" ** string "password")) () in
@@ -45,6 +82,7 @@ let account_page () () =
 			container (standard_menu ())
 			[
 				h1 [pcdata "Your account"];
+				p ~a:[a_class ["error"]; a_id "error_paragraph"] [];
 				Form.post_form ~service:update_user_service (fun (email, password) -> 
 				[
 					table [
@@ -54,20 +92,20 @@ let account_page () () =
 						];
 						tr [
 							th [pcdata "E-mail address"];
-							td [Form.input ~input_type:`Text ~name:email ~value:ex_email Form.string] 
+							td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string] 
 						];
 						tr [
 							th [pcdata "Password"];
-							td [Form.input ~input_type:`Password ~name:password Form.string]
+							td [Form.input ~a:[a_id "password_input1"] ~input_type:`Password ~name:password Form.string]
 						];
 						tr [
 							th [pcdata "Confirm password"];
-							td [Raw.input ~a:[a_input_type `Password; a_id "password_confirm"] ()]
+							td [Raw.input ~a:[a_input_type `Password; a_id "password_input2"] ()]
 						];
 						tr 
 						[
 						 	td ~a:[a_colspan 2]
-								[Form.input ~input_type:`Submit ~value:"Save changes" Form.string]
+								[Form.input ~a:[a_onclick [%client check_account_form]] ~input_type:`Submit ~value:"Save changes" Form.string]
 						]
 					]
 				]) ()
@@ -79,7 +117,7 @@ let account_page () () =
 	)
 ;;
 
-let%client check_form ev =
+let%client check_register_form ev =
 	let add_or_replace text = 
 	let p = Dom_html.getElementById "error_paragraph" in
 	let l = Dom.list_of_nodeList p##.childNodes in
@@ -105,7 +143,7 @@ let%client check_form ev =
 	Js.Opt.iter (Dom_html.CoerceTo.input ni) (fun e ->
 		if Js.to_string e##.value = "" then
 		begin
-			add_or_replace (Js.string "You might want to put in a name...");
+			add_or_replace (Js.string "You might want to put in a full name...");
 			Dom.preventDefault ev
 		end
 	);
@@ -162,7 +200,7 @@ let register_page () () =
 						td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email Form.string]
 					];
 					tr [
-						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_form]]
+						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
 						~input_type:`Submit ~value:"Sign up" Form.string]
 					]
 				]
