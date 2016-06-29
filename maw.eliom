@@ -82,7 +82,7 @@ let login_box () =
 			]::
 			(match err with
 			| None -> []
-			| Some e -> [tr [td ~a:[a_colspan 3] [pcdata e]]]
+			| Some e -> [tr [td ~a:[a_colspan 3; a_class ["error"]] [pcdata e]]]
 			)
 		)]) ()]
 	| Some (_, n, _) -> [Form.post_form ~service:logout_service (fun () ->
@@ -148,7 +148,7 @@ let error_page e =
 let not_logged_in () =
 	container (standard_menu ())
 	[
-		p [pcdata "You need to be logged in for this to work."]
+		p [pcdata "You need to be logged in for this to work. You can log in (or create a new account) on the top right of the screen."]
 	];;
 
 let unknown_game () =
