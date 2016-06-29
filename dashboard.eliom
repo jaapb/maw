@@ -17,12 +17,16 @@ let location_bar id title date loc =
 	];;
 
 let format_upcoming_games ug =
-	table (
-		List.flatten (List.map (function
-		| (id, title, date, loc) -> 
-			[tr [td (location_bar id title date loc)]]
-		) ug)
-	);;
+	match ug with
+	| [] -> p [pcdata "Strangely, there are no games planned at all."]
+	| l ->
+		table (
+			List.flatten (List.map (function
+			| (id, title, date, loc) -> 
+				[tr [td (location_bar id title date loc)]]
+			) l)
+		)
+;;
 
 let format_my_games mg dg =
 	Lwt.return (
