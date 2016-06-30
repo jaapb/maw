@@ -306,3 +306,15 @@ let confirm_user user_id random =
 	| [i] -> PGSQL(dbh) "UPDATE users SET confirmation = NULL WHERE id = $i" 
 	| _ -> Lwt.fail_with "Inconsistency in database"
 ;;
+
+let add_game title designer =
+	get_db () >>= fun dbh -> PGSQL(dbh) "INSERT INTO games \
+		(title, designer) VALUES
+		($title, $designer)"
+;;
+
+let set_game_data game_id date location =
+	get_db () >>= fun dbh -> PGSQL(dbh) "UPDATE games \
+		SET date = $date, location = $location \
+		WHERE id = $game_id"
+;;

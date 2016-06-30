@@ -14,6 +14,8 @@
 
 let add_user_service = create ~id:(Path ["register"])
 	~meth:(Post (unit, string "name" ** string "username" ** string "email" ** string "password")) ();;
+let update_user_service = create ~id:(Fallback account_service)
+	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 
 let update_user_page () (email, password) =
@@ -70,9 +72,8 @@ let%client check_account_form ev =
 ;;
 
 let account_page () () =
-	let update_user_service = create ~id:(Fallback account_service)
-		~meth:(Post (unit, string "email" ** string "password")) () in
-	Maw_app.register ~service:update_user_service update_user_page;
+	Maw_app.register ~scope:Eliom_common.default_session_scope
+		~service:update_user_service update_user_page;
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
@@ -213,7 +214,7 @@ let register_page () () =
 
 let add_user_page () (name, (username, (email, password))) =
 	Lwt.catch (fun () -> Database.add_user name username email password >>=
-	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~service:confirm_user_service (uid, random) in
+	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~absolute_path:true ~service:confirm_user_service (uid, random) in
 	Mail.send_register_mail name email uri;
 	container (standard_menu ())
 	[
