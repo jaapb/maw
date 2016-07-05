@@ -68,13 +68,13 @@ let login_box () =
 		[table (
 			tr [
 				td [pcdata "Username"];
-				td [Form.input ~input_type:`Text ~name:name Form.string];
-				td [Form.input ~input_type:`Submit ~value:"Login" Form.string]
+				td ~a:[a_colspan 2]
+					[Form.input ~input_type:`Text ~name:name Form.string]
 			]::
 			tr [
 				td [pcdata "Password"];
-				td ~a:[a_colspan 2]
-					[Form.input ~input_type:`Password ~name:password Form.string]
+				td [Form.input ~input_type:`Password ~name:password Form.string];
+				td [Form.input ~input_type:`Submit ~value:"Login" Form.string]
 			]::
 			tr [
 				td ~a:[a_colspan 3]

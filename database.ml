@@ -318,3 +318,9 @@ let set_game_data game_id date location =
 		SET date = $date, location = $location \
 		WHERE id = $game_id"
 ;;
+
+let get_unconfirmed_users () =
+	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email, confirmation \
+		FROM users \
+		WHERE confirmation IS NOT NULL"
+;;

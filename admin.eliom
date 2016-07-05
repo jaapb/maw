@@ -28,7 +28,7 @@ let set_game_data_page f () games =
 			Database.set_game_data game_id date location
 		) games
 	with Invalid_argument s ->
-		Lwt.return (ignore ([%client (Eliom_lib.alert "Gniarf: %s" ~%s: unit)]))) >>=
+		Lwt.return (ignore ([%client (Eliom_lib.alert "Error: %s" ~%s: unit)]))) >>=
 	fun () -> f () ()
 ;;
 
@@ -41,6 +41,7 @@ let rec admin_page () () =
       else
       let%lwt games = Database.get_upcoming_games ~no_date:true () in
       let%lwt users = Database.get_user_list () in
+			let%lwt nonconf = Database.get_unconfirmed_users () in
       let (uhid, uhn) = List.hd users in
       begin
 				Maw_app.register ~scope:Eliom_common.default_session_scope
@@ -112,6 +113,35 @@ let rec admin_page () () =
             ]
           ]) ();
 					h2 [pcdata "Manually confirm users"];
+					table
+					(
+						tr [
+							td ~a:[a_colspan 3]
+								[pcdata (Printf.sprintf "Currently %d users are waiting for confirmation." (List.length nonconf))]
+						]::
+						tr [
+							th [pcdata "Name"];
+							th [pcdata "E-mail address"];
+							th [pcdata ""]
+						]::
+						List.map (fun (id, name, email, c) ->
+							match c with
+							| None -> (* this should not happen *)
+								tr 
+								[	
+									td [pcdata name];
+									td [pcdata email];
+									td [pcdata ""];
+								]
+							| Some confirm ->
+								tr
+								[
+									td [pcdata name];
+									td [pcdata email];
+									td [a ~service:User.confirm_user_service [pcdata "Confirm"] (id, confirm)]
+								]
+						) nonconf 
+					)
         ]
       end
   )
