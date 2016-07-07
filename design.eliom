@@ -49,7 +49,7 @@ let design_page game_id () =
 						];
 						tr [
 							td [
-								Form.input ~input_type:`Submit ~value:"Update" Form.string
+								Form.input ~input_type:`Submit ~value:"Save" Form.string
 							]
 						]
 					]
@@ -64,7 +64,7 @@ let design_page game_id () =
 							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:min ~value:min_nr Form.int32];
 							td [pcdata "Maximum:"];
 							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:max ~value:max_nr Form.int32];
-							td [Form.input ~input_type:`Submit ~value:"Update" Form.string]
+							td [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
 				]) game_id;
