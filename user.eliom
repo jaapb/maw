@@ -214,7 +214,7 @@ let register_page () () =
 
 let add_user_page () (name, (username, (email, password))) =
 	Lwt.catch (fun () -> Database.add_user name username email password >>=
-	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~absolute_path:true ~service:confirm_user_service (uid, random) in
+	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~absolute:true ~service:confirm_user_service (uid, random) in
 	Mail.send_register_mail name email uri;
 	container (standard_menu ())
 	[
