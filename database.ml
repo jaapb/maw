@@ -197,14 +197,11 @@ let get_inscription_list ?(filter_cast = false) game_id =
 ;;
 
 let search_for_user search =
+ 	let search_expr = Printf.sprintf ".*%s.*" search in
   get_db () >>= fun dbh ->
-  PGSQL(dbh) "SELECT id \
+  PGSQL(dbh) "SELECT id, name, email \
     FROM users \
-    WHERE username = $search OR email = $search" >>=
-	function
-	| [] -> fail Not_found
-	| [uid] -> return uid
-	| _ -> fail_with "Inconsistency in database"
+    WHERE email = $search OR name ~* $search_expr"
 ;;
 
 let get_group_name game_id uid_list =
@@ -323,4 +320,10 @@ let get_unconfirmed_users () =
 	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email, confirmation \
 		FROM users \
 		WHERE confirmation IS NOT NULL"
+;;
+
+let get_confirmed_users () =
+	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email \
+		FROM users \
+		WHERE confirmation IS NULL"
 ;;

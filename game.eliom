@@ -13,10 +13,6 @@
 
 let game_service = create ~id:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let signup_service = create ~id:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let do_signup_service = create ~id:(Path ["signup"]) ~meth:(Post (suffix (int32 "game_id"),
-	bool "edit" ** bool "is_group" ** opt (string "group_name") ** string "team" **
-	list "person" (sum (string "search") (int32 "uid") ** string "role_type" ** string "note")
-)) ();;
 let show_inscriptions_service = create ~id:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let show_casting_service = create ~id:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
@@ -73,10 +69,12 @@ let%client rec renumber_children n trs =
 			begin
 				let td_name::td_role::td_note::_ =
 					Dom.list_of_nodeList tr##.childNodes in
-				let input_name::_ = Dom.list_of_nodeList td_name##.childNodes in	
+				let input_email::input_uid::_ =
+					Dom.list_of_nodeList td_name##.childNodes in	
 				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
-					Js.Unsafe.set input_name "name" (Printf.sprintf "person.search[%d]" n);
+					Js.Unsafe.set input_email "name" (Printf.sprintf "person.email[%d]" n);
+					Js.Unsafe.set input_uid "name" (Printf.sprintf "person.uid[%d]" n);
 					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
 					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
 					renumber_children (n+1) t
@@ -99,9 +97,46 @@ let%client remove_my_row ev =
   )
 ;; 
 
-let%shared new_row id teams =
+let%client row_text_changed id ev =
+	let sel = Dom_html.getElementById (Printf.sprintf "gir_select[%d]" id) in
+  Js.Opt.iter (ev##.target) (fun ei ->
+		Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
+			let search = Js.to_string e##.value in
+			Js.Opt.iter (Dom_html.CoerceTo.select sel) (fun s ->
+				let opts = Dom_html.js_array_of_collection (s##.options) in
+				opts##forEach (Js.wrap_callback (fun opt index _ ->
+					let txt = Js.to_string opt##.text in
+					match Regexp.search (Regexp.regexp_string search) txt 0 with
+					| None -> opt##.disabled := true
+					| Some _ -> opt##.disabled := false
+				))		
+			)
+		)
+	)
+;;
+
+let%client row_select_changed id ev =
+	let txt = Dom_html.getElementById (Printf.sprintf "gir_text[%d]" id) in
+  Js.Opt.iter (ev##.target) (fun ei ->
+		Js.Opt.iter (Dom_html.CoerceTo.select ei) (fun e ->
+			let si = e##.selectedIndex in
+			Js.Opt.iter (Dom_html.CoerceTo.input txt) (fun t ->
+				Js.Opt.iter (e##.options##item si) (fun o ->
+					t##.value := o##.text
+				)
+			)
+		)
+	)
+;;
+
+let%shared new_row id teams users =
   tr ~a:[a_class ["group_inscription_row"]] [ 
-    td [Raw.input ~a:[a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Text; a_value ""] ()];
+    td [
+			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.email[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false; a_oninput [%client (row_text_changed ~%id)]] ();
+			Raw.select ~a:[a_class ["git_select"]; a_id (Printf.sprintf "gir_select[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_onchange [%client (row_select_changed ~%id)]] (List.map (fun (uid, name, _) ->
+				option ~a:[a_value (Int32.to_string uid)] (pcdata name)
+			) users)
+		];
     td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) teams)];
     td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
     td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
@@ -110,11 +145,11 @@ let%shared new_row id teams =
 
 let%client nr_ids = ref 0
 
-let%client add_inscription_row it teams =
+let%client add_inscription_row it teams users =
 	let br = Dom_html.getElementById "button_row" in
   begin
     incr nr_ids;
-    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids teams)) (Js.some br);
+    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids teams users)) (Js.some br);
   end
 ;;
 
@@ -127,11 +162,11 @@ let%shared group_name_row gname =
 	]
 ;;
 
-let%shared new_button teams =
-  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%teams)]] ()
+let%shared new_button teams users =
+  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%teams ~%users)]] ()
 ;;
 
-let%client group_inscription_handler teams gname ev =
+let%client group_inscription_handler teams users gname ev =
 	Js.Opt.iter (ev##.target) (fun x ->
 		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
 			let it = Dom_html.getElementById "inscription_table" in
@@ -142,8 +177,8 @@ let%client group_inscription_handler teams gname ev =
 			let tpr = Dom_html.getElementById "team_preference_row" in
 				nr_ids := 0;
 				Dom.insertBefore it (Html.To_dom.of_element (group_name_row gname)) (Js.some tpr);
-				add_inscription_row it teams;
-				Dom.insertBefore bf (Html.To_dom.of_element (new_button teams)) (Js.some sb)
+				add_inscription_row it teams users;
+				Dom.insertBefore bf (Html.To_dom.of_element (new_button teams users)) (Js.some sb)
       end
       else
       begin
@@ -163,13 +198,50 @@ let%client group_inscription_handler teams gname ev =
 	)
 ;;
 
+let do_signup_page game_id () (edit, (group_name, (team, users))) =
+	let rec handle_inscriptions edit group_name users prefs =
+		match users, prefs with
+		| uid::uids, (r, n)::prefs ->
+      Database.add_inscription game_id uid group_name
+  		  (if String.lowercase_ascii team = "any" then None else Some team)
+			  (if String.lowercase_ascii r = "any" then None else Some r)
+			  n >>=
+			fun () -> handle_inscriptions edit group_name uids prefs
+		| _, _ -> Lwt.return ()
+	in
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (uid, _, _) -> 
+		container (standard_menu ())
+		[
+			p [
+				pcdata (
+					if edit
+					then "Changes successfully saved."
+					else "You have successfully signed up for this game."
+				)
+			]
+		]
+	)
+	(fun e -> error_page (Printexc.to_string e))
+;;
+
 let signup_page game_id () =
+	let do_signup_service = create
+		~id:(Fallback (preapply signup_service game_id))
+		~meth:(Post (unit,
+			bool "edit" ** opt (string "group_name") **
+			string "team" ** list "person" ((string "email") ** (int32 "uid") **
+			string "role_type" ** string "note"))) () in
+	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, uname, _) -> 
 		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _, _)  =
 			Database.get_game_data game_id in
+		let%lwt users = Database.get_confirmed_users () in
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt inscr = Database.get_inscription_data uid game_id in
@@ -183,7 +255,7 @@ let signup_page game_id () =
 			(List.sort_uniq (fun (u1, _, _, _, _, _) (u2, _, _, _, _, _) ->
 				compare u1 u2) inscr))
 			else None in
-		let (gname: string) = default (Printf.sprintf "Team %s" uname) ex_group_name in
+		(*let (gname: string) = default (Printf.sprintf "Team %s" uname) ex_group_name in*)
 		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
 		container (standard_menu ())
 		[
@@ -192,18 +264,21 @@ let signup_page game_id () =
 		  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]];
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
+			p [i [pcdata "For group inscriptions, you can either find an existing users or enter the e-mail address the user has subscribed with. In the latter case, you will be asked whether you want to create a new account."]];
 			Form.post_form ~service:do_signup_service
-			(fun (edit, (is_group, (group_name, (team, person)))) ->
+			(fun (edit, (group_name, (team, person))) ->
       [
 				table ~a:[a_id "inscription_table"] (
         	tr [
 						td ~a:[a_colspan 4] [
-       	       Form.bool_checkbox_one ~name:is_group ~checked:multiple_inscr ~a:[a_onclick [%client (group_inscription_handler ~%teams "blerp")]] (); 
+       	       Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%teams ~%users "blerp")]::(match ex_group_name with
+							 | None -> []
+							 | Some _ -> [a_checked ()])) (); 
           		pcdata "This is a group inscription"
 						]
 					]::
 					cond_list multiple_inscr
-					(group_name_row gname)
+					(group_name_row "blarp")
 					(tr ~a:[a_id "team_preference_row"] [
 						td ~a:[a_colspan 4] [
 							pcdata "Team preference: ";
@@ -220,12 +295,13 @@ let signup_page game_id () =
 						th [pcdata "Note"];
             th [];
 					]::
-					person.it (fun ((search, uid), (role_type, note))
+					person.it (fun (email, (uid, (role_type, note)))
 						(ex_uid, ex_name, _, r, ex_note, _) init ->
 						let ex_role = default "Any" r in
 						tr [
 							td [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
+								Form.input ~input_type:`Hidden ~name:email ~value:"" Form.string;
 								pcdata ex_name
 							]; 
 							td [
@@ -249,7 +325,7 @@ let signup_page game_id () =
 							td ~a:[a_id "button_field"; a_colspan 4] (
 							cond_list
 								(List.length me_inscr > 1)
-								(new_button teams)
+								(new_button teams users)
 								(Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 								if signed_up
 								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
@@ -257,51 +333,13 @@ let signup_page game_id () =
 						)]	
 					])
 				)
-			]) game_id
+			]) ()
 		]
 	)
 	(function 
 	| Not_found -> unknown_game ()
 	| e -> error_page (Printexc.to_string e)
 	)
-;;
-
-let do_signup_page game_id (edit, (is_group, (group_name, (team, users)))) =
-	let rec handle_inscriptions edit group_name users prefs =
-		match users, prefs with
-		| uid::uids, (r, n)::prefs ->
-      Database.add_inscription game_id uid group_name
-  		  (if String.lowercase_ascii team = "any" then None else Some team)
-			  (if String.lowercase_ascii r = "any" then None else Some r)
-			  n >>=
-			fun () -> handle_inscriptions edit group_name uids prefs
-		| _, _ -> Lwt.return ()
-	in
-	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _) -> 
-		begin
-			Lwt_list.fold_left_s (fun (uids, prefs) x ->
-				match x with
-				| (Inj1 search, p) -> 
-					Database.search_for_user search >>=
-					fun res -> Lwt.return (res::uids, p::prefs)
-				| (Inj2 uid, p) -> Lwt.return (uid::uids, p::prefs)) ([], []) users >>=
-			fun (uid_list, pref_list) -> handle_inscriptions edit group_name uid_list pref_list >>=
-			fun () -> container (standard_menu ())
-			[
-				p [
-					pcdata (
-						if edit
-						then "Changes successfully saved."
-						else "You have successfully signed up for this game."
-					)
-				]
-			]
-		end
-	)
-	(fun e -> error_page (Printexc.to_string e))
 ;;
 
 let show_inscriptions_page game_id () =
@@ -397,7 +435,6 @@ let show_casting_page game_id () =
 let _ =
 	Maw_app.register ~service:game_service game_page;
 	Maw_app.register ~service:signup_service signup_page;
-	Maw_app.register ~service:do_signup_service do_signup_page;
 	Maw_app.register ~service:show_inscriptions_service show_inscriptions_page;
 	Maw_app.register ~service:show_casting_service show_casting_page
 ;;

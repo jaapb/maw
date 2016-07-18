@@ -123,6 +123,16 @@ table.casting td.active
   border-color: #000000;
 }
 
+input.gir_text
+{
+	width: 100%;
+}
+
+select.gir_select
+{
+	width: 100%;
+}
+
 .error
 {
 	color: red;
