@@ -389,16 +389,18 @@ let show_inscriptions_page game_id () =
 					table (
 						tr [
 							th [pcdata "Status"];
+							th [pcdata "Group name"];
 							th [pcdata "Name"];
 							th [pcdata "Team"];
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (nm, _, g, r, nt, _, st) ->
+						List.map (fun (nm, _, t, r, nt, g, st) ->
 							tr [
 								td [pcdata (status_word st)];
+								td [pcdata (default "" g)];
 								td [pcdata nm];
-								td [pcdata (default "Any" g)];
+								td [pcdata (default "Any" t)];
 								td [pcdata (default "Any" r)];
 								td [i [pcdata nt]]
 							]
