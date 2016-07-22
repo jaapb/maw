@@ -133,7 +133,7 @@ let%shared new_row id roles users =
   tr ~a:[a_class ["group_inscription_row"]] [ 
     td [
 			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.email[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false; a_oninput [%client (row_text_changed ~%id)]] ();
-			Raw.select ~a:[a_class ["git_select"]; a_id (Printf.sprintf "gir_select[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_onchange [%client (row_select_changed ~%id)]] (List.map (fun (uid, name, _) ->
+			Raw.select ~a:[a_class ["gir_select"]; a_id (Printf.sprintf "gir_select[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_onchange [%client (row_select_changed ~%id)]] (List.map (fun (uid, name, _) ->
 				option ~a:[a_value (Int32.to_string uid)] (pcdata name)
 			) users)
 		];
@@ -188,7 +188,7 @@ let%client group_inscription_handler roles users gname ev =
 				Dom.removeChild it gnr;
         List.iter (fun x ->
           Js.Opt.iter (Dom_html.CoerceTo.element x) (fun e ->
-            if Js.to_string e##.className = "group_inscription_row" then
+						if Js.to_bool (e##.classList##contains (Js.string "group_inscription_row")) then
               Dom.removeChild it e
           )
         ) (Dom.list_of_nodeList it##.childNodes);
@@ -251,6 +251,31 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	(fun e -> error_page (Printexc.to_string e))
 ;;
 
+let%client check_signup_form ev =
+	Eliom_lib.alert "check_signup_form v5";
+	let it = Dom_html.getElementById "inscription_table" in
+	List.iter (fun tr_el ->
+		Js.Opt.iter (Dom_html.CoerceTo.element tr_el) (fun tr ->
+			if Js.to_bool (tr##.classList##contains (Js.string "user_inscription_row")) then
+			begin
+				Eliom_lib.alert "Yes, this is a UIR";
+				(* get contents of first td *)
+				Js.Opt.iter (tr##.childNodes##item 0) (fun td ->
+				Eliom_lib.alert "ugh 1";
+					List.iter (fun c ->
+						Js.Opt.iter (Dom.CoerceTo.text c) (fun text ->
+				Eliom_lib.alert "ugh 2";
+							Eliom_lib.alert "Text: %s" (Js.to_string text##.data)
+						)	
+					) (Dom.list_of_nodeList td##.childNodes)
+				)
+			end
+			else if	Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
+				()
+		)
+	) (Dom.list_of_nodeList it##.childNodes)
+;;
+
 let signup_page game_id () =
 	let do_signup_service = create
 		~id:(Fallback (preapply signup_service game_id))
@@ -262,16 +287,16 @@ let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, uname, _) -> 
+	| Some (my_uid, uname, _) -> 
 		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, _, _)  =
 			Database.get_game_data game_id in
 		let%lwt users = Database.get_confirmed_users () in
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
-		let%lwt inscr = Database.get_inscription_data uid game_id in
-		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = uid) inscr
+		let%lwt inscr = Database.get_inscription_data my_uid game_id in
+		let me_inscr = if List.exists (fun (u, _, _, _, _, _) -> u = my_uid) inscr
 			then inscr 
-			else (uid, uname, None, None, "", None)::inscr in
+			else (my_uid, uname, None, None, "", None)::inscr in
 		let signed_up = List.length inscr > 0 in
 		let multiple_inscr = List.length me_inscr > 1 in
 		let ex_group_name = if signed_up
@@ -321,7 +346,8 @@ let signup_page game_id () =
 					person.it (fun (email, (uid, (role_type, note)))
 						(ex_uid, ex_name, _, r, ex_note, _) init ->
 						let ex_role = default "Any" r in
-						tr [
+						tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
+							else "group_inscription_row"]] [
 							td [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
 								Form.input ~input_type:`Hidden ~name:email ~value:"" Form.string;
@@ -349,7 +375,7 @@ let signup_page game_id () =
 							cond_list
 								(List.length me_inscr > 1)
 								(new_button teams users)
-								(Form.input ~a:[a_id "submit_button"] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+								(Form.input ~a:[a_id "submit_button"; a_onclick [%client check_signup_form]] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 								if signed_up
 								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
 								else [])
