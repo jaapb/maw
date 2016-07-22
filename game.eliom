@@ -279,7 +279,6 @@ let signup_page game_id () =
 			(List.sort_uniq (fun (u1, _, _, _, _, _) (u2, _, _, _, _, _) ->
 				compare u1 u2) inscr))
 			else None in
-		(*let (gname: string) = default (Printf.sprintf "Team %s" uname) ex_group_name in*)
 		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
 		container (standard_menu ())
 		[
