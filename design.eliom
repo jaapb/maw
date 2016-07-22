@@ -194,25 +194,27 @@ let%client new_input () =
 	]);;
 
 let%client do_move ev =
-	let it = Dom_html.getElementById "inscr_table" in
+	let id = Dom_html.getElementById "inscr_div" in
 	let td = Dom_html.getElementById "teams" in
 	Js.Opt.iter (ev##.target) (fun gt_th ->
 		Js.Opt.iter (gt_th##.parentNode) (fun gt_tr ->
 			Js.Opt.iter (gt_tr##.parentNode) (fun dst ->
-				List.iter (fun it_tr ->
-					List.iter (fun it_td ->
-						Js.Opt.iter (Dom_html.CoerceTo.element it_td) (fun e ->
-							if Js.to_bool (e##.classList##contains (Js.string "active"))
-							then begin
-                if List.length (Dom.list_of_nodeList it_tr##.childNodes) = 1
-                then 
-                  Dom.insertBefore it_tr (new_input ()) (Js.some it_td);
-								Dom.appendChild dst it_tr;
-								e##.classList##remove (Js.string "active")
-							end
-						)
-					) (Dom.list_of_nodeList it_tr##.childNodes)
-				) (Dom.list_of_nodeList it##.childNodes);
+				List.iter (fun it ->
+					List.iter (fun it_tr ->
+						List.iter (fun it_td ->
+							Js.Opt.iter (Dom_html.CoerceTo.element it_td) (fun e ->
+								if Js.to_bool (e##.classList##contains (Js.string "active"))
+								then begin
+                	if List.length (Dom.list_of_nodeList it_tr##.childNodes) = 1
+                	then 
+                  	Dom.insertBefore it_tr (new_input ()) (Js.some it_td);
+									Dom.appendChild dst it_tr;
+									e##.classList##remove (Js.string "active")
+								end
+							)
+						) (Dom.list_of_nodeList it_tr##.childNodes)
+					) (Dom.list_of_nodeList it##.childNodes)
+				) (Dom.list_of_nodeList id##.childNodes);
 				List.iter (fun td_table ->
 					List.iter (fun td_tr -> 
 						List.iter (fun e -> Js.Opt.iter (Dom_html.CoerceTo.element e) (fun td_td ->
