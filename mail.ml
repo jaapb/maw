@@ -17,13 +17,34 @@ let send_mail to_addrs subject contents =
 let send_register_mail name email uri =
 	send_mail [name, email] "New account confirmation"
 	(Printf.sprintf "Hello %s,\n
-	\n
-	To confirm your account, please click on the following link:\n
-	%s\n
-	\n
-	Kind regards,\n
-	\n
+\n
+To confirm your account, please click on the following link:\n
+%s\n
+\n
+Kind regards,\n
+\n
 	Maw.\n
-	\n
-	P.S. This account is not monitored, so please don't reply to this e-mail." name uri) 
+\n
+P.S. This account is not monitored, so please don't reply to this e-mail." name uri) 
+;;
+
+let send_simple_inscription_mail name email game_title game_loc game_date game_designer =
+	send_mail [name, email] (Printf.sprintf "Inscription for %s" game_title) 
+	(Printf.sprintf "Hello %s,\n
+\n
+You have (or have been) signed up through the Megagame Makers website for the\n
+following game:\n
+\n
+%s (by %s)\n
+\n
+This game will be held in %s on %s.\n
+\n
+You can review your inscription on the Megagame Makers website.\n
+\n
+Kind regards,\n
+\n
+  Maw.\n
+\n
+P.S. This account is not monitored, so please don't reply to this e-mail."
+name game_title game_designer game_loc game_date)
 ;;
