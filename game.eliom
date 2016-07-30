@@ -252,26 +252,52 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 ;;
 
 let%client check_signup_form ev =
-	Eliom_lib.alert "check_signup_form v5";
+	let email_regexp = Regexp.regexp "[^@]*@[^@]*\\.[^@]*" in
 	let it = Dom_html.getElementById "inscription_table" in
 	List.iter (fun tr_el ->
 		Js.Opt.iter (Dom_html.CoerceTo.element tr_el) (fun tr ->
-			if Js.to_bool (tr##.classList##contains (Js.string "user_inscription_row")) then
+			(* if Js.to_bool (tr##.classList##contains (Js.string "user_inscription_row")) then
 			begin
-				Eliom_lib.alert "Yes, this is a UIR";
 				(* get contents of first td *)
 				Js.Opt.iter (tr##.childNodes##item 0) (fun td ->
-				Eliom_lib.alert "ugh 1";
-					List.iter (fun c ->
+					Js.Opt.iter (td##.childNodes##item 2) (fun c ->
 						Js.Opt.iter (Dom.CoerceTo.text c) (fun text ->
-				Eliom_lib.alert "ugh 2";
-							Eliom_lib.alert "Text: %s" (Js.to_string text##.data)
-						)	
-					) (Dom.list_of_nodeList td##.childNodes)
+						)
+					)
 				)
 			end
-			else if	Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
-				()
+			else *) if	Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
+			begin
+				(* get contents of first td *)
+				Js.Opt.iter (tr##.childNodes##item 0) (fun td ->
+					Js.Opt.iter (td##.childNodes##item 0) (fun e ->
+						Js.Opt.iter (Dom_html.CoerceTo.element e) (fun c ->
+							Js.Opt.iter (Dom_html.CoerceTo.input c) (fun inp ->
+								let input_name = Js.to_string inp##.value in
+								Js.Opt.iter (td##.childNodes##item 1) (fun e ->
+									Js.Opt.iter (Dom_html.CoerceTo.element e) (fun c ->
+										Js.Opt.iter (Dom_html.CoerceTo.select c) (fun sel ->
+											let si = sel##.selectedIndex in
+											Js.Opt.iter (sel##.options##item si) (fun o ->
+												Js.Opt.iter (o##.childNodes##item 0) (fun e ->
+													Js.Opt.iter (Dom.CoerceTo.text e) (fun t ->
+														let select_name = Js.to_string t##.data in
+														if input_name <> select_name then
+														(match Regexp.string_match email_regexp input_name 0 with
+														| None -> Dom.preventDefault ev
+														| Some _ -> ()
+														)
+													)
+												)
+											)
+										)
+									)
+								)
+							)
+						)
+					)
+				)
+			end
 		)
 	) (Dom.list_of_nodeList it##.childNodes)
 ;;
@@ -415,7 +441,7 @@ let show_inscriptions_page game_id () =
 						tr [
 							th [pcdata "Status"];
 							th [pcdata "Group name"];
-							th [pcdata "Name"];
+							th [pcdata "Player name"];
 							th [pcdata "Team"];
 							th [pcdata "Role"];
 							th [pcdata "Note"]
