@@ -25,6 +25,14 @@ let random_string length =
 	String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng length)) 0 length
 ;;
 
+let char_of_inscr_status s =
+	match s with
+	| `Provisional -> "V"
+	| `Interested -> "I"
+	| `Confirmed -> "C"
+	| `Paid -> "P"
+;;
+
 let get_upcoming_games ?no_date () =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
@@ -153,8 +161,9 @@ let change_things dbh game_id uid group_name team role =
 			SET group_name = $g WHERE game_id = $game_id AND user_id = $uid")
 ;;
 
-let add_inscription game_id uid group_name team role note =
+let add_inscription game_id uid group_name status team role note =
 	let stamp = CalendarLib.Calendar.now () in
+	let st = char_of_inscr_status status in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
 		PGSQL(dbh) "SELECT game_id, user_id \
@@ -162,9 +171,9 @@ let add_inscription game_id uid group_name team role note =
 			WHERE game_id = $game_id AND user_id = $uid" >>=
 		(function
 		| [] -> PGSQL(dbh) "INSERT INTO game_inscriptions \
-		  	(game_id, user_id, inscription_time, note) \
+		  	(game_id, user_id, inscription_time, note, status) \
 		  	VALUES \
-		  	($game_id, $uid, $stamp, $note)"
+		  	($game_id, $uid, $stamp, $note, $st)"
 		| _ -> PGSQL(dbh) "UPDATE game_inscriptions \
 				SET note = $note \
 				WHERE game_id = $game_id AND user_id = $uid") >>=
@@ -286,13 +295,13 @@ let add_user name username email password =
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO users (name, username, email, password, password_salt, confirmation) \
-		VALUES ($name, $username, $email, $c_password, $salt, $c_random)" >>=
-	fun () -> PGSQL(dbh) "SELECT id FROM users \
-		WHERE name = $name" >>=
+	PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
+	fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
 	function
-	| [uid] -> Lwt.return (uid, c_random)
-	| _ -> Lwt.fail_with "Inconsistency in database"
+	| [Some uid] -> PGSQL(dbh) "INSERT INTO users (id, name, username, email, password, password_salt, confirmation) \
+		VALUES ($uid, $name, $username, $email, $c_password, $salt, $c_random)" >>=
+		fun () -> Lwt.return (uid, c_random)
+	| _ -> Lwt.fail_with "User creation did not succeed"
 ;;
 
 let confirm_user user_id random =
@@ -326,4 +335,14 @@ let get_confirmed_users () =
 	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email \
 		FROM users \
 		WHERE confirmation IS NULL"
+;;
+
+let add_provisional_user email game_id =
+	get_db () >>= fun dbh -> PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
+	fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
+	function
+	| [Some uid] -> PGSQL(dbh) "INSERT INTO provisional_users (id, email, game_id) \
+		VALUES ($uid, $email, $game_id)" >>=
+		fun () -> Lwt.return uid
+	| _ -> Lwt.fail_with "User creation did not succeed."
 ;;

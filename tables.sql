@@ -5,7 +5,6 @@ CREATE TABLE game_casting (
     user_id integer NOT NULL
 );
 
-
 CREATE TABLE game_inscriptions (
     game_id integer NOT NULL,
     user_id integer NOT NULL,
@@ -36,8 +35,13 @@ CREATE SEQUENCE games_id_seq
     NO MAXVALUE
     CACHE 1;
 
-
 ALTER SEQUENCE games_id_seq OWNED BY games.id;
+
+CREATE TABLE provisional_users (
+    id integer NOT NULL,
+    email text NOT NULL,
+    game_id integer
+);
 
 CREATE TABLE role_types (
     name character varying(50) NOT NULL,
@@ -56,8 +60,8 @@ CREATE TABLE users (
     is_admin boolean DEFAULT false NOT NULL,
     email text NOT NULL,
     password text NOT NULL,
-		password_salt character varying(8) NOT NULL,
-    confirmation character(32)
+    confirmation character(32),
+    password_salt character varying(8) NOT NULL
 );
 
 CREATE SEQUENCE users_id_seq
@@ -67,15 +71,14 @@ CREATE SEQUENCE users_id_seq
     NO MAXVALUE
     CACHE 1;
 
-COPY users (id, name, username, is_admin, email, password, confirmation, password_salt) FROM stdin;
-1      Administrator   admin   t       root@kerguelen.org      tdfBqVvihMVZzMwYXZ03CAatorP7Ef7Uj7Id3C4OUV3pQ0Lnts5F8+OeNvNktq3UBakUCrVh2HPNc2KQQNihvA  \N      xxxxxxxx
-\.
-
 ALTER SEQUENCE users_id_seq OWNED BY users.id;
 
-ALTER TABLE ONLY games ALTER COLUMN id SET DEFAULT nextval('games_id_seq'::regclass);
+CREATE TABLE user_ids (
+    id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL,
+    creation_time timestamp without time zone DEFAULT now() NOT NULL
+);
 
-ALTER TABLE ONLY users ALTER COLUMN id SET DEFAULT nextval('users_id_seq'::regclass);
+ALTER TABLE ONLY games ALTER COLUMN id SET DEFAULT nextval('games_id_seq'::regclass);
 
 ALTER TABLE ONLY game_casting
     ADD CONSTRAINT game_casting_game_id_user_id_key UNIQUE (game_id, user_id);
@@ -92,8 +95,17 @@ ALTER TABLE ONLY teams
 ALTER TABLE ONLY games
     ADD CONSTRAINT megagames_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY provisional_users
+    ADD CONSTRAINT provisional_users_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY role_types
     ADD CONSTRAINT role_types_pkey PRIMARY KEY (name, game_id);
+
+ALTER TABLE ONLY user_ids
+    ADD CONSTRAINT user_ids_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT users_name_key UNIQUE (name);
@@ -128,5 +140,14 @@ ALTER TABLE ONLY games
 ALTER TABLE ONLY teams
     ADD CONSTRAINT groups_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
 
+ALTER TABLE ONLY provisional_users
+    ADD CONSTRAINT provisional_users_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
+
+ALTER TABLE ONLY provisional_users
+    ADD CONSTRAINT provisional_users_id_fkey FOREIGN KEY (id) REFERENCES user_ids(id);
+
 ALTER TABLE ONLY role_types
     ADD CONSTRAINT role_types_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
+
+ALTER TABLE ONLY users
+    ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES user_ids(id);

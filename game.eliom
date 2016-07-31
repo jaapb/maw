@@ -202,11 +202,37 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	let rec handle_inscriptions edit group_name users =
 		match users with
 		| (email, (uid, (r, n)))::tl ->
-      Database.add_inscription game_id uid group_name
-  		  (if String.lowercase_ascii team = "any" then None else Some team)
-			  (if String.lowercase_ascii r = "any" then None else Some r)
-			  n >>=
-			fun () -> handle_inscriptions edit group_name tl
+			Lwt.catch (fun () -> Database.get_user_data uid >>=
+				fun (name, _) -> (
+					if email = name then
+      			Database.add_inscription game_id uid group_name `Interested
+  		  			(if String.lowercase_ascii team = "any" then None else Some team)
+			  			(if String.lowercase_ascii r = "any" then None else Some r) n
+					else
+					begin
+						Database.add_provisional_user email game_id >>=
+						fun uid -> Database.add_inscription game_id uid group_name `Provisional
+  		  			(if String.lowercase_ascii team = "any" then None else Some team)
+			  			(if String.lowercase_ascii r = "any" then None else Some r) n >>=
+						fun () -> Database.get_game_data game_id >>=
+						fun (t, dt, l, dsg, _, _, _, _, _) -> 
+							let dstr = match dt with Some d -> Printer.Date.sprint "%d %B %Y" d | _ -> "TBD" in
+							Mail.send_simple_inscription_mail email t l dstr dsg;
+							Lwt.return ()
+					end
+				)	>>=
+				fun () -> handle_inscriptions edit group_name tl)
+			(function
+			| Not_found -> Database.add_provisional_user email game_id >>=
+					fun uid -> Database.add_inscription game_id uid group_name `Provisional
+  		 			(if String.lowercase_ascii team = "any" then None else Some team)
+			 			(if String.lowercase_ascii r = "any" then None else Some r) n >>=
+					fun () -> Database.get_game_data game_id >>=
+					fun (t, dt, l, dsg, _, _, _, _, _) -> 
+						let dstr = match dt with Some d -> Printer.Date.sprint "%d %B %Y" d | _ -> "TBD" in
+						Mail.send_simple_inscription_mail email t l dstr dsg;
+						Lwt.return ()
+			| e -> Lwt.fail e)
 		| _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -256,17 +282,7 @@ let%client check_signup_form ev =
 	let it = Dom_html.getElementById "inscription_table" in
 	List.iter (fun tr_el ->
 		Js.Opt.iter (Dom_html.CoerceTo.element tr_el) (fun tr ->
-			(* if Js.to_bool (tr##.classList##contains (Js.string "user_inscription_row")) then
-			begin
-				(* get contents of first td *)
-				Js.Opt.iter (tr##.childNodes##item 0) (fun td ->
-					Js.Opt.iter (td##.childNodes##item 2) (fun c ->
-						Js.Opt.iter (Dom.CoerceTo.text c) (fun text ->
-						)
-					)
-				)
-			end
-			else *) if	Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
+			if	Js.to_bool (tr##.classList##contains (Js.string "group_inscription_row")) then
 			begin
 				(* get contents of first td *)
 				Js.Opt.iter (tr##.childNodes##item 0) (fun td ->
@@ -284,7 +300,8 @@ let%client check_signup_form ev =
 														let select_name = Js.to_string t##.data in
 														if input_name <> select_name then
 														(match Regexp.string_match email_regexp input_name 0 with
-														| None -> Dom.preventDefault ev
+														| None -> Eliom_lib.alert "Please select a name or enter a valid e-mail address";
+																Dom.preventDefault ev
 														| Some _ -> ()
 														)
 													)

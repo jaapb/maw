@@ -28,9 +28,9 @@ Kind regards,\n
 P.S. This account is not monitored, so please don't reply to this e-mail." name uri) 
 ;;
 
-let send_simple_inscription_mail name email game_title game_loc game_date game_designer =
-	send_mail [name, email] (Printf.sprintf "Inscription for %s" game_title) 
-	(Printf.sprintf "Hello %s,\n
+let send_simple_inscription_mail email game_title game_loc game_date game_designer =
+	send_mail ["", email] (Printf.sprintf "Inscription for %s" game_title) 
+	(Printf.sprintf "Hello,\n
 \n
 You have (or have been) signed up through the Megagame Makers website for the\n
 following game:\n
@@ -46,5 +46,5 @@ Kind regards,\n
   Maw.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
-name game_title game_designer game_loc game_date)
+game_title game_designer game_loc game_date)
 ;;
