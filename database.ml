@@ -294,14 +294,22 @@ let add_user name username email password =
 	let c_random = random_string 32 in
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
+	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
+	fun () -> PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
 	fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
 	function
-	| [Some uid] -> PGSQL(dbh) "INSERT INTO users (id, name, username, email, password, password_salt, confirmation) \
-		VALUES ($uid, $name, $username, $email, $c_password, $salt, $c_random)" >>=
-		fun () -> Lwt.return (uid, c_random)
-	| _ -> Lwt.fail_with "User creation did not succeed"
+	| [Some uid] -> begin
+			PGSQL(dbh) "INSERT INTO users \
+				(id, name, username, email, password, password_salt, confirmation) \
+				VALUES \
+				($uid, $name, $username, $email, $c_password, $salt, $c_random)" >>=
+			fun () -> PGOCaml.commit dbh >>=
+			fun () -> Lwt.return (uid, c_random)
+		end
+	| _ -> begin
+			PGOCaml.rollback dbh >>=
+			fun () -> Lwt.fail_with "User creation did not succeed"
+		end
 ;;
 
 let confirm_user user_id random =

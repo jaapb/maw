@@ -29,7 +29,7 @@ P.S. This account is not monitored, so please don't reply to this e-mail." name 
 ;;
 
 let send_simple_inscription_mail email game_title game_loc game_date game_designer =
-	send_mail ["", email] (Printf.sprintf "Inscription for %s" game_title) 
+	send_mail ["New User", email] (Printf.sprintf "Inscription for %s" game_title) 
 	(Printf.sprintf "Hello,\n
 \n
 You have (or have been) signed up through the Megagame Makers website for the\n

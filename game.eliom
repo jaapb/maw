@@ -73,7 +73,7 @@ let%client rec renumber_children n trs =
 					Dom.list_of_nodeList td_name##.childNodes in	
 				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
-					Js.Unsafe.set input_email "name" (Printf.sprintf "person.email[%d]" n);
+					Js.Unsafe.set input_email "name" (Printf.sprintf "person.search[%d]" n);
 					Js.Unsafe.set input_uid "name" (Printf.sprintf "person.uid[%d]" n);
 					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
 					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
@@ -132,7 +132,7 @@ let%client row_select_changed id ev =
 let%shared new_row id roles users =
   tr ~a:[a_class ["group_inscription_row"]] [ 
     td [
-			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.email[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false; a_oninput [%client (row_text_changed ~%id)]] ();
+			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false; a_oninput [%client (row_text_changed ~%id)]] ();
 			Raw.select ~a:[a_class ["gir_select"]; a_id (Printf.sprintf "gir_select[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_onchange [%client (row_select_changed ~%id)]] (List.map (fun (uid, name, _) ->
 				option ~a:[a_value (Int32.to_string uid)] (pcdata name)
 			) users)
@@ -201,36 +201,37 @@ let%client group_inscription_handler roles users gname ev =
 let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	let rec handle_inscriptions edit group_name users =
 		match users with
-		| (email, (uid, (r, n)))::tl ->
-			Lwt.catch (fun () -> Database.get_user_data uid >>=
-				fun (name, _) -> (
-					if email = name then
+		| (search, (uid, (r, n)))::tl -> Lwt.catch (fun () ->
+				Database.get_user_data uid >>=
+				fun (name, email) -> 
+				begin
+					if search = name then
       			Database.add_inscription game_id uid group_name `Interested
   		  			(if String.lowercase_ascii team = "any" then None else Some team)
 			  			(if String.lowercase_ascii r = "any" then None else Some r) n
 					else
 					begin
-						Database.add_provisional_user email game_id >>=
+						Database.add_provisional_user search game_id >>=
 						fun uid -> Database.add_inscription game_id uid group_name `Provisional
   		  			(if String.lowercase_ascii team = "any" then None else Some team)
 			  			(if String.lowercase_ascii r = "any" then None else Some r) n >>=
 						fun () -> Database.get_game_data game_id >>=
 						fun (t, dt, l, dsg, _, _, _, _, _) -> 
 							let dstr = match dt with Some d -> Printer.Date.sprint "%d %B %Y" d | _ -> "TBD" in
-							Mail.send_simple_inscription_mail email t l dstr dsg;
+							Mail.send_simple_inscription_mail search t l dstr dsg;
 							Lwt.return ()
 					end
-				)	>>=
+				end	>>=
 				fun () -> handle_inscriptions edit group_name tl)
 			(function
-			| Not_found -> Database.add_provisional_user email game_id >>=
+			| Not_found -> Database.add_provisional_user search game_id >>=
 					fun uid -> Database.add_inscription game_id uid group_name `Provisional
   		 			(if String.lowercase_ascii team = "any" then None else Some team)
 			 			(if String.lowercase_ascii r = "any" then None else Some r) n >>=
 					fun () -> Database.get_game_data game_id >>=
 					fun (t, dt, l, dsg, _, _, _, _, _) -> 
 						let dstr = match dt with Some d -> Printer.Date.sprint "%d %B %Y" d | _ -> "TBD" in
-						Mail.send_simple_inscription_mail email t l dstr dsg;
+						Mail.send_simple_inscription_mail search t l dstr dsg;
 						Lwt.return ()
 			| e -> Lwt.fail e)
 		| _ -> Lwt.return ()
@@ -324,7 +325,7 @@ let signup_page game_id () =
 		~id:(Fallback (preapply signup_service game_id))
 		~meth:(Post (unit,
 			bool "edit" ** opt (string "group_name") **
-			string "team" ** list "person" (string "email" ** int32 "uid" **
+			string "team" ** list "person" (string "search" ** int32 "uid" **
 			string "role_type" ** string "note"))) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -355,7 +356,7 @@ let signup_page game_id () =
 		  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]];
 			p [pcdata d];
 			h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
-			p [i [pcdata "For group inscriptions, you can either find an existing users or enter the e-mail address the user has subscribed with. In the latter case, you will be asked whether you want to create a new account."]];
+			p [i [pcdata "For group inscriptions, you can either find an existing user with the dropdown box, or enter an e-mail address. In the latter case, if it does not exist already, a new account will be created for that user."]];
 			Form.post_form ~service:do_signup_service
 			(fun (edit, (group_name, (team, person))) ->
       [
@@ -386,14 +387,14 @@ let signup_page game_id () =
 						th [pcdata "Note"];
             th [];
 					]::
-					person.it (fun (email, (uid, (role_type, note)))
+					person.it (fun (search, (uid, (role_type, note)))
 						(ex_uid, ex_name, _, r, ex_note, _) init ->
 						let ex_role = default "Any" r in
 						tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
 							else "group_inscription_row"]] [
 							td [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
-								Form.input ~input_type:`Hidden ~name:email ~value:"" Form.string;
+								Form.input ~input_type:`Hidden ~name:search ~value:ex_name Form.string;
 								pcdata ex_name
 							]; 
 							td [
