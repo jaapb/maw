@@ -17,6 +17,7 @@ let add_user_service = create ~id:(Path ["register"])
 let update_user_service = create ~id:(Fallback account_service)
 	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
+let confirm_provisional_user_service = create ~id:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
 
 let update_user_page () (email, password) =
 	Lwt.catch (fun () ->
@@ -214,7 +215,12 @@ let register_page () () =
 
 let add_user_page () (name, (username, (email, password))) =
 	Lwt.catch (fun () -> Database.add_user name username email password >>=
-	fun (uid, random) -> let uri = Eliom_uri.make_string_uri ~absolute:true ~service:confirm_user_service (uid, random) in
+	fun (uid, random) -> begin
+	match random with
+		| None -> Lwt.fail_with "Did not generate confirmation code"
+		| Some x -> Lwt.return x
+	end >>=
+	fun rstr -> let uri = Eliom_uri.make_string_uri ~absolute:true ~service:confirm_user_service (uid, rstr) in
 	Mail.send_register_mail name email uri;
 	container (standard_menu ())
 	[
@@ -238,9 +244,66 @@ let confirm_user_page (user_id, random) () =
 	)
 ;;
 
+let update_provisional_user_page user_id () (name, (username, (old_email, (email, password)))) =
+	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) name username email password >>=
+	fun (_, c_random) -> container (standard_menu ())
+	[
+		h1 [pcdata "Placeholder"]
+	])
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
+let confirm_provisional_user_page (user_id) () =
+let update_provisional_user_service = create
+	~id:(Fallback (preapply confirm_provisional_user_service user_id))
+	~meth:(Post (unit, string "name" ** string "username" ** string "old_email" ** string "email" ** string "password")) () in
+	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
+	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
+	fun ex_email -> container (standard_menu ())
+	[
+		h1 [pcdata "User data"];
+		Form.post_form ~service:update_provisional_user_service
+		(fun (name, (username, (old_email, (email, password)))) -> [
+			table [
+				tr [
+					th [pcdata "Username:"];
+					td [Form.input ~a:[a_id "username_input"] ~input_type:`Text ~name:username Form.string]
+				];
+				tr [
+					th [pcdata "Password:"];
+					td [Form.input ~a:[a_id "password_input1"] ~input_type:`Password ~name:password Form.string]
+				];
+				tr [
+					th [pcdata "Confirm password:"];
+					td [Raw.input ~a:[a_id "password_input2"; a_input_type `Password] ()]
+				];
+				tr [
+					th [pcdata "Full name:"];
+					td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
+				];
+				tr [
+					th [pcdata "E-mail address:"];
+					td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string;
+					Form.input ~input_type:`Hidden ~name:old_email ~value:ex_email Form.string]
+				];
+				tr [
+					td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
+					~input_type:`Submit ~value:"Sign up" Form.string]
+				]
+			]
+		]) ()			
+	]) 
+	(function
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
 let _ =
 	Maw_app.register ~service:account_service account_page;
 	Maw_app.register ~service:Maw.register_service register_page;
 	Maw_app.register ~service:add_user_service add_user_page;
-	Maw_app.register ~service:confirm_user_service confirm_user_page
+	Maw_app.register ~service:confirm_user_service confirm_user_page;
+	Maw_app.register ~service:confirm_provisional_user_service confirm_provisional_user_page
 ;;

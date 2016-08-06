@@ -27,10 +27,18 @@ let random_string length =
 
 let char_of_inscr_status s =
 	match s with
-	| `Provisional -> "V"
 	| `Interested -> "I"
+	| `Waiting -> "W"
 	| `Confirmed -> "C"
 	| `Paid -> "P"
+;;
+
+let inscr_status_of_char s =
+	if s = "I" then `Interested
+	else if s = "W" then `Waiting
+	else if s = "C" then `Confirmed
+	else if s = "P" then `Paid
+	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %s" s))
 ;;
 
 let get_upcoming_games ?no_date () =
@@ -183,12 +191,15 @@ let add_inscription game_id uid group_name status team role note =
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_name \
+	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_name, g2.status \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
 		ON g1.game_id = g2.game_id AND \
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
-		WHERE g1.user_id = $uid AND g1.game_id = $game_id"
+		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
+	fun l -> Lwt_list.map_p
+		(fun (u, nm, tn, rt, nt, gn, s) ->
+			Lwt.return (u, nm, tn, rt, nt, gn, inscr_status_of_char s)) l
 ;;
 
 let get_inscription_list ?(filter_cast = false) game_id =
@@ -290,26 +301,36 @@ let get_casting game_id =
 		ORDER BY role_name DESC"
 ;;
 
-let add_user name username email password =
-	let c_random = random_string 32 in
+let add_user ?id ?(confirm=true) name username email password =
+	let c_random = 
+		if confirm then Some (random_string 32)
+		else None in
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
-	fun () -> PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
-	fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
-	function
-	| [Some uid] -> begin
-			PGSQL(dbh) "INSERT INTO users \
-				(id, name, username, email, password, password_salt, confirmation) \
-				VALUES \
-				($uid, $name, $username, $email, $c_password, $salt, $c_random)" >>=
-			fun () -> PGOCaml.commit dbh >>=
-			fun () -> Lwt.return (uid, c_random)
-		end
-	| _ -> begin
-			PGOCaml.rollback dbh >>=
-			fun () -> Lwt.fail_with "User creation did not succeed"
-		end
+	fun () -> begin
+		match id with
+		| None -> begin
+				PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
+				fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
+				function 
+				| [Some uid] -> Lwt.return uid
+      	| _ -> begin
+						PGOCaml.rollback dbh >>=
+						fun () -> Lwt.fail_with "User creation did not succeed"
+					end
+			end
+		| Some uid -> begin
+				PGSQL(dbh) "DELETE FROM provisional_users WHERE id = $uid" >>=
+				fun () -> Lwt.return uid
+			end
+	end >>=
+	fun uid ->	PGSQL(dbh) "INSERT INTO users \
+		(id, name, username, email, password, password_salt, confirmation) \
+		VALUES \
+		($uid, $name, $username, $email, $c_password, $salt, $?c_random)" >>=
+	fun () -> PGOCaml.commit dbh >>=
+	fun () -> Lwt.return (uid, c_random)
 ;;
 
 let confirm_user user_id random =
@@ -353,4 +374,15 @@ let add_provisional_user email game_id =
 		VALUES ($uid, $email, $game_id)" >>=
 		fun () -> Lwt.return uid
 	| _ -> Lwt.fail_with "User creation did not succeed."
+;;
+
+let get_provisional_user_data uid =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT email \
+		FROM provisional_users \
+		WHERE id = $uid" >>=
+	function
+	| [] -> fail Not_found
+	| [u] -> return u
+	| _ -> fail_with "Inconsistency in database"
 ;;
