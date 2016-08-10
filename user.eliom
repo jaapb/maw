@@ -18,6 +18,7 @@ let update_user_service = create ~id:(Fallback account_service)
 	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 let confirm_provisional_user_service = create ~id:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
+let find_user_service = Eliom_service.create ~id:Global ~meth:(Get unit) ();;
 
 let update_user_page () (email, password) =
 	Lwt.catch (fun () ->
@@ -300,10 +301,26 @@ let update_provisional_user_service = create
 	)
 ;;
 
+let find_user_page () () =
+	let%lwt users = Database.get_confirmed_users () in
+	container (standard_menu ())
+	[
+		h1 [pcdata "Find user"];
+		table 
+		(List.map (fun (id, name, email) ->
+			tr [
+				td [pcdata (Printf.sprintf "%ld" id)];
+				td [pcdata name];
+				td [pcdata email]
+			]
+		) users)
+	];;
+
 let _ =
 	Maw_app.register ~service:account_service account_page;
 	Maw_app.register ~service:Maw.register_service register_page;
 	Maw_app.register ~service:add_user_service add_user_page;
 	Maw_app.register ~service:confirm_user_service confirm_user_page;
-	Maw_app.register ~service:confirm_provisional_user_service confirm_provisional_user_page
+	Maw_app.register ~service:confirm_provisional_user_service confirm_provisional_user_page;
+	Maw_app.register ~service:find_user_service find_user_page
 ;;

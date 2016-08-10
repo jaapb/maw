@@ -4,6 +4,7 @@
 	open Html.D
 	open Eliom_service
 	open Eliom_parameter
+	open Utils
 ]
 
 [%%server
@@ -103,78 +104,47 @@ let%client remove_my_row ev =
       )
     )
   )
-;; 
-
-let%client row_text_changed id ev =
-	let sel = Dom_html.getElementById (Printf.sprintf "gir_select[%d]" id) in
-  Js.Opt.iter (ev##.target) (fun ei ->
-		Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
-			let search = Js.to_string e##.value in
-			Js.Opt.iter (Dom_html.CoerceTo.select sel) (fun s ->
-				let opts = Dom_html.js_array_of_collection (s##.options) in
-				opts##forEach (Js.wrap_callback (fun opt index _ ->
-					let txt = Js.to_string opt##.text in
-					match Regexp.search (Regexp.regexp_string search) txt 0 with
-					| None -> opt##.disabled := true
-					| Some _ -> opt##.disabled := false
-				))		
-			)
-		)
-	)
 ;;
 
-let%client row_select_changed id ev =
-	let txt = Dom_html.getElementById (Printf.sprintf "gir_text[%d]" id) in
-  Js.Opt.iter (ev##.target) (fun ei ->
-		Js.Opt.iter (Dom_html.CoerceTo.select ei) (fun e ->
-			let si = e##.selectedIndex in
-			Js.Opt.iter (Dom_html.CoerceTo.input txt) (fun t ->
-				Js.Opt.iter (e##.options##item si) (fun o ->
-					t##.value := o##.text
-				)
-			)
-		)
-	)
-;;
-
-let%shared new_row id roles users =
+let%client new_row id roles =
   tr ~a:[a_class ["group_inscription_row"]] [ 
+		td [
+			Raw.input ~a:[a_input_type `Button; a_value "Find user"; a_onclick (fun ev -> ignore (Eliom_client.window_open ~window_name:(Js.string "Window") ~service:~%User.find_user_service ()))] ()
+		];
     td [
-			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false; a_oninput [%client (row_text_changed ~%id)]] ();
-			Raw.select ~a:[a_class ["gir_select"]; a_id (Printf.sprintf "gir_select[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_onchange [%client (row_select_changed ~%id)]] (List.map (fun (uid, name, _) ->
-				option ~a:[a_value (Int32.to_string uid)] (pcdata name)
-			) users)
+			Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id); a_input_type `Hidden; a_value ""] ();
+			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false] ();
 		];
     td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) roles)];
     td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
-    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
+    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
   ]
 ;;
 
 let%client nr_ids = ref 0
 
-let%client add_inscription_row it roles users =
+let%client add_inscription_row it roles =
 	let br = Dom_html.getElementById "button_row" in
   begin
     incr nr_ids;
-    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids roles users)) (Js.some br);
+    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids roles)) (Js.some br);
   end
 ;;
 
 let%shared group_name_row gname =
 	tr ~a:[a_id "group_name_row"] [
-		td ~a:[a_colspan 4] [
+		td ~a:[a_colspan 5] [
 			pcdata "Group name: ";
 			Raw.input ~a:[a_input_type `Text; a_name "group_name"; a_value gname] ()
 		]			
 	]
 ;;
 
-let%shared new_button roles users =
-  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%roles ~%users)]] ()
+let%shared new_button roles =
+  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%roles)]] ()
 ;;
 
-let%client group_inscription_handler roles users gname ev =
+let%client group_inscription_handler roles gname ev =
 	Js.Opt.iter (ev##.target) (fun x ->
 		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
 			let it = Dom_html.getElementById "inscription_table" in
@@ -185,8 +155,8 @@ let%client group_inscription_handler roles users gname ev =
 			let tpr = Dom_html.getElementById "team_preference_row" in
 				nr_ids := 0;
 				Dom.insertBefore it (Html.To_dom.of_element (group_name_row gname)) (Js.some tpr);
-				add_inscription_row it roles users;
-				Dom.insertBefore bf (Html.To_dom.of_element (new_button roles users)) (Js.some sb)
+				add_inscription_row it roles;
+				Dom.insertBefore bf (Html.To_dom.of_element (new_button roles)) (Js.some sb)
       end
       else
       begin
@@ -221,8 +191,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			Mail.send_provisional_inscription_mail uri search t l dstr dsg;
 			Lwt.return ()
 	in
-	let rec handle_inscriptions edit group_name users places game_title game_loc game_dstr game_dsg =
-		let status = if places > 0l then `Interested else `Waiting in
+	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr game_dsg status =
 		match users with
 		| (search, (uid, (role, note)))::tl -> 
 				Lwt.catch (fun () -> Database.get_user_data uid >>=
@@ -241,7 +210,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 				(function
 				| Not_found -> handle_provisional search uid group_name team role note status
 				| e -> Lwt.fail e) >>=
-				fun () -> handle_inscriptions edit group_name tl (Int32.sub places 1l) game_title game_loc game_dstr game_dsg
+				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr game_dsg status
 		| _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -254,7 +223,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		handle_inscriptions edit group_name users (Int32.sub max_pl nr_inscr) game_title game_dstr game_loc game_dsg >>=
+		handle_inscriptions edit group_name users game_title game_dstr game_loc game_dsg (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> container (standard_menu ())
 		[
 			h1 [pcdata "Summary"];
@@ -346,7 +315,7 @@ let signup_page game_id () =
 	| Some (my_uid, uname, _) -> 
 		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
-		let%lwt users = Database.get_confirmed_users () in
+		(*let%lwt users = Database.get_confirmed_users () in*)
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
@@ -368,7 +337,7 @@ let signup_page game_id () =
 			p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 		  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]]::
 			p [pcdata d]::
-			cond_list (nr_inscr > max_pl)
+			cond_list (nr_inscr >= max_pl)
 			(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
 			[h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
 			p [i [pcdata "For group inscriptions, you can either find an existing user with the dropdown box, or enter an e-mail address. In the latter case, if it does not exist already, a new account will be created for that user."]];
@@ -377,17 +346,17 @@ let signup_page game_id () =
       [
 				table ~a:[a_id "inscription_table"] (
         	tr [
-						td ~a:[a_colspan 4] [
-       	       Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%role_types ~%users "blerp")]::(match ex_group_name with
+						td ~a:[a_colspan 5] [
+       	       Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%role_types (default "" ~%ex_group_name))]::(match ex_group_name with
 							 | None -> []
 							 | Some _ -> [a_checked ()])) (); 
           		pcdata "This is a group inscription"
 						]
 					]::
 					cond_list multiple_inscr
-					(group_name_row "blarp")
+					(group_name_row (default "" ex_group_name))
 					(tr ~a:[a_id "team_preference_row"] [
-						td ~a:[a_colspan 4] [
+						td ~a:[a_colspan 5] [
 							pcdata "Team preference: ";
 							Form.select ~name:team Form.string
 							(Form.Option ([], "Any", None, false))
@@ -397,7 +366,7 @@ let signup_page game_id () =
 						]
 					]::
 					tr [
-						th [pcdata "Name"];
+						th ~a:[a_colspan 2] [pcdata "Name"];
 						th [pcdata "Role type preference"];
 						th [pcdata "Note"];
             th [];
@@ -407,7 +376,7 @@ let signup_page game_id () =
 						let ex_role = default "Any" r in
 						tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
 							else "group_inscription_row"]] [
-							td [
+							td ~a:[a_colspan 2] [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
 								Form.input ~input_type:`Hidden ~name:search ~value:ex_name Form.string;
 								pcdata ex_name
@@ -430,10 +399,10 @@ let signup_page game_id () =
 					) me_inscr
 					[
 						tr ~a:[a_id "button_row"] [
-							td ~a:[a_id "button_field"; a_colspan 4] (
+							td ~a:[a_id "button_field"; a_colspan 5] (
 							cond_list
 								(List.length me_inscr > 1)
-								(new_button teams users)
+								(new_button role_types)
 								(Form.input ~a:[a_id "submit_button"; a_onclick [%client check_signup_form]] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 								if signed_up
 								then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]

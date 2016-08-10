@@ -3,6 +3,7 @@ open Eliom_content
 open Html.D
 open Eliom_service
 open Eliom_parameter
+open Utils
 
 [%%server
 	open CalendarLib
