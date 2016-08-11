@@ -107,9 +107,9 @@ let%client remove_my_row ev =
 ;;
 
 let%client new_row id roles =
-  tr ~a:[a_class ["group_inscription_row"]] [ 
+  tr ~a:[a_class ["group_inscription_row"]; a_id (Printf.sprintf "gir_%d" id)] [
 		td [
-			Raw.input ~a:[a_input_type `Button; a_value "Find user"; a_onclick (fun ev -> ignore (Eliom_client.window_open ~window_name:(Js.string "Window") ~service:~%User.find_user_service ()))] ()
+			Raw.input ~a:[a_input_type `Button; a_value "Find user"; a_onclick (fun ev -> ignore (Eliom_client.window_open ~window_name:(Js.string "Window") ~service:~%User.find_user_service id))] ()
 		];
     td [
 			Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id); a_input_type `Hidden; a_value ""] ();

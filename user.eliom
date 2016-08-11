@@ -18,7 +18,7 @@ let update_user_service = create ~id:(Fallback account_service)
 	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 let confirm_provisional_user_service = create ~id:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
-let find_user_service = Eliom_service.create ~id:Global ~meth:(Get unit) ();;
+let find_user_service = Eliom_service.create ~id:Global ~meth:(Get (int "row_id")) ();;
 
 let update_user_page () (email, password) =
 	Lwt.catch (fun () ->
@@ -301,20 +301,77 @@ let update_provisional_user_service = create
 	)
 ;;
 
-let find_user_page () () =
+let%client handle_search users ev =
+begin
+	Js.Opt.iter (ev##.target) (fun x ->
+		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
+			let rex = Regexp.regexp_string_case_fold (Js.to_string i##.value) in
+			let tbl = Dom_html.getElementById "users_table" in
+			List.iter (fun tbody ->
+				List.iter (fun c ->
+					Js.Opt.iter (Dom_html.CoerceTo.element c) (fun tr ->
+						Scanf.sscanf (Js.to_string tr##.id) "uid_%ld" (fun uid ->
+							Js.Opt.iter (tr##.childNodes##item 1) (fun td ->
+								Js.Opt.iter (td##.childNodes##item 0) (fun c ->
+									Js.Opt.iter (Dom.CoerceTo.text c) (fun e ->
+										match Regexp.search rex (Js.to_string e##.data) 0 with
+										| None -> tr##.style##.display := Js.string "none"
+										| Some _ -> tr##.style##.display := Js.string "table-row"
+									)
+								)
+							)
+						)
+					)
+				) (Dom.list_of_nodeList tbody##.childNodes)
+			) (Dom.list_of_nodeList tbl##.childNodes)
+		)
+	)
+end;;
+
+let%client handle_select id name uid ev =
+begin
+	Eliom_lib.alert "Setting gir_%d to %s and %ld" id name uid;
+	Js.Opt.iter (Dom_html.window##.parent##.document##getElementById (Js.string (Printf.sprintf "gir_%d" id))) (fun gniarq ->
+		Eliom_lib.alert "Found element";
+		Js.Opt.iter (gniarq##.childNodes##item 1) (fun e ->
+			Js.Opt.iter (e##.childNodes##item 0) (fun n ->
+				Js.Opt.iter (Dom_html.CoerceTo.element n) (fun e ->
+					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp_uid -> 
+						inp_uid##.value := Js.string (Printf.sprintf "%ld" uid)
+					)
+				)
+			);
+			Js.Opt.iter (e##.childNodes##item 1) (fun n ->
+				Js.Opt.iter (Dom_html.CoerceTo.element n) (fun e ->
+					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp_search -> 
+						inp_search##.value := Js.string name
+					)
+				)
+			)
+		)
+	)
+end;;
+
+let find_user_page id () =
 	let%lwt users = Database.get_confirmed_users () in
-	container (standard_menu ())
-	[
-		h1 [pcdata "Find user"];
-		table 
-		(List.map (fun (id, name, email) ->
-			tr [
-				td [pcdata (Printf.sprintf "%ld" id)];
-				td [pcdata name];
-				td [pcdata email]
-			]
-		) users)
-	];;
+	Lwt.return (Eliom_tools.F.html
+		~title:"Find a user"
+		~css:[["css";"maw.css"]]
+		(body [
+			h1 [pcdata "Find user"];
+			p [
+				pcdata "Search: ";
+				Raw.input ~a:[a_input_type `Text; a_oninput [%client (handle_search ~%users)]] ()
+			];
+			table ~a:[a_id "users_table"]
+			(List.map (fun (uid, name, email) ->
+				tr ~a:[a_id (Printf.sprintf "uid_%ld" uid)] [
+					td [Raw.input ~a:[a_input_type `Button; a_value "Select"; a_onclick [%client handle_select ~%id ~%name ~%uid]] ()];
+					td [pcdata name]
+				]
+			) users)
+		])
+	);;
 
 let _ =
 	Maw_app.register ~service:account_service account_page;
