@@ -13,7 +13,7 @@
 ]
 
 let add_user_service = create ~id:(Path ["register"])
-	~meth:(Post (unit, string "name" ** string "username" ** string "email" ** string "password")) ();;
+	~meth:(Post (unit, string "name" ** string "email" ** string "password")) ();;
 let update_user_service = create ~id:(Fallback account_service)
 	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
@@ -131,7 +131,6 @@ let%client check_register_form ev =
 		| [c] -> Dom.replaceChild p t c
 		| _ -> ()
 	end in
-	let ui = Dom_html.getElementById "username_input" in
 	let p1 = Dom_html.getElementById "password_input1" in
 	let p2 = Dom_html.getElementById "password_input2" in
 	let ni = Dom_html.getElementById "name_input" in
@@ -163,13 +162,6 @@ let%client check_register_form ev =
 				Dom.preventDefault ev
 			end
 		)
-	);
-	Js.Opt.iter (Dom_html.CoerceTo.input ui) (fun e ->
-		if Js.to_string e##.value = "" then
-		begin
-			add_or_replace (Js.string "You might want to put in a username...");
-			Dom.preventDefault ev
-		end
 	)
 ;;
 
@@ -180,11 +172,11 @@ let register_page () () =
 			h1 [pcdata "Create a new account"];
 			p ~a:[a_class ["error"]; a_id "error_paragraph"] [];
 			Form.post_form ~service:add_user_service
-			(fun (name, (username, (email, password))) -> [
+			(fun (name, (email, password)) -> [
 				table [
 					tr [
-						th [pcdata "Username:"];
-						td [Form.input ~a:[a_id "username_input"] ~input_type:`Text ~name:username Form.string]
+						th [pcdata "E-mail address:"];
+						td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email Form.string]
 					];
 					tr [
 						th [pcdata "Password:"];
@@ -199,10 +191,6 @@ let register_page () () =
 						td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
 					];
 					tr [
-						th [pcdata "E-mail address:"];
-						td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email Form.string]
-					];
-					tr [
 						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
 						~input_type:`Submit ~value:"Sign up" Form.string]
 					]
@@ -214,8 +202,8 @@ let register_page () () =
 	| e -> error_page (Printexc.to_string e)
 	)
 
-let add_user_page () (name, (username, (email, password))) =
-	Lwt.catch (fun () -> Database.add_user name username email password >>=
+let add_user_page () (name, (email, password)) =
+	Lwt.catch (fun () -> Database.add_user name email password >>=
 	fun (uid, random) -> begin
 	match random with
 		| None -> Lwt.fail_with "Did not generate confirmation code"
@@ -245,8 +233,8 @@ let confirm_user_page (user_id, random) () =
 	)
 ;;
 
-let update_provisional_user_page user_id () (name, (username, (old_email, (email, password)))) =
-	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) name username email password >>=
+let update_provisional_user_page user_id () (name, (old_email, (email, password))) =
+	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) name email password >>=
 	fun (_, c_random) -> container (standard_menu ())
 	[
 		h1 [pcdata "Placeholder"]
@@ -259,18 +247,19 @@ let update_provisional_user_page user_id () (name, (username, (old_email, (email
 let confirm_provisional_user_page (user_id) () =
 let update_provisional_user_service = create
 	~id:(Fallback (preapply confirm_provisional_user_service user_id))
-	~meth:(Post (unit, string "name" ** string "username" ** string "old_email" ** string "email" ** string "password")) () in
+	~meth:(Post (unit, string "name" ** string "old_email" ** string "email" ** string "password")) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
 	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
 	fun ex_email -> container (standard_menu ())
 	[
 		h1 [pcdata "User data"];
 		Form.post_form ~service:update_provisional_user_service
-		(fun (name, (username, (old_email, (email, password)))) -> [
+		(fun (name, (old_email, (email, password))) -> [
 			table [
 				tr [
-					th [pcdata "Username:"];
-					td [Form.input ~a:[a_id "username_input"] ~input_type:`Text ~name:username Form.string]
+					th [pcdata "E-mail address:"];
+					td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string;
+					Form.input ~input_type:`Hidden ~name:old_email ~value:ex_email Form.string]
 				];
 				tr [
 					th [pcdata "Password:"];
@@ -283,11 +272,6 @@ let update_provisional_user_service = create
 				tr [
 					th [pcdata "Full name:"];
 					td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
-				];
-				tr [
-					th [pcdata "E-mail address:"];
-					td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string;
-					Form.input ~input_type:`Hidden ~name:old_email ~value:ex_email Form.string]
 				];
 				tr [
 					td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]

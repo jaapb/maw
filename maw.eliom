@@ -50,7 +50,7 @@ let login_box () =
 	| None -> [Form.post_form ~service:login_service (fun (name, password) ->
 		[table (
 			tr [
-				td [pcdata "Username"];
+				td [pcdata "E-mail"];
 				td ~a:[a_colspan 2]
 					[Form.input ~input_type:`Text ~name:name Form.string]
 			]::

@@ -90,7 +90,7 @@ let check_password name password =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT id, password, password_salt, name, is_admin \
 		FROM users \
-		WHERE username = $name AND confirmation IS NULL" >>=
+		WHERE email = $name AND confirmation IS NULL" >>=
 	function
 	| [(id, db_password, db_salt, name, is_admin)] ->
 		if crypt_password password db_salt = db_password then Lwt.return (Some (id, name, is_admin))
@@ -304,7 +304,7 @@ let get_casting game_id =
 		ORDER BY role_name DESC"
 ;;
 
-let add_user ?id ?(confirm=true) name username email password =
+let add_user ?id ?(confirm=true) name email password =
 	let c_random = 
 		if confirm then Some (random_string 32)
 		else None in
@@ -329,9 +329,9 @@ let add_user ?id ?(confirm=true) name username email password =
 			end
 	end >>=
 	fun uid ->	PGSQL(dbh) "INSERT INTO users \
-		(id, name, username, email, password, password_salt, confirmation) \
+		(id, name, email, password, password_salt, confirmation) \
 		VALUES \
-		($uid, $name, $username, $email, $c_password, $salt, $?c_random)" >>=
+		($uid, $name, $email, $c_password, $salt, $?c_random)" >>=
 	fun () -> PGOCaml.commit dbh >>=
 	fun () -> Lwt.return (uid, c_random)
 ;;
