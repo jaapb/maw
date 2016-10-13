@@ -8,7 +8,7 @@ CREATE TABLE game_casting (
 CREATE TABLE game_inscriptions (
     game_id integer NOT NULL,
     user_id integer NOT NULL,
-    inscription_time timestamp without time zone NOT NULL,
+    inscription_time timestamp without time zone DEFAULT now() NOT NULL,
     team_name character varying(50),
     role_type character varying(50),
     note character varying(150) NOT NULL,
@@ -56,7 +56,6 @@ CREATE TABLE teams (
 CREATE TABLE users (
     id integer NOT NULL,
     name text NOT NULL,
-    username character varying(32) NOT NULL,
     is_admin boolean DEFAULT false NOT NULL,
     email text NOT NULL,
     password text NOT NULL,
@@ -108,9 +107,6 @@ ALTER TABLE ONLY users
     ADD CONSTRAINT users_email_key UNIQUE (email);
 
 ALTER TABLE ONLY users
-    ADD CONSTRAINT users_name_key UNIQUE (name);
-
-ALTER TABLE ONLY users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY game_casting
@@ -132,7 +128,7 @@ ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_role_type_fkey FOREIGN KEY (role_type, game_id) REFERENCES role_types(name, game_id);
 
 ALTER TABLE ONLY game_inscriptions
-    ADD CONSTRAINT game_inscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT game_inscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
 ALTER TABLE ONLY games
     ADD CONSTRAINT games_designer_fkey FOREIGN KEY (designer) REFERENCES users(id);
