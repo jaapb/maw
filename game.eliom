@@ -40,7 +40,8 @@ let game_page game_id () =
 		  	if uid = dsg then
 				[
 					p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
-					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id]
+					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id];
+					p [a ~service:Design.message_service [pcdata "Send a message to players"] game_id]
 				]
 				else if List.length l > 0 then
 				let (_, _, team, role, _, _, status) = List.find

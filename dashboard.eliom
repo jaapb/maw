@@ -56,7 +56,8 @@ let format_my_games mg dg =
 						td (location_bar id title date loc);
 						td [a ~service:Design.design_service [pcdata "Edit design"] id];
 						td [a ~service:Game.show_inscriptions_service [pcdata "Show inscriptions"] id];
-						td [a ~service:Design.cast_service [pcdata "Casting"] id]
+						td [a ~service:Design.cast_service [pcdata "Casting"] id];
+						td [a ~service:Design.message_service [pcdata "Messages"] id]
 					]]
 				) l))
 			])
