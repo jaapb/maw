@@ -27,10 +27,13 @@ let random_string length =
 
 let char_of_inscr_status s =
 	match s with
+	| `Potential -> "T"
 	| `Interested -> "I"
 	| `Waiting -> "W"
 	| `Confirmed -> "C"
 	| `Paid -> "P"
+	| `Cancelled -> "N"
+	| `No_show -> "X"
 ;;
 
 let inscr_status_of_char s =
