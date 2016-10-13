@@ -18,25 +18,25 @@ let show_inscriptions_service = create ~id:(Path ["inscriptions"]) ~meth:(Get (s
 let show_casting_service = create ~id:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
-  let standard_game_data title loc date dsg_name d full =
+  let standard_game_data title loc date dsg_fname dsg_lname d full =
 		h1 [pcdata title]::
 		p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
-		p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]]::
+		p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
 		p [pcdata d]::
     (if full
     then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
     else []) in
 	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_name, dsg, d, _, max_pl, _) =
+	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg, d, _, max_pl, _) =
 		Database.get_game_data game_id in
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
     match u with
 	  | None -> container (standard_menu ()) 
-			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl))
-	  | Some (uid, _, _) ->
+			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl))
+	  | Some (uid, _, _, _) ->
 			let%lwt l = Database.get_inscription_data uid game_id in
 			container (standard_menu ()) 
-			(standard_game_data title loc date dsg_name d (nr_inscr >= max_pl) @
+			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl) @
 		  	if uid = dsg then
 				[
 					p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
@@ -44,8 +44,8 @@ let game_page game_id () =
 					p [a ~service:Design.message_service [pcdata "Send a message to players"] game_id]
 				]
 				else if List.length l > 0 then
-				let (_, _, team, role, _, _, status) = List.find
-					(fun (u, _, _, _, _, _, _) -> uid = u) l in
+				let (_, _, _, team, role, _, _, status) = List.find
+					(fun (u, _, _, _, _, _, _, _) -> uid = u) l in
 				[
 					p [
 						i [pcdata (match status with
@@ -185,24 +185,24 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
  			(if String.lowercase_ascii team = "any" then None else Some team)
  			(if String.lowercase_ascii role = "any" then None else Some role) note >>=
 		fun () -> Database.get_game_data game_id >>=
-		fun (t, dt, l, dsg, _, _, _, _, _) -> 
+		fun (t, dt, l, dsg_fname, dsg_lname, _, _, _, _, _) -> 
 			let dstr = match dt with
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
-			Mail.send_provisional_inscription_mail uri search t l dstr dsg;
+			Mail.send_provisional_inscription_mail uri search t l dstr dsg_fname dsg_lname;
 			Lwt.return ()
 	in
-	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr game_dsg status =
+	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname status =
 		match users with
 		| (search, (uid, (role, note)))::tl -> 
 				Lwt.catch (fun () -> Database.get_user_data uid >>=
-					fun (name, email) -> begin
-						if search = name then
+					fun (fname, lname, email) -> begin
+						if search = fname (* XXX *) then
 						begin
       				Database.add_inscription game_id uid group_name status
   		  				(if String.lowercase_ascii team = "any" then None else Some team)
 			  				(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-								fun () -> Mail.send_simple_inscription_mail name email game_title game_loc game_dstr game_dsg;
+								fun () -> Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
 								Lwt.return ()
 						end
 						else
@@ -211,20 +211,20 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 				(function
 				| Not_found -> handle_provisional search uid group_name team role note status
 				| e -> Lwt.fail e) >>=
-				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr game_dsg status
+				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_fname dsg_lname status
 		| _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _, _) -> 
-		let%lwt (game_title, game_date, game_loc, game_dsg, _, _, _, max_pl, _) =
+	| Some (uid, _, _, _) -> 
+		let%lwt (game_title, game_date, game_loc, dsg_fname, dsg_lname, _, _, _, max_pl, _) =
 			Database.get_game_data game_id  in
 		let game_dstr = match game_date with
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		handle_inscriptions edit group_name users game_title game_dstr game_loc game_dsg (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
+		handle_inscriptions edit group_name users game_title game_dstr game_loc dsg_fname dsg_lname (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> container (standard_menu ())
 		[
 			h1 [pcdata "Summary"];
@@ -313,22 +313,22 @@ let signup_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (my_uid, uname, _) -> 
-		let%lwt (title, date, loc, dsg_name, dsg_id, d, _, max_pl, _)  =
+	| Some (my_uid, fname, lname, _) -> 
+		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg_id, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
 		(*let%lwt users = Database.get_confirmed_users () in*)
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
-		let me_inscr = if List.exists (fun (u, _, _, _, _, _, _) -> u = my_uid) inscr
+		let me_inscr = if List.exists (fun (u, _, _, _, _, _, _, _) -> u = my_uid) inscr
 			then inscr 
-			else (my_uid, uname, None, None, "", None, `Interested)::inscr in
+			else (my_uid, fname, lname, None, None, "", None, `Interested)::inscr in
 		let signed_up = List.length inscr > 0 in
 		let multiple_inscr = List.length me_inscr > 1 in
 		let ex_group_name = if signed_up
-			then List.hd (List.map (fun (_, _, _, _, _, gn, _) -> gn)
-			(List.sort_uniq (fun (u1, _, _, _, _, _, _) (u2, _, _, _, _, _, _) ->
+			then List.hd (List.map (fun (_, _, _ , _, _, _, gn, _) -> gn)
+			(List.sort_uniq (fun (u1, _, _, _, _, _, _, _) (u2, _, _, _, _, _, _, _) ->
 				compare u1 u2) inscr))
 			else None in
 		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
@@ -336,7 +336,7 @@ let signup_page game_id () =
 		(
 			h1 [pcdata title]::
 			p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
-		  p [i [pcdata (Printf.sprintf "Designed by %s" dsg_name)]]::
+		  p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
 			p [pcdata d]::
 			cond_list (nr_inscr >= max_pl)
 			(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
@@ -373,14 +373,14 @@ let signup_page game_id () =
             th [];
 					]::
 					person.it (fun (search, (uid, (role_type, note)))
-						(ex_uid, ex_name, _, r, ex_note, _, _) init ->
+						(ex_uid, ex_fname, ex_lname, _, r, ex_note, _, _) init ->
 						let ex_role = default "Any" r in
 						tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
 							else "group_inscription_row"]] [
 							td ~a:[a_colspan 2] [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
-								Form.input ~input_type:`Hidden ~name:search ~value:ex_name Form.string;
-								pcdata ex_name
+								Form.input ~input_type:`Hidden ~name:search ~value:(Printf.sprintf "%s %s" ex_fname ex_lname) Form.string;
+								pcdata (Printf.sprintf "%s %s" ex_fname ex_lname)
 							]; 
 							td [
 								Form.select ~name:role_type Form.string
@@ -423,15 +423,18 @@ let signup_page game_id () =
 let show_inscriptions_page game_id () =
 	let status_word st =
 		match st with
+		| "T" -> "Potential"
 		| "I" -> "Interested"
+		| "W" -> "Waiting"
 		| "C" -> "Confirmed"
 		| "P" -> "Paid"
-		| "N" -> "No-show" in
+		| "N" -> "Cancelled" 
+		| "X" -> "No-show" in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _, _) ->
-		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
+	| Some (uid, _, _, _) ->
+		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		let%lwt inscr = Database.get_inscription_list game_id in
 		if uid = dsg_id then
@@ -449,11 +452,11 @@ let show_inscriptions_page game_id () =
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (nm, _, t, r, nt, g, st) ->
+						List.map (fun (fname, lname, _, t, r, nt, g, st) ->
 							tr [
 								td [pcdata (status_word st)];
 								td [pcdata (default "" g)];
-								td [pcdata nm];
+								td [pcdata (Printf.sprintf "%s %s" fname lname)];
 								td [pcdata (default "Any" t)];
 								td [pcdata (default "Any" r)];
 								td [i [pcdata nt]]
@@ -475,17 +478,17 @@ let show_inscriptions_page game_id () =
 ;;
 
 let show_casting_page game_id () =
-	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, _, _, cp) =
+	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, _, _, _, cp) =
 			Database.get_game_data game_id in
 		if cp then
 		begin
 			let%lwt casting = Database.get_casting game_id in
-			let teams = List.sort_uniq (fun (t1, _, _, _, _, _) (t2, _, _, _, _, _) ->
+			let teams = List.sort_uniq (fun (t1, _, _, _, _, _, _) (t2, _, _, _, _, _, _) ->
 				compare t1 t2) casting in
 			container (standard_menu ())
 			(
 				h1 [pcdata (Printf.sprintf "Casting for %s" title)]::
-				List.map (fun (t, _, _, _, _, _) ->
+				List.map (fun (t, _, _, _, _, _, _) ->
 					table ~a:[a_class ["team_table"]] (
 						tr [
 							th ~a:[a_class ["team_name"]; a_colspan 2] [pcdata t]
@@ -494,12 +497,12 @@ let show_casting_page game_id () =
 							th ~a:[a_class ["header"]] [pcdata "Role"];
 							th ~a:[a_class ["header"]] [pcdata "Name"]
 						]::
-						List.map (fun (_, rn, n, _, _, _) ->
+						List.map (fun (_, rn, fname, lname, _, _, _) ->
 							tr [
 								td [pcdata rn];
-								td [pcdata n]
+								td [pcdata (Printf.sprintf "%s %s" fname lname)]
 							]
-						) (List.filter (fun (x, _, _, _, _, _) -> x = t) casting)
+						) (List.filter (fun (x, _, _, _, _, _, _) -> x = t) casting)
 					)
 				) teams
 			)

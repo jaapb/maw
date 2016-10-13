@@ -13,7 +13,7 @@
 ]
 
 let add_user_service = create ~id:(Path ["register"])
-	~meth:(Post (unit, string "name" ** string "email" ** string "password")) ();;
+	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password")) ();;
 let update_user_service = create ~id:(Fallback account_service)
 	~meth:(Post (unit, string "email" ** string "password")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
@@ -25,7 +25,7 @@ let update_user_page () (email, password) =
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _, _) -> Database.update_user_data uid email password >>=
+		| Some (uid, _, _, _) -> Database.update_user_data uid email password >>=
 		fun () -> container (standard_menu ())
 		[
 			p [pcdata "Changes successfully saved."]
@@ -80,8 +80,8 @@ let account_page () () =
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _, _) -> 
-			let%lwt (name, ex_email) = Database.get_user_data uid in
+		| Some (uid, _, _, _) -> 
+			let%lwt (first_name, last_name, ex_email) = Database.get_user_data uid in
 			container (standard_menu ())
 			[
 				h1 [pcdata "Your account"];
@@ -90,8 +90,12 @@ let account_page () () =
 				[
 					table [
 						tr [
-							th [pcdata "Name"];
-							td [pcdata name]
+							th [pcdata "First name"];
+							td [pcdata first_name]
+						];
+						tr [
+							th [pcdata "Last name"];
+							td [pcdata last_name]
 						];
 						tr [
 							th [pcdata "E-mail address"];
@@ -172,7 +176,7 @@ let register_page () () =
 			h1 [pcdata "Create a new account"];
 			p ~a:[a_class ["error"]; a_id "error_paragraph"] [];
 			Form.post_form ~service:add_user_service
-			(fun (name, (email, password)) -> [
+			(fun (first_name, (last_name, (email, password))) -> [
 				table [
 					tr [
 						th [pcdata "E-mail address:"];
@@ -187,8 +191,12 @@ let register_page () () =
 						td [Raw.input ~a:[a_id "password_input2"; a_input_type `Password] ()]
 					];
 					tr [
-						th [pcdata "Full name:"];
-						td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
+						th [pcdata "First name:"];
+						td [Form.input ~a:[a_id "first_name_input"] ~input_type:`Text ~name:first_name Form.string] 
+					];
+					tr [
+						th [pcdata "Last name:"];
+						td [Form.input ~a:[a_id "last_name_input"] ~input_type:`Text ~name:last_name Form.string] 
 					];
 					tr [
 						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
@@ -202,15 +210,15 @@ let register_page () () =
 	| e -> error_page (Printexc.to_string e)
 	)
 
-let add_user_page () (name, (email, password)) =
-	Lwt.catch (fun () -> Database.add_user name email password >>=
+let add_user_page () (first_name, (last_name, (email, password))) =
+	Lwt.catch (fun () -> Database.add_user first_name last_name email password >>=
 	fun (uid, random) -> begin
 	match random with
 		| None -> Lwt.fail_with "Did not generate confirmation code"
 		| Some x -> Lwt.return x
 	end >>=
 	fun rstr -> let uri = Eliom_uri.make_string_uri ~absolute:true ~service:confirm_user_service (uid, rstr) in
-	Mail.send_register_mail name email uri;
+	Mail.send_register_mail first_name last_name email uri;
 	container (standard_menu ())
 	[
 		h1 [pcdata "Account created"];
@@ -233,8 +241,8 @@ let confirm_user_page (user_id, random) () =
 	)
 ;;
 
-let update_provisional_user_page user_id () (name, (old_email, (email, password))) =
-	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) name email password >>=
+let update_provisional_user_page user_id () (first_name, (last_name, (old_email, (email, password)))) =
+	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password >>=
 	fun (_, c_random) -> container (standard_menu ())
 	[
 		h1 [pcdata "Placeholder"]
@@ -247,14 +255,14 @@ let update_provisional_user_page user_id () (name, (old_email, (email, password)
 let confirm_provisional_user_page (user_id) () =
 let update_provisional_user_service = create
 	~id:(Fallback (preapply confirm_provisional_user_service user_id))
-	~meth:(Post (unit, string "name" ** string "old_email" ** string "email" ** string "password")) () in
+	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password")) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
 	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
 	fun ex_email -> container (standard_menu ())
 	[
 		h1 [pcdata "User data"];
 		Form.post_form ~service:update_provisional_user_service
-		(fun (name, (old_email, (email, password))) -> [
+		(fun (first_name, (last_name, (old_email, (email, password)))) -> [
 			table [
 				tr [
 					th [pcdata "E-mail address:"];
@@ -270,8 +278,12 @@ let update_provisional_user_service = create
 					td [Raw.input ~a:[a_id "password_input2"; a_input_type `Password] ()]
 				];
 				tr [
-					th [pcdata "Full name:"];
-					td [Form.input ~a:[a_id "name_input"] ~input_type:`Text ~name:name Form.string] 
+					th [pcdata "First name:"];
+					td [Form.input ~a:[a_id "first_name_input"] ~input_type:`Text ~name:first_name Form.string] 
+				];
+				tr [
+					th [pcdata "Last name:"];
+					td [Form.input ~a:[a_id "last_name_input"] ~input_type:`Text ~name:last_name Form.string] 
 				];
 				tr [
 					td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
@@ -312,9 +324,9 @@ begin
 	)
 end;;
 
-let%client handle_select id name uid ev =
+let%client handle_select id first_name last_name uid ev =
 begin
-	Eliom_lib.alert "Setting gir_%d to %s and %ld" id name uid;
+	Eliom_lib.alert "Setting gir_%d to %s %s and %ld" id first_name last_name uid;
 	Js.Opt.iter (Dom_html.window##.parent##.document##getElementById (Js.string (Printf.sprintf "gir_%d" id))) (fun gniarq ->
 		Eliom_lib.alert "Found element";
 		Js.Opt.iter (gniarq##.childNodes##item 1) (fun e ->
@@ -328,7 +340,7 @@ begin
 			Js.Opt.iter (e##.childNodes##item 1) (fun n ->
 				Js.Opt.iter (Dom_html.CoerceTo.element n) (fun e ->
 					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp_search -> 
-						inp_search##.value := Js.string name
+						inp_search##.value := Js.string (Printf.sprintf "%s %s" first_name last_name)
 					)
 				)
 			)
@@ -348,10 +360,10 @@ let find_user_page id () =
 				Raw.input ~a:[a_input_type `Text; a_oninput [%client (handle_search ~%users)]] ()
 			];
 			table ~a:[a_id "users_table"]
-			(List.map (fun (uid, name, email) ->
+			(List.map (fun (uid, first_name, last_name, email) ->
 				tr ~a:[a_id (Printf.sprintf "uid_%ld" uid)] [
-					td [Raw.input ~a:[a_input_type `Button; a_value "Select"; a_onclick [%client handle_select ~%id ~%name ~%uid]] ()];
-					td [pcdata name]
+					td [Raw.input ~a:[a_input_type `Button; a_value "Select"; a_onclick [%client handle_select ~%id ~%first_name ~%last_name ~%uid]] ()];
+					td [pcdata (Printf.sprintf "%s %s" first_name last_name)]
 				]
 			) users)
 		])

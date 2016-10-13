@@ -36,13 +36,13 @@ let rec admin_page () () =
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
     match u with
     | None -> not_logged_in ()
-    | Some (_, _, is_admin) -> if not is_admin
+    | Some (_, _, _, is_admin) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
       let%lwt games = Database.get_upcoming_games ~no_date:true () in
       let%lwt users = Database.get_user_list () in
 			let%lwt nonconf = Database.get_unconfirmed_users () in
-      let (uhid, uhn) = List.hd users in
+      let (uhid, uhfname, uhlname) = List.hd users in
       begin
 				Maw_app.register ~scope:Eliom_common.default_session_scope
 					~service:add_game_service (add_game_page admin_page);
@@ -99,9 +99,9 @@ let rec admin_page () () =
                 th [pcdata "Designer:"];
                 td [
                   Form.select ~name:designer Form.int32
-                  (Form.Option ([], uhid, Some (pcdata uhn), false))
-                  (List.map (fun (id, n) ->
-                    Form.Option ([], id, Some (pcdata n), false)
+                  (Form.Option ([], uhid, Some (pcdata (Printf.sprintf "%s %s" uhfname uhlname)), false))
+                  (List.map (fun (id, fname, lname) ->
+                    Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fname lname)), false)
                   ) (List.tl users))
                 ]
               ];
@@ -124,19 +124,19 @@ let rec admin_page () () =
 							th [pcdata "E-mail address"];
 							th [pcdata ""]
 						]::
-						List.map (fun (id, name, email, c) ->
+						List.map (fun (id, fname, lname, email, c) ->
 							match c with
 							| None -> (* this should not happen *)
 								tr 
 								[	
-									td [pcdata name];
+									td [pcdata (Printf.sprintf "%s %s" fname lname)];
 									td [pcdata email];
 									td [pcdata ""];
 								]
 							| Some confirm ->
 								tr
 								[
-									td [pcdata name];
+									td [pcdata (Printf.sprintf "%s %s" fname lname)];
 									td [pcdata email];
 									td [a ~service:User.confirm_user_service [pcdata "Confirm"] (id, confirm)]
 								]

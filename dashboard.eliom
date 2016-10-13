@@ -69,7 +69,7 @@ let dashboard_page () () =
 		let%lwt u = Eliom_reference.get Maw.user in
 		let%lwt mg_fmt = match u with
 		| None -> Lwt.return []
-		| Some (uid, _, _) -> Database.get_user_games uid >>=
+		| Some (uid, _, _, _) -> Database.get_user_games uid >>=
 				fun mg -> Database.get_designer_games uid >>=
 				fun dg -> format_my_games mg dg
 		in

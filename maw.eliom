@@ -34,7 +34,7 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 let login_action () (name, password) =
 	let%lwt u = Database.check_password name password in
 	match u with
-	| Some (uid, name, is_admin) -> Eliom_reference.set user (Some (uid, name, is_admin))
+	| Some (uid, fname, lname, is_admin) -> Eliom_reference.set user (Some (uid, fname, lname, is_admin))
 	| None -> Eliom_reference.set login_err (Some "Unknown user or wrong password")
 ;;
 
@@ -68,10 +68,10 @@ let login_box () =
 			| Some e -> [tr [td ~a:[a_colspan 3; a_class ["error"]] [pcdata e]]]
 			)
 		)]) ()]
-	| Some (_, n, _) -> [Form.post_form ~service:logout_service (fun () ->
+	| Some (_, fn, ln, _) -> [Form.post_form ~service:logout_service (fun () ->
 		[table [
 			tr [
-			 	td [pcdata (Printf.sprintf "Logged in as %s" n)]
+			 	td [pcdata (Printf.sprintf "Logged in as %s %s" fn ln)]
 			];
 			tr [
 				td [Form.input ~input_type:`Submit ~value:"Logout" Form.string]
@@ -85,7 +85,7 @@ let standard_menu () =
 	let%lwt u = Eliom_reference.get user in
 	match u with
 	| None -> Lwt.return []
-	| Some (_, _, is_admin) -> Lwt.return [
+	| Some (_, _, _, is_admin) -> Lwt.return [
 		table (
 			tr [
 				td [a ~service:dashboard_service [pcdata "Dashboard"] ()]

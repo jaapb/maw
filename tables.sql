@@ -55,12 +55,13 @@ CREATE TABLE teams (
 
 CREATE TABLE users (
     id integer NOT NULL,
-    name text NOT NULL,
+    last_name text NOT NULL,
     is_admin boolean DEFAULT false NOT NULL,
     email text NOT NULL,
     password text NOT NULL,
     confirmation character(32),
-    password_salt character varying(8) NOT NULL
+    password_salt character varying(8) NOT NULL,
+    first_name text NOT NULL
 );
 
 CREATE SEQUENCE users_id_seq

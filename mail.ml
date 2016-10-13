@@ -14,8 +14,9 @@ let send_mail to_addrs subject contents =
 	Netsmtp.sendmail smtp msg
 ;;
 
-let send_register_mail name email uri =
-	send_mail [name, email] "New account confirmation"
+let send_register_mail first_name last_name email uri =
+	send_mail [Printf.sprintf "%s %s" first_name last_name, email]
+	"New account confirmation"
 	(Printf.sprintf "Hello %s,\n
 \n
 To confirm your account, please click on the following link:\n
@@ -25,17 +26,18 @@ Kind regards,\n
 \n
 	Maw.\n
 \n
-P.S. This account is not monitored, so please don't reply to this e-mail." name uri) 
+P.S. This account is not monitored, so please don't reply to this e-mail." first_name uri) 
 ;;
 
-let send_simple_inscription_mail name email game_title game_loc game_date game_designer =
-	send_mail [name, email] (Printf.sprintf "Inscription for %s" game_title) 
-	(Printf.sprintf "Hello,\n
+let send_simple_inscription_mail fname lname email game_title game_loc game_date dsg_fname dsg_lname =
+	send_mail [Printf.sprintf "%s %s" fname lname, email]
+	(Printf.sprintf "Inscription for %s" game_title) 
+	(Printf.sprintf "Hello %s,\n
 \n
 You have (or have been) signed up through the Megagame Makers website for the\n
 following game:\n
 \n
-%s (by %s)\n
+%s (by %s %s)\n
 \n
 This game will be held in %s on %s.\n
 \n
@@ -46,17 +48,17 @@ Kind regards,\n
   Maw.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
-game_title game_designer game_loc game_date)
+fname game_title dsg_fname dsg_lname game_loc game_date)
 ;;
 
-let send_provisional_inscription_mail uri email game_title game_loc game_date game_designer =
+let send_provisional_inscription_mail uri email game_title game_loc game_date dsg_fname dsg_lname =
 	send_mail ["New User", email] (Printf.sprintf "Inscription for %s" game_title) 
 	(Printf.sprintf "Hello,\n
 \n
 You have (or have been) signed up through the Megagame Makers website for the\n
 following game:\n
 \n
-%s (by %s)\n
+%s (by %s %s)\n
 \n
 This game will be held in %s on %s.\n
 \n
@@ -68,5 +70,5 @@ Kind regards,\n
   Maw.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
-game_title game_designer game_loc game_date uri)
+game_title dsg_fname dsg_lname game_loc game_date uri)
 ;;

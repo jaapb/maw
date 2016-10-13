@@ -76,7 +76,7 @@ let get_designer_games uid =
 
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT title, date, location, name, designer,
+	PGSQL(dbh) "SELECT title, date, location, first_name, last_name, designer,
 		description, min_players, max_players, casting_published \
 		FROM games JOIN users ON designer = users.id \
 		WHERE games.id = $game_id" >>=
@@ -86,14 +86,15 @@ let get_game_data game_id =
 	| _ -> fail_with "Inconsistent database"
 ;;
 
-let check_password name password =
+let check_password email password =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, password, password_salt, name, is_admin \
+	PGSQL(dbh) "SELECT id, password, password_salt, first_name, last_name, \
+	  is_admin \
 		FROM users \
-		WHERE email = $name AND confirmation IS NULL" >>=
+		WHERE email = $email AND confirmation IS NULL" >>=
 	function
-	| [(id, db_password, db_salt, name, is_admin)] ->
-		if crypt_password password db_salt = db_password then Lwt.return (Some (id, name, is_admin))
+	| [(id, db_password, db_salt, first_name, last_name, is_admin)] ->
+		if crypt_password password db_salt = db_password then Lwt.return (Some (id, first_name, last_name, is_admin))
 		else Lwt.return None
 	| _ -> Lwt.return None (* don't want to fail with Inconsistent database here
 	  as it would give away information *)
@@ -194,26 +195,29 @@ let add_inscription game_id uid group_name status team role note =
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT g2.user_id, name, g2.team_name, g2.role_type, g2.note, g2.group_name, g2.status \
+	PGSQL(dbh) "SELECT g2.user_id, first_name, last_name, g2.team_name, \
+		g2.role_type, g2.note, g2.group_name, g2.status \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
 		ON g1.game_id = g2.game_id AND \
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
 		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
 	fun l -> Lwt_list.map_p
-		(fun (u, nm, tn, rt, nt, gn, s) ->
-			Lwt.return (u, nm, tn, rt, nt, gn, inscr_status_of_char s)) l
+		(fun (u, fnm, lnm, tn, rt, nt, gn, s) ->
+			Lwt.return (u, fnm, lnm, tn, rt, nt, gn, inscr_status_of_char s)) l
 ;;
 
 let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
-	if filter_cast then PGSQL(dbh) "SELECT name, i.user_id, i.team_name, role_type, note, group_name, status \
+	if filter_cast then PGSQL(dbh) "SELECT first_name, last_name, i.user_id, \
+	  i.team_name, role_type, note, group_name, status \
 		FROM game_inscriptions i JOIN users ON user_id = users.id 
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		ORDER BY group_name ASC, inscription_time ASC"
-	else PGSQL(dbh) "SELECT name, user_id, team_name, role_type, note, group_name, status \
+	else PGSQL(dbh) "SELECT first_name, last_name, user_id, team_name, \
+		role_type, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY group_name ASC, inscription_time ASC"
@@ -222,9 +226,9 @@ let get_inscription_list ?(filter_cast = false) game_id =
 let search_for_user search =
  	let search_expr = Printf.sprintf ".*%s.*" search in
   get_db () >>= fun dbh ->
-  PGSQL(dbh) "SELECT id, name, email \
+  PGSQL(dbh) "SELECT id, first_name, last_name, email \
     FROM users \
-    WHERE email = $search OR name ~* $search_expr"
+    WHERE email = $search OR last_name ~* $search_expr"
 ;;
 
 let get_group_name game_id uid_list =
@@ -240,7 +244,7 @@ let get_group_name game_id uid_list =
 
 let get_user_data uid =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name, email \
+	PGSQL(dbh) "SELECT first_name, last_name, email \
 		FROM users \
 		WHERE id = $uid" >>=
 	function
@@ -260,7 +264,7 @@ let update_user_data uid email password =
 
 let get_user_list () =
   get_db () >>= fun dbh ->
-  PGSQL(dbh) "SELECT id, name \
+  PGSQL(dbh) "SELECT id, first_name, last_name \
     FROM users"
 ;;
 
@@ -297,14 +301,15 @@ let set_published game_id b =
 
 let get_casting game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT c.team_name, role_name, name, c.user_id, note, group_name \
+	PGSQL(dbh) "SELECT c.team_name, role_name, first_name, last_name, c.user_id, \
+	  note, group_name \
 		FROM game_casting c JOIN users ON c.user_id = users.id \
 		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE c.game_id = $game_id \
 		ORDER BY role_name DESC"
 ;;
 
-let add_user ?id ?(confirm=true) name email password =
+let add_user ?id ?(confirm=true) fname lname email password =
 	let c_random = 
 		if confirm then Some (random_string 32)
 		else None in
@@ -329,9 +334,9 @@ let add_user ?id ?(confirm=true) name email password =
 			end
 	end >>=
 	fun uid ->	PGSQL(dbh) "INSERT INTO users \
-		(id, name, email, password, password_salt, confirmation) \
+		(id, first_name, last_name, email, password, password_salt, confirmation) \
 		VALUES \
-		($uid, $name, $email, $c_password, $salt, $?c_random)" >>=
+		($uid, $fname, $lname, $email, $c_password, $salt, $?c_random)" >>=
 	fun () -> PGOCaml.commit dbh >>=
 	fun () -> Lwt.return (uid, c_random)
 ;;
@@ -358,13 +363,15 @@ let set_game_data game_id date location =
 ;;
 
 let get_unconfirmed_users () =
-	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email, confirmation \
+	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, first_name, last_name, \
+	  email, confirmation \
 		FROM users \
 		WHERE confirmation IS NOT NULL"
 ;;
 
 let get_confirmed_users () =
-	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, name, email \
+	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, first_name, last_name, \
+		email \
 		FROM users \
 		WHERE confirmation IS NULL"
 ;;

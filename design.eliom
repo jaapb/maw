@@ -28,8 +28,8 @@ let design_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-	| Some (uid, _, _) -> 
-		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
+	| Some (uid, _, _, _) -> 
+		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
@@ -144,35 +144,35 @@ let update_description game_id descr =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.set_game_description game_id descr
+	| Some (uid, _, _, _) -> Database.set_game_description game_id descr
 ;;
 
 let update_numbers game_id (min, max) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.set_game_numbers game_id min max
+	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
 ;;
 
 let remove_teams game_id teams =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.remove_game_teams game_id teams
+	| Some (uid, _, _, _) -> Database.remove_game_teams game_id teams
 ;;
 
 let add_team game_id team =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.add_game_team game_id team
+	| Some (uid, _, _, _) -> Database.add_game_team game_id team
 ;;
 
 let remove_role_types game_id role_types =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.remove_game_role_types game_id role_types
+	| Some (uid, _, _, _) -> Database.remove_game_role_types game_id role_types
 ;;
 
 let add_role_type game_id role_type =
@@ -180,7 +180,7 @@ let add_role_type game_id role_type =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> Database.add_game_role_type game_id role_type
+	| Some (uid, _, _, _) -> Database.add_game_role_type game_id role_type
 ;;
 
 let%client switch_active ev =
@@ -262,18 +262,18 @@ let cast_page game_id () =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
 			match l with
 			| [] -> ((g, rhd)::res)
-			| (_, _, _, _, _, g', _) as x::l' -> 
+			| (_, _, _, _, _, _, g', _) as x::l' -> 
 				if g = g' then pg_aux l' g (x::rhd) res
 				else pg_aux l' g' [x] ((g, rhd)::res)
 		in
 		match l with
 		| [] -> []
-		| (_, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
+		| (_, _, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
 	in
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
-  | Some (uid, _, _) -> let%lwt (title, _, _, _, dsg_id, _, _, _, _) =
+  | Some (uid, _, _, _) -> let%lwt (title, _, _, _, _, dsg_id, _, _, _, _) =
       Database.get_game_data game_id in
     if uid <> dsg_id then error_page "You are not the designer of this game."
     else
@@ -292,14 +292,14 @@ let cast_page game_id () =
 					(List.map (fun (gn, g) -> 
 						table ~a:[a_class ["casting"]]
 						(tr [th ~a:[a_class ["group_name"]; a_colspan 2] [pcdata (default "Ungrouped" gn)]]::
-        		List.map (fun (nm, p_id, _, _, n, _, _) ->
+        		List.map (fun (fname, lname, p_id, _, _, n, _, _) ->
         			tr ~a:[a_class ["player_row"]] [
 								td ~a:[
           	   		a_onclick [%client switch_active];
 							  	a_title n
             		] [
 									Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
-									pcdata nm
+									pcdata (Printf.sprintf "%s %s" fname lname)
 								]
             	]
           	) g)
@@ -320,7 +320,7 @@ let cast_page game_id () =
                 th ~a:[a_class ["header"]] [pcdata "Role"];
                 th ~a:[a_class ["header"]] [pcdata "Name"]
               ]::
-						  member.it (fun (p_role, p_uid) (_, rn, pn, pid, n, g) init ->
+						  member.it (fun (p_role, p_uid) (_, rn, pfname, plname, pid, n, g) init ->
 						 		tr ~a:[a_class ["player_row"]] [
 									td [
 										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
@@ -330,10 +330,10 @@ let cast_page game_id () =
 							  		a_title n]
 									[
 										Form.input ~input_type:`Hidden ~name:p_uid ~value:pid Form.int32;
-										pcdata pn
+										pcdata (Printf.sprintf "%s %s" pfname plname)
 									]
 								]::init
-						  ) (List.filter (fun (n, _, _, _, _, _) -> n = t) casting)
+						  ) (List.filter (fun (n, _, _,  _, _, _, _) -> n = t) casting)
 							[]
 						)::init
       	  ) teams
@@ -368,7 +368,7 @@ let do_cast_page game_id (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _) -> 
+	| Some (uid, _, _, _) -> 
 		Database.clear_casting game_id >>=
 		fun () -> Lwt_list.iter_s (fun (name, members) ->
 			Lwt_list.iter_s (fun (role, pid) ->
@@ -390,8 +390,8 @@ let message_page game_id () =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
-  | Some (uid, _, _) -> 
-		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
+  | Some (uid, _, _, _) -> 
+		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
@@ -439,8 +439,8 @@ let do_message_page game_id _ =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
-  | Some (uid, _, _) -> 
-		let%lwt (title, date, loc, _, dsg_id, d, min_nr, max_nr, _) =
+  | Some (uid, _, _, _) -> 
+		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
