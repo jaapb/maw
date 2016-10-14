@@ -62,11 +62,11 @@ CREATE TABLE users (
     confirmation character(32),
     password_salt character varying(8) NOT NULL,
     first_name text NOT NULL,
-    address text,
-    phone_number text,
-    town text,
-    postcode text,
-    country text
+    address text NOT NULL,
+    phone_number text NOT NULL,
+    town text NOT NULL,
+    postcode text NOT NULL,
+    country text NOT NULL
 );
 
 CREATE SEQUENCE users_id_seq
@@ -122,7 +122,7 @@ ALTER TABLE ONLY game_casting
     ADD CONSTRAINT game_casting_game_id_fkey1 FOREIGN KEY (game_id, team_name) REFERENCES teams(game_id, name);
 
 ALTER TABLE ONLY game_casting
-    ADD CONSTRAINT game_casting_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT game_casting_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);

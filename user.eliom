@@ -50,10 +50,17 @@ let%client check_account_form ev =
 	let p1 = Dom_html.getElementById "password_input1" in
 	let p2 = Dom_html.getElementById "password_input2" in
 	let ei = Dom_html.getElementById "email_input" in
+	let fni = Dom_html.getElementById "first_name_input" in
+	let lni = Dom_html.getElementById "last_name_input" in
+	let ai = Dom_html.getElementById "address_input" in
+	let pci = Dom_html.getElementById "postcode_input" in
+	let ti = Dom_html.getElementById "town_input" in
+	let ci = Dom_html.getElementById "country_input" in
+	let phi = Dom_html.getElementById "phone_input" in
 	Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
 		if Js.to_string e##.value = "" then
 		begin
-			add_or_replace (Js.string "You might want to put in an e-mail addres...");
+			add_or_replace (Js.string "Please enter an e-mail address.");
 			Dom.preventDefault ev
 		end
 	);
@@ -66,10 +73,59 @@ let%client check_account_form ev =
 			end
 			else if Js.to_string e1##.value = "" then
 			begin
-				add_or_replace (Js.string "You might want to put in a password...");
+				add_or_replace (Js.string "Please enter a password.");
 				Dom.preventDefault ev
 			end
 		)
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input fni) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a first name.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input lni) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a last name.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ai) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter an address.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input pci) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a postcode.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ti) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a town.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ci) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a country.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input phi) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a phone number.");
+			Dom.preventDefault ev
+		end
 	)
 ;;
 
@@ -82,6 +138,7 @@ let account_page () () =
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) -> 
 			let%lwt (ex_fname, ex_lname, ex_email) = Database.get_user_data uid in
+			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Database.get_extra_user_data uid in
 			container (standard_menu ())
 			[
 				h1 [pcdata "Your account"];
@@ -111,23 +168,23 @@ let account_page () () =
 						];
 						tr [
 							th [pcdata "Address"];
-							td [Form.input ~a:[a_id "address_input"] ~input_type:`Text ~name:address Form.string]
+							td [Form.input ~a:[a_id "address_input"] ~input_type:`Text ~name:address ~value:ex_address Form.string]
 						];
 						tr [
 							th [pcdata "Postcode"];
-							td [Form.input ~a:[a_id "postcode_input"] ~input_type:`Text ~name:postcode Form.string]
+							td [Form.input ~a:[a_id "postcode_input"] ~input_type:`Text ~name:postcode ~value:ex_postcode Form.string]
 						];
 						tr [
 							th [pcdata "Town"];
-							td [Form.input ~a:[a_id "town_input"] ~input_type:`Text ~name:town Form.string]
+							td [Form.input ~a:[a_id "town_input"] ~input_type:`Text ~name:town ~value:ex_town Form.string]
 						];
 						tr [
 							th [pcdata "Country"];
-							td [Form.input ~a:[a_id "country_input"] ~input_type:`Text ~name:country Form.string]
+							td [Form.input ~a:[a_id "country_input"] ~input_type:`Text ~name:country ~value:ex_country Form.string]
 						];
 						tr [
 							th [pcdata "Phone number"];
-							td [Form.input ~a:[a_id "phone_input"] ~input_type:`Text ~name:phone Form.string]
+							td [Form.input ~a:[a_id "phone_input"] ~input_type:`Text ~name:phone ~value:ex_phone Form.string]
 						];
 						tr 
 						[
@@ -158,10 +215,17 @@ let%client check_register_form ev =
 	let p1 = Dom_html.getElementById "password_input1" in
 	let p2 = Dom_html.getElementById "password_input2" in
 	let ei = Dom_html.getElementById "email_input" in
+	let fni = Dom_html.getElementById "first_name_input" in
+	let lni = Dom_html.getElementById "last_name_input" in
+	let ai = Dom_html.getElementById "address_input" in
+	let pci = Dom_html.getElementById "postcode_input" in
+	let ti = Dom_html.getElementById "town_input" in
+	let ci = Dom_html.getElementById "country_input" in
+	let phi = Dom_html.getElementById "phone_input" in
 	Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
 		if Js.to_string e##.value = "" then
 		begin
-			add_or_replace (Js.string "You might want to put in an e-mail addres...");
+			add_or_replace (Js.string "Please enter an address.");
 			Dom.preventDefault ev
 		end
 	);
@@ -174,10 +238,59 @@ let%client check_register_form ev =
 			end
 			else if Js.to_string e1##.value = "" then
 			begin
-				add_or_replace (Js.string "You might want to put in a password...");
+				add_or_replace (Js.string "Please enter a password.");
 				Dom.preventDefault ev
 			end
 		)
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input fni) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a first name.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input lni) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a last name.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ai) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter an address.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input pci) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a postcode.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ti) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a town.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input ci) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a country.");
+			Dom.preventDefault ev
+		end
+	);
+	Js.Opt.iter (Dom_html.CoerceTo.input phi) (fun e ->
+		if Js.to_string e##.value = "" then
+		begin
+			add_or_replace (Js.string "Please enter a phone number.");
+			Dom.preventDefault ev
+		end
 	)
 ;;
 

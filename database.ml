@@ -253,6 +253,17 @@ let get_user_data uid =
 	| _ -> fail_with "Inconsistency in database"
 ;;
 
+let get_extra_user_data uid =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT address, postcode, town, country, phone_number \
+	  FROM users \
+		WHERE id = $uid" >>=
+	function
+	| [] -> fail Not_found
+	| [u] -> return u
+	| _ -> fail_with "Inconsistency in database"
+;;
+
 let update_user_data uid fname lname email password address postcode town country phone =
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
