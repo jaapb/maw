@@ -253,12 +253,14 @@ let get_user_data uid =
 	| _ -> fail_with "Inconsistency in database"
 ;;
 
-let update_user_data uid email password =
+let update_user_data uid fname lname email password address postcode town country phone =
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET email = $email, password = $c_password, password_salt = $salt \
+		SET email = $email, password = $c_password, password_salt = $salt, \
+		first_name = $fname, last_name = $lname, address = $address, town = $town, \
+		phone_number = $phone, postcode = $postcode, country = $country \
 		WHERE id = $uid"
 ;;
 
@@ -309,7 +311,7 @@ let get_casting game_id =
 		ORDER BY role_name DESC"
 ;;
 
-let add_user ?id ?(confirm=true) fname lname email password =
+let add_user ?id ?(confirm=true) fname lname email password address postcode town country phone =
 	let c_random = 
 		if confirm then Some (random_string 32)
 		else None in
@@ -334,9 +336,11 @@ let add_user ?id ?(confirm=true) fname lname email password =
 			end
 	end >>=
 	fun uid ->	PGSQL(dbh) "INSERT INTO users \
-		(id, first_name, last_name, email, password, password_salt, confirmation) \
+		(id, first_name, last_name, email, password, password_salt, confirmation, \
+		address, postcode, town, country, phone_number) \
 		VALUES \
-		($uid, $fname, $lname, $email, $c_password, $salt, $?c_random)" >>=
+		($uid, $fname, $lname, $email, $c_password, $salt, $?c_random, $address, \
+		$postcode, $town, $country, $phone)" >>=
 	fun () -> PGOCaml.commit dbh >>=
 	fun () -> Lwt.return (uid, c_random)
 ;;

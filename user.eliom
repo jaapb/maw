@@ -13,19 +13,19 @@
 ]
 
 let add_user_service = create ~id:(Path ["register"])
-	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password")) ();;
+	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) ();;
 let update_user_service = create ~id:(Fallback account_service)
-	~meth:(Post (unit, string "email" ** string "password")) ();;
+	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) ();;
 let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
 let confirm_provisional_user_service = create ~id:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
 let find_user_service = Eliom_service.create ~id:Global ~meth:(Get (int "row_id")) ();;
 
-let update_user_page () (email, password) =
+let update_user_page () (fname, (lname, (email, (password, (address, (postcode, (town, (country, phone))))))))  =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> Database.update_user_data uid email password >>=
+		| Some (uid, _, _, _) -> Database.update_user_data uid fname lname email password address postcode town country phone>>=
 		fun () -> container (standard_menu ())
 		[
 			p [pcdata "Changes successfully saved."]
@@ -81,22 +81,14 @@ let account_page () () =
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) -> 
-			let%lwt (first_name, last_name, ex_email) = Database.get_user_data uid in
+			let%lwt (ex_fname, ex_lname, ex_email) = Database.get_user_data uid in
 			container (standard_menu ())
 			[
 				h1 [pcdata "Your account"];
 				p ~a:[a_class ["error"]; a_id "error_paragraph"] [];
-				Form.post_form ~service:update_user_service (fun (email, password) -> 
+				Form.post_form ~service:update_user_service (fun (first_name, (last_name, (email, (password, (address, (postcode, (town, (country, phone)))))))) -> 
 				[
 					table [
-						tr [
-							th [pcdata "First name"];
-							td [pcdata first_name]
-						];
-						tr [
-							th [pcdata "Last name"];
-							td [pcdata last_name]
-						];
 						tr [
 							th [pcdata "E-mail address"];
 							td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string] 
@@ -108,6 +100,34 @@ let account_page () () =
 						tr [
 							th [pcdata "Confirm password"];
 							td [Raw.input ~a:[a_input_type `Password; a_id "password_input2"] ()]
+						];
+						tr [
+							th [pcdata "First name"];
+							td [Form.input ~a:[a_id "fname_input"] ~input_type:`Text ~name:first_name ~value:ex_fname Form.string]
+						];
+						tr [
+							th [pcdata "Last name"];
+							td [Form.input ~a:[a_id "lname_input"] ~input_type:`Text ~name:last_name ~value:ex_lname Form.string]
+						];
+						tr [
+							th [pcdata "Address"];
+							td [Form.input ~a:[a_id "address_input"] ~input_type:`Text ~name:address Form.string]
+						];
+						tr [
+							th [pcdata "Postcode"];
+							td [Form.input ~a:[a_id "postcode_input"] ~input_type:`Text ~name:postcode Form.string]
+						];
+						tr [
+							th [pcdata "Town"];
+							td [Form.input ~a:[a_id "town_input"] ~input_type:`Text ~name:town Form.string]
+						];
+						tr [
+							th [pcdata "Country"];
+							td [Form.input ~a:[a_id "country_input"] ~input_type:`Text ~name:country Form.string]
+						];
+						tr [
+							th [pcdata "Phone number"];
+							td [Form.input ~a:[a_id "phone_input"] ~input_type:`Text ~name:phone Form.string]
 						];
 						tr 
 						[
@@ -137,19 +157,11 @@ let%client check_register_form ev =
 	end in
 	let p1 = Dom_html.getElementById "password_input1" in
 	let p2 = Dom_html.getElementById "password_input2" in
-	let ni = Dom_html.getElementById "name_input" in
 	let ei = Dom_html.getElementById "email_input" in
 	Js.Opt.iter (Dom_html.CoerceTo.input ei) (fun e ->
 		if Js.to_string e##.value = "" then
 		begin
 			add_or_replace (Js.string "You might want to put in an e-mail addres...");
-			Dom.preventDefault ev
-		end
-	);
-	Js.Opt.iter (Dom_html.CoerceTo.input ni) (fun e ->
-		if Js.to_string e##.value = "" then
-		begin
-			add_or_replace (Js.string "You might want to put in a full name...");
 			Dom.preventDefault ev
 		end
 	);
@@ -176,27 +188,47 @@ let register_page () () =
 			h1 [pcdata "Create a new account"];
 			p ~a:[a_class ["error"]; a_id "error_paragraph"] [];
 			Form.post_form ~service:add_user_service
-			(fun (first_name, (last_name, (email, password))) -> [
+			(fun (first_name, (last_name, (email, (password, (address, (postcode, (town, (country, phone)))))))) -> [
 				table [
 					tr [
-						th [pcdata "E-mail address:"];
+						th [pcdata "E-mail address"];
 						td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email Form.string]
 					];
 					tr [
-						th [pcdata "Password:"];
+						th [pcdata "Password"];
 						td [Form.input ~a:[a_id "password_input1"] ~input_type:`Password ~name:password Form.string]
 					];
 					tr [
-						th [pcdata "Confirm password:"];
+						th [pcdata "Confirm password"];
 						td [Raw.input ~a:[a_id "password_input2"; a_input_type `Password] ()]
 					];
 					tr [
-						th [pcdata "First name:"];
-						td [Form.input ~a:[a_id "first_name_input"] ~input_type:`Text ~name:first_name Form.string] 
+						th [pcdata "First name"];
+						td [Form.input ~a:[a_id "fname_input"] ~input_type:`Text ~name:first_name Form.string] 
 					];
 					tr [
-						th [pcdata "Last name:"];
-						td [Form.input ~a:[a_id "last_name_input"] ~input_type:`Text ~name:last_name Form.string] 
+						th [pcdata "Last name"];
+						td [Form.input ~a:[a_id "lname_input"] ~input_type:`Text ~name:last_name Form.string] 
+					];
+					tr [
+						th [pcdata "Address"];
+						td [Form.input ~a:[a_id "address_input"] ~input_type:`Text ~name:address Form.string] 
+					];
+					tr [
+						th [pcdata "Postcode"];
+						td [Form.input ~a:[a_id "postcode_input"] ~input_type:`Text ~name:postcode Form.string] 
+					];
+					tr [
+						th [pcdata "Town"];
+						td [Form.input ~a:[a_id "town_input"] ~input_type:`Text ~name:town Form.string] 
+					];
+					tr [
+						th [pcdata "Country"];
+						td [Form.input ~a:[a_id "country_input"] ~input_type:`Text ~name:country Form.string] 
+					];
+					tr [
+						th [pcdata "Phone number"];
+						td [Form.input ~a:[a_id "phone_input"] ~input_type:`Text ~name:phone Form.string] 
 					];
 					tr [
 						td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]
@@ -210,8 +242,8 @@ let register_page () () =
 	| e -> error_page (Printexc.to_string e)
 	)
 
-let add_user_page () (first_name, (last_name, (email, password))) =
-	Lwt.catch (fun () -> Database.add_user first_name last_name email password >>=
+let add_user_page () (first_name, (last_name, (email, (password, (address, (postcode, (town, (country, phone)))))))) =
+	Lwt.catch (fun () -> Database.add_user first_name last_name email password address postcode town country phone >>=
 	fun (uid, random) -> begin
 	match random with
 		| None -> Lwt.fail_with "Did not generate confirmation code"
@@ -241,8 +273,8 @@ let confirm_user_page (user_id, random) () =
 	)
 ;;
 
-let update_provisional_user_page user_id () (first_name, (last_name, (old_email, (email, password)))) =
-	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password >>=
+let update_provisional_user_page user_id () (first_name, (last_name, (old_email, (email, (password, (address, (postcode, (town, (country, phone))))))))) =
+	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password address postcode town country phone >>=
 	fun (_, c_random) -> container (standard_menu ())
 	[
 		h1 [pcdata "Placeholder"]
@@ -255,35 +287,55 @@ let update_provisional_user_page user_id () (first_name, (last_name, (old_email,
 let confirm_provisional_user_page (user_id) () =
 let update_provisional_user_service = create
 	~id:(Fallback (preapply confirm_provisional_user_service user_id))
-	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password")) () in
+	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
 	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
 	fun ex_email -> container (standard_menu ())
 	[
 		h1 [pcdata "User data"];
 		Form.post_form ~service:update_provisional_user_service
-		(fun (first_name, (last_name, (old_email, (email, password)))) -> [
+		(fun (first_name, (last_name, (old_email, (email, (password, (address, (postcode, (town, (country, phone))))))))) -> [
 			table [
 				tr [
-					th [pcdata "E-mail address:"];
+					th [pcdata "E-mail address"];
 					td [Form.input ~a:[a_id "email_input"] ~input_type:`Text ~name:email ~value:ex_email Form.string;
 					Form.input ~input_type:`Hidden ~name:old_email ~value:ex_email Form.string]
 				];
 				tr [
-					th [pcdata "Password:"];
+					th [pcdata "Password"];
 					td [Form.input ~a:[a_id "password_input1"] ~input_type:`Password ~name:password Form.string]
 				];
 				tr [
-					th [pcdata "Confirm password:"];
+					th [pcdata "Confirm password"];
 					td [Raw.input ~a:[a_id "password_input2"; a_input_type `Password] ()]
 				];
 				tr [
-					th [pcdata "First name:"];
-					td [Form.input ~a:[a_id "first_name_input"] ~input_type:`Text ~name:first_name Form.string] 
+					th [pcdata "First name"];
+					td [Form.input ~a:[a_id "fname_input"] ~input_type:`Text ~name:first_name Form.string] 
 				];
 				tr [
-					th [pcdata "Last name:"];
-					td [Form.input ~a:[a_id "last_name_input"] ~input_type:`Text ~name:last_name Form.string] 
+					th [pcdata "Last name"];
+					td [Form.input ~a:[a_id "lname_input"] ~input_type:`Text ~name:last_name Form.string] 
+				];
+				tr [
+					th [pcdata "Address"];
+					td [Form.input ~a:[a_id "address_input"] ~input_type:`Text ~name:address Form.string] 
+				];
+				tr [
+					th [pcdata "Postcode"];
+					td [Form.input ~a:[a_id "postcode_input"] ~input_type:`Text ~name:postcode Form.string] 
+				];
+				tr [
+					th [pcdata "Town"];
+					td [Form.input ~a:[a_id "town_input"] ~input_type:`Text ~name:town Form.string] 
+				];
+				tr [
+					th [pcdata "Country"];
+					td [Form.input ~a:[a_id "country_input"] ~input_type:`Text ~name:country Form.string] 
+				];
+				tr [
+					th [pcdata "Phone number"];
+					td [Form.input ~a:[a_id "phone_number_input"] ~input_type:`Text ~name:phone Form.string] 
 				];
 				tr [
 					td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client check_register_form]]

@@ -61,7 +61,12 @@ CREATE TABLE users (
     password text NOT NULL,
     confirmation character(32),
     password_salt character varying(8) NOT NULL,
-    first_name text NOT NULL
+    first_name text NOT NULL,
+    address text,
+    phone_number text,
+    town text,
+    postcode text,
+    country text
 );
 
 CREATE SEQUENCE users_id_seq
