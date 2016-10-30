@@ -79,11 +79,10 @@ let%client rec renumber_children n trs =
 			begin
 				let td_name::td_role::td_note::_ =
 					Dom.list_of_nodeList tr##.childNodes in
-				let input_email::input_uid::_ =
+				let input_uid::_ =
 					Dom.list_of_nodeList td_name##.childNodes in	
 				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
-					Js.Unsafe.set input_email "name" (Printf.sprintf "person.search[%d]" n);
 					Js.Unsafe.set input_uid "name" (Printf.sprintf "person.uid[%d]" n);
 					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
 					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
@@ -94,7 +93,7 @@ let%client rec renumber_children n trs =
 ;;
 
 let%client remove_my_row ev =
-  (* button -> in td -> in tr: delete this tr! *)
+	(* The button is in a td in a tr; it's the tr that has to be deleted! *)
   Js.Opt.iter (ev##.target) (fun e ->
     Js.Opt.iter (e##.parentNode) (fun td ->
       Js.Opt.iter (td##.parentNode) (fun tr ->
@@ -109,12 +108,11 @@ let%client remove_my_row ev =
 
 let%client new_row id roles =
   tr ~a:[a_class ["group_inscription_row"]; a_id (Printf.sprintf "gir_%d" id)] [
-		td [
-			Raw.input ~a:[a_input_type `Button; a_value "Find user"; a_onclick (fun ev -> ignore (Eliom_client.window_open ~window_name:(Js.string "Window") ~service:~%User.find_user_service id))] ()
-		];
     td [
-			Raw.input ~a:[a_name (Printf.sprintf "person.uid[%d]" id); a_input_type `Hidden; a_value ""] ();
-			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.search[%d]" id); a_input_type `Search; a_value ""; a_autocomplete false] ();
+			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_input_type `Search; a_value ""; a_list "users_list"] ();
+		];
+		td [
+			pcdata "[new user]"
 		];
     td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) roles)];
     td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
@@ -178,7 +176,7 @@ let%client group_inscription_handler roles gname ev =
 ;;
 
 let do_signup_page game_id () (edit, (group_name, (team, users))) =
-	let handle_provisional search uid group_name team role note status =
+	(* let handle_provisional search uid group_name team role note status =
 		let uri = Eliom_uri.make_string_uri ~absolute:true ~service:User.confirm_provisional_user_service uid in
 		Database.add_provisional_user search game_id >>=
 		fun uid -> Database.add_inscription game_id uid group_name status
@@ -191,26 +189,17 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			| _ -> "TBD" in
 			Mail.send_provisional_inscription_mail uri search t l dstr dsg_fname dsg_lname;
 			Lwt.return ()
-	in
+	in *)
 	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname status =
 		match users with
-		| (search, (uid, (role, note)))::tl -> 
-				Lwt.catch (fun () -> Database.get_user_data uid >>=
-					fun (fname, lname, email) -> begin
-						if search = fname (* XXX *) then
-						begin
-      				Database.add_inscription game_id uid group_name status
-  		  				(if String.lowercase_ascii team = "any" then None else Some team)
-			  				(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-								fun () -> Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
-								Lwt.return ()
-						end
-						else
-							handle_provisional search uid group_name team role note status
-					end)
-				(function
-				| Not_found -> handle_provisional search uid group_name team role note status
-				| e -> Lwt.fail e) >>=
+		| (uid, (role, note))::tl -> 
+				Database.get_user_data uid >>=
+				fun (fname, lname, email) ->
+      		Database.add_inscription game_id uid group_name status
+  		  		(if String.lowercase_ascii team = "any" then None else Some team)
+			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
+						fun () -> Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
+						Lwt.return () >>=
 				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_fname dsg_lname status
 		| _ -> Lwt.return ()
 	in
@@ -240,9 +229,9 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 					th [pcdata "Role type"];
 					th [pcdata "Notes"]
 				]::
-				(List.map (fun (email, (_, (role_type, note))) ->
+				(List.map (fun (uid, (role_type, note)) ->
 					tr [
-						td [pcdata email];
+						td [pcdata (Printf.sprintf "%ld" uid)];
 						td [pcdata role_type];
 						td [pcdata note]
 					]
@@ -302,13 +291,29 @@ let%client check_signup_form ev =
 	) (Dom.list_of_nodeList it##.childNodes)
 ;;
 
+let%client initialise_signup me_inscr users e =
+let udl = Dom_html.getElementById "users_list" in
+begin
+	Eliom_lib.alert "Initialising...";
+	nr_ids := List.length me_inscr - 1;
+	List.iter (fun (uid, fname, lname, _, s) ->
+		let status = match s with
+		| Some "P" -> " (provisional)"
+		| Some "U" -> " (unconfirmed)"
+		| _ -> "" in
+		let thing = Raw.option (pcdata (Printf.sprintf "%s %s%s" fname lname status)) in
+		Eliom_lib.alert "Add child %s" lname;
+		Dom.appendChild udl (Html.To_dom.of_element thing)
+	) users
+end
+
 let signup_page game_id () =
 	let do_signup_service = create
 		~id:(Fallback (preapply signup_service game_id))
 		~meth:(Post (unit,
 			bool "edit" ** opt (string "group_name") **
-			string "team" ** list "person" (string "search" ** int32 "uid" **
-			string "role_type" ** string "note"))) () in
+			string "team" ** list "person" (int32 "uid" ** string "role_type" **
+			string "note"))) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -316,11 +321,11 @@ let signup_page game_id () =
 	| Some (my_uid, fname, lname, _) -> 
 		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg_id, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
-		(*let%lwt users = Database.get_confirmed_users () in*)
     let%lwt teams = Database.get_game_teams game_id in
 		let%lwt role_types = Database.get_game_role_types game_id in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
+		let%lwt users = Database.get_users ~unconfirmed:true ~provisional:true () in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _, _, _) -> u = my_uid) inscr
 			then inscr 
 			else (my_uid, fname, lname, None, None, "", None, `Interested)::inscr in
@@ -331,9 +336,10 @@ let signup_page game_id () =
 			(List.sort_uniq (fun (u1, _, _, _, _, _, _, _) (u2, _, _, _, _, _, _, _) ->
 				compare u1 u2) inscr))
 			else None in
-		ignore ([%client (nr_ids := List.length ~%me_inscr - 1 : unit)]);
-		container (standard_menu ())
+		container ~onload:[%client (fun e -> initialise_signup ~%me_inscr ~%users e)]
+		(standard_menu ())
 		(
+			datalist ~a:[a_id "users_list"] ()::
 			h1 [pcdata title]::
 			p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 		  p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
@@ -372,14 +378,13 @@ let signup_page game_id () =
 						th [pcdata "Note"];
             th [];
 					]::
-					person.it (fun (search, (uid, (role_type, note)))
+					person.it (fun (uid, (role_type, note))
 						(ex_uid, ex_fname, ex_lname, _, r, ex_note, _, _) init ->
 						let ex_role = default "Any" r in
 						tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
 							else "group_inscription_row"]] [
 							td ~a:[a_colspan 2] [
 								Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
-								Form.input ~input_type:`Hidden ~name:search ~value:(Printf.sprintf "%s %s" ex_fname ex_lname) Form.string;
 								pcdata (Printf.sprintf "%s %s" ex_fname ex_lname)
 							]; 
 							td [

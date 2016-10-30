@@ -40,9 +40,9 @@ let rec admin_page () () =
       then error_page "You must be an administrator to access this page."
       else
       let%lwt games = Database.get_upcoming_games ~no_date:true () in
-      let%lwt users = Database.get_user_list () in
-			let%lwt nonconf = Database.get_unconfirmed_users () in
-      let (uhid, uhfname, uhlname) = List.hd users in
+      let%lwt users = Database.get_users ~unconfirmed:true () in
+			let nonconf = List.filter (fun (_, _, _, _, s) -> s = Some "U") users in
+      let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
 				Maw_app.register ~scope:Eliom_common.default_session_scope
 					~service:add_game_service (add_game_page admin_page);
@@ -100,7 +100,7 @@ let rec admin_page () () =
                 td [
                   Form.select ~name:designer Form.int32
                   (Form.Option ([], uhid, Some (pcdata (Printf.sprintf "%s %s" uhfname uhlname)), false))
-                  (List.map (fun (id, fname, lname) ->
+                  (List.map (fun (id, fname, lname, _, _) ->
                     Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fname lname)), false)
                   ) (List.tl users))
                 ]

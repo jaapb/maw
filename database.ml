@@ -275,12 +275,6 @@ let update_user_data uid fname lname email password address postcode town countr
 		WHERE id = $uid"
 ;;
 
-let get_user_list () =
-  get_db () >>= fun dbh ->
-  PGSQL(dbh) "SELECT id, first_name, last_name \
-    FROM users"
-;;
-
 let clear_casting game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "DELETE FROM game_casting \
@@ -377,18 +371,31 @@ let set_game_data game_id date location =
 		WHERE id = $game_id"
 ;;
 
-let get_unconfirmed_users () =
-	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, first_name, last_name, \
-	  email, confirmation \
-		FROM users \
-		WHERE confirmation IS NOT NULL"
-;;
-
-let get_confirmed_users () =
-	get_db () >>= fun dbh -> PGSQL(dbh) "SELECT id, first_name, last_name, \
-		email \
-		FROM users \
-		WHERE confirmation IS NULL"
+let get_users ?(confirmed = true) ?(unconfirmed = false) ?(provisional = false) () =
+	get_db () >>= fun dbh -> begin
+		if provisional then
+			PGSQL(dbh) "SELECT id, first_name, last_name, email, 'P'::char(1) \
+			FROM provisional_users"
+		else
+			Lwt.return [] 
+	end	>>=
+	fun p_users -> begin
+		if unconfirmed then
+			PGSQL(dbh) "SELECT id, first_name, last_name, email, 'U'::char(1) \
+			FROM users \
+			WHERE confirmation IS NOT NULL"
+		else
+			Lwt.return []
+	end >>=
+	fun uc_users -> begin
+		if confirmed then
+			PGSQL(dbh) "SELECT id, first_name, last_name, email, 'C'::char(1) \
+			FROM users \
+			WHERE confirmation IS NULL"
+		else
+			Lwt.return []
+	end >>=
+	fun c_users -> Lwt.return (p_users @ uc_users @ c_users)
 ;;
 
 let add_provisional_user email game_id =

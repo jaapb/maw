@@ -514,7 +514,7 @@ begin
 end;;
 
 let find_user_page id () =
-	let%lwt users = Database.get_confirmed_users () in
+	let%lwt users = Database.get_users () in
 	Lwt.return (Eliom_tools.F.html
 		~title:"Find a user"
 		~css:[["css";"maw.css"]]
@@ -525,7 +525,7 @@ let find_user_page id () =
 				Raw.input ~a:[a_input_type `Text; a_oninput [%client (handle_search ~%users)]] ()
 			];
 			table ~a:[a_id "users_table"]
-			(List.map (fun (uid, first_name, last_name, email) ->
+			(List.map (fun (uid, first_name, last_name, email, _) ->
 				tr ~a:[a_id (Printf.sprintf "uid_%ld" uid)] [
 					td [Raw.input ~a:[a_input_type `Button; a_value "Select"; a_onclick [%client handle_select ~%id ~%first_name ~%last_name ~%uid]] ()];
 					td [pcdata (Printf.sprintf "%s %s" first_name last_name)]

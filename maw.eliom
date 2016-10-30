@@ -99,24 +99,27 @@ let standard_menu () =
 		)]
 ;;
 
-let container menu_thread cts_div =
+let container ?onload menu_thread cts_div =
 	let%lwt box = login_box () in
 	let%lwt menu_div = menu_thread in
+	let body_contents = [ 
+		div ~a:[a_class ["layout"]; a_id "header"] [h1 [pcdata "MAW"]];
+		div ~a:[a_class ["layout"]; a_id "logbox"] box;
+		div ~a:[a_class ["layout"]; a_id "menu"] menu_div;
+		div ~a:[a_class ["layout"]; a_id "contents"] cts_div;
+		div ~a:[a_class ["layout"]; a_id "footer"] [
+			img ~alt:"Powered by Ocsigen"
+			~src:(make_uri ~service:(Eliom_service.static_dir ())
+				["ocsigen-powered.png"]) ()
+		]
+	] in
 	Lwt.return
 	(Eliom_tools.F.html
 		~title:"maw"
 		~css:[["css";"maw.css"]]
-		Html.F.(body [
-			div ~a:[a_class ["layout"]; a_id "header"] [h1 [pcdata "MAW"]];
-			div ~a:[a_class ["layout"]; a_id "logbox"] box;
-			div ~a:[a_class ["layout"]; a_id "menu"] menu_div;
-			div ~a:[a_class ["layout"]; a_id "contents"] cts_div;
-			div ~a:[a_class ["layout"]; a_id "footer"] [
-				img ~alt:"Powered by Ocsigen"
-				~src:(make_uri ~service:(Eliom_service.static_dir ())
-					["ocsigen-powered.png"]) ()
-			]
-		])
+		(match onload with
+		| None -> Html.F.(body body_contents)
+		| Some x -> Html.F.(body ~a:[a_onload x] body_contents))
 	);;
 
 let error_page e =
