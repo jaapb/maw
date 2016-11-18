@@ -213,7 +213,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		handle_inscriptions edit group_name users game_title game_dstr game_loc dsg_fname dsg_lname (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
+		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> container (standard_menu ())
 		[
 			h1 [pcdata "Summary"];

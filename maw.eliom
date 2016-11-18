@@ -13,6 +13,21 @@ module Maw_app =
 			let global_data_path = None
     end)
 
+let mail_server_el = Ocsigen_extensions.Configuration.element
+	~name:"server" ~obligatory:true ~pcdata:(fun s -> Mail.mail_server := s) ();;
+let mail_port_el = Ocsigen_extensions.Configuration.element
+	~name:"port" ~obligatory:true
+	~pcdata:(fun s -> Mail.mail_port := int_of_string s) ();;
+let mail_user_el = Ocsigen_extensions.Configuration.element
+	~name:"user" ~obligatory:true ~pcdata:(fun s -> Mail.mail_user := s) ();;
+let mail_password_el = Ocsigen_extensions.Configuration.element
+	~name:"password" ~obligatory:true ~pcdata:(fun s -> Mail.mail_password := s)
+	();;
+let mail_el = Ocsigen_extensions.Configuration.element
+	~name:"mail" ~obligatory:true
+	~elements:[mail_server_el; mail_port_el; mail_user_el; mail_password_el]
+	();;
+
 (* Services *)
 
 let dashboard_service = create ~path:(Path []) ~meth:(Get unit) ();;
@@ -145,6 +160,7 @@ let unknown_game () =
 	];;
 
 let () =
+	Eliom_config.parse_config [mail_el];
 	Eliom_registration.Action.register ~service:login_service login_action;
 	Eliom_registration.Action.register ~service:logout_service logout_action
 ;;

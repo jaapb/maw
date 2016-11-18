@@ -1,11 +1,21 @@
 open Unix
 
-let mail_server = "smtp.kerguelen.org";;
-let port = 25;;
+let mail_server = ref "";;
+let mail_port = ref 0;;
+let mail_user = ref "";;
+let mail_password = ref "";;
 
 let send_mail to_addrs subject contents =
-	let smtp = new Netsmtp.connect (`Socket (`Sock_inet_byname (SOCK_STREAM, mail_server, port), Uq_client.default_connect_options)) 1.0 in
-	Netsmtp.authenticate ~host:"marion-dufresne.kerguelen.org" smtp;
+	let smtp = new Netsmtp.connect (`Socket (`Sock_inet_byname (SOCK_STREAM, !mail_server, !mail_port), Uq_client.default_connect_options)) 1.0 in
+	let tls_config = Netsys_tls.create_x509_config ~peer_auth:`None
+		(Netsys_crypto.current_tls ()) in
+	Netsmtp.authenticate ~host:"marion-dufresne.kerguelen.org"
+		~sasl_mechs:[ (module Netmech_plain_sasl.PLAIN) ]
+		~user:!mail_user
+		~creds:[ "password", !mail_password, [] ]
+		~tls_required:true
+		~tls_config
+		smtp;
 	let msg = Netsendmail.compose
 		~from_addr:("MAW", "maw@kerguelen.org")
 		~to_addrs
@@ -71,4 +81,8 @@ Kind regards,\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 game_title dsg_fname dsg_lname game_loc game_date uri)
+;;
+
+let _ =
+	Nettls_gnutls.init ()
 ;;
