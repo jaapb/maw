@@ -12,17 +12,17 @@
 	open Maw
 ]
 
-let design_service = create ~id:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let update_descr_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
-let update_numbers_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
-let remove_teams_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
-let add_team_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "team")) ();;
-let remove_role_types_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "role_types")) ();;
-let add_role_type_service = create ~id:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;
-let cast_service = create ~id:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let do_cast_service = create ~id:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
-let message_service = create ~id:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let do_message_service = create ~id:(Path ["messaging"]) ~meth:(Post (suffix (int32 "game_id"), string "team" ** string "subject" ** string "contents")) ();;
+let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
+let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
+let remove_teams_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
+let add_team_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "team")) ();;
+let remove_role_types_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "role_types")) ();;
+let add_role_type_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;
+let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
+let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let do_message_service = create ~path:(Path ["messaging"]) ~meth:(Post (suffix (int32 "game_id"), string "team" ** string "subject" ** string "contents")) ();;
 
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in

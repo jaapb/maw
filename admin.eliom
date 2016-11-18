@@ -11,11 +11,6 @@
 	open Maw
 ]
 
-let add_game_service = create ~id:(Fallback admin_service)
-	~meth:(Post (unit, string "title" ** int32 "designer")) ();;
-let set_game_data_service = create ~id:(Fallback admin_service)
-  ~meth:(Post (unit, list "game" (int32 "game_id" ** string "date" ** string "location"))) ();;
-
 let add_game_page f () (title, designer) =
 	Database.add_game title designer >>=
 	fun () -> f () ()
@@ -33,6 +28,11 @@ let set_game_data_page f () games =
 ;;
 
 let rec admin_page () () =
+	let add_game_service = create_attached_post ~fallback:admin_service
+		~post_params:(string "title" ** int32 "designer") () in
+	let set_game_data_service = create_attached_post ~fallback:admin_service
+ 	 ~post_params:(list "game" (int32 "game_id" ** string "date" **
+		string "location")) () in
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
     match u with
     | None -> not_logged_in ()

@@ -18,6 +18,8 @@
     <extension findlib-package="batteries"/>
     <extension findlib-package="pgocaml"/>
     <extension findlib-package="eliom.server"/>
+    <extension findlib-package="netclient"/>
+    <extension findlib-package="nettls-gnutls"/>
     %%% This will include the packages defined as SERVER_PACKAGES in your Makefile:
     %%PACKAGES%%
     <host hostfilter="*">

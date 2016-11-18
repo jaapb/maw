@@ -1,0 +1,19 @@
+- player history (past roles, past teams, past groups)
+- ability to change/merge teams (add teams)
+- social login (facebook/OpenID/...)
+- achievement system
+- notifications (baseline can't be turned off)
+- interests section (game tags)
+- integrate with PayPal
+- design HTML
+- integrating with Google Maps
+- user profiles (visible to other users)
+- users should be able to see waiting list (or at least numbers)
+- show vacancies in game description
+- team composition can be different; numbers per team rather than per game
+- admin should be able to create accounts
+- log out should go back to main page
+- finish messaging system
+- temporary account available for 48h
+- picture upload for description
+- put in vacancies manually

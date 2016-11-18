@@ -15,14 +15,14 @@ module Maw_app =
 
 (* Services *)
 
-let dashboard_service = create ~id:(Path []) ~meth:(Get unit) ();;
-let login_service = create ~id:Global
+let dashboard_service = create ~path:(Path []) ~meth:(Get unit) ();;
+let login_service = create ~path:No_path
 	~meth:(Post (unit, (string "name" ** string "password"))) ();;
-let logout_service = create ~id:Global
+let logout_service = create ~path:No_path
 	~meth:(Post (unit, unit)) ();;
-let account_service = create ~id:(Path ["account"]) ~meth:(Get unit) ();;
-let admin_service = create ~id:(Path ["admin"]) ~meth:(Get unit) ();;
-let register_service = create ~id:(Path ["register"]) ~meth:(Get unit) ();;
+let account_service = create ~path:(Path ["account"]) ~meth:(Get unit) ();;
+let admin_service = create ~path:(Path ["admin"]) ~meth:(Get unit) ();;
+let register_service = create ~path:(Path ["register"]) ~meth:(Get unit) ();;
 
 (* Login bits and pieces *)
 

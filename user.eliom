@@ -12,13 +12,11 @@
 	open Database
 ]
 
-let add_user_service = create ~id:(Path ["register"])
+let add_user_service = create ~path:(Path ["register"])
 	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) ();;
-let update_user_service = create ~id:(Fallback account_service)
-	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) ();;
-let confirm_user_service = create ~id:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
-let confirm_provisional_user_service = create ~id:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
-let find_user_service = Eliom_service.create ~id:Global ~meth:(Get (int "row_id")) ();;
+let confirm_user_service = create ~path:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
+let confirm_provisional_user_service = create ~path:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
+let find_user_service = Eliom_service.create ~path:No_path ~meth:(Get (int "row_id")) ();;
 
 let update_user_page () (fname, (lname, (email, (password, (address, (postcode, (town, (country, phone))))))))  =
 	Lwt.catch (fun () ->
@@ -130,6 +128,9 @@ let%client check_account_form ev =
 ;;
 
 let account_page () () =
+	let update_user_service = create_attached_post
+		~fallback:account_service
+		~post_params:(string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:update_user_service update_user_page;
 	Lwt.catch (fun () ->
@@ -398,9 +399,9 @@ let update_provisional_user_page user_id () (first_name, (last_name, (old_email,
 ;;
 
 let confirm_provisional_user_page (user_id) () =
-let update_provisional_user_service = create
-	~id:(Fallback (preapply confirm_provisional_user_service user_id))
-	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) () in
+let update_provisional_user_service = create_attached_post
+	~fallback:(preapply confirm_provisional_user_service user_id)
+	~post_params:(string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
 	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
 	fun ex_email -> container (standard_menu ())

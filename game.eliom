@@ -12,10 +12,10 @@
 	open Maw
 ]
 
-let game_service = create ~id:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let signup_service = create ~id:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let show_inscriptions_service = create ~id:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let show_casting_service = create ~id:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let game_service = create ~path:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let signup_service = create ~path:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let show_inscriptions_service = create ~path:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_fname dsg_lname d full =
@@ -294,26 +294,24 @@ let%client check_signup_form ev =
 let%client initialise_signup me_inscr users e =
 let udl = Dom_html.getElementById "users_list" in
 begin
-	Eliom_lib.alert "Initialising...";
 	nr_ids := List.length me_inscr - 1;
 	List.iter (fun (uid, fname, lname, _, s) ->
 		let status = match s with
 		| Some "P" -> " (provisional)"
 		| Some "U" -> " (unconfirmed)"
 		| _ -> "" in
-		let thing = Raw.option (pcdata (Printf.sprintf "%s %s%s" fname lname status)) in
-		Eliom_lib.alert "Add child %s" lname;
+		let thing = Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(pcdata (Printf.sprintf "%s %s%s" fname lname status)) in
 		Dom.appendChild udl (Html.To_dom.of_element thing)
 	) users
 end
 
 let signup_page game_id () =
-	let do_signup_service = create
-		~id:(Fallback (preapply signup_service game_id))
-		~meth:(Post (unit,
-			bool "edit" ** opt (string "group_name") **
+	let do_signup_service = create_attached_post
+		~fallback:(preapply signup_service game_id)
+		~post_params:(bool "edit" ** opt (string "group_name") **
 			string "team" ** list "person" (int32 "uid" ** string "role_type" **
-			string "note"))) () in
+			string "note")) () in 
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with

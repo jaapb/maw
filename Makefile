@@ -187,13 +187,13 @@ $(DEPSDIR)/database.ml.server: database.ml | $(DEPSDIR)
 
 ## Special rule for mail component
 ${ELIOM_SERVER_DIR}/mail.cmo: mail.ml
-	ocamlfind ocamlc -package netclient \
+	ocamlfind ocamlc -package netclient,nettls-gnutls \
     -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 ${ELIOM_SERVER_DIR}/mail.cmx: mail.ml
-	ocamlfind ocamlopt -package netclient \
+	ocamlfind ocamlopt -package netclient,nettls-gnutls \
     -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 $(DEPSDIR)/mail.ml.server: mail.ml | $(DEPSDIR)
-	ocamlfind ocamldep -package netclient \
+	ocamlfind ocamldep -package netclient,nettls-gnutls \
     -I ${ELIOM_SERVER_DIR} $< > $@
 
 ${ELIOM_SERVER_DIR}/%.cmo: %.ml
