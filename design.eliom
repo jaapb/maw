@@ -199,6 +199,8 @@ let%client before_submit ev =
 ;;
 
 let role_page game_id () =
+	let do_role_service = create_attached_post ~fallback:(preapply role_service game_id)
+		~post_params:(list "team" (string "name" ** list "role" (string "name"))) () in
 	let empty_row ct =
 		tr [td [pcdata ct]; td [pcdata "empty"]]
 	in
@@ -228,17 +230,33 @@ let role_page game_id () =
 			container (standard_menu ())
 			[
 				h1 [pcdata title];
-				table (
-					tr [
-						th [pcdata "Team"];
-						th [pcdata "Roles"]
-					]::
-					match roles with
-					| [] -> []
-					| (th, [])::t -> List.rev (team_table_rows [] t [empty_row th])
-					| (th, (rh::rt))::t ->
-							List.rev (team_table_rows rt t [first_row th rh rt])
-				)
+      	Form.post_form ~service:do_role_service (fun team -> [
+					table (
+						tr [
+							th [pcdata "Team"];
+							th [pcdata "Roles"]
+						]::
+						team.it (fun (t_name, role) (t, rs) init ->
+							tr [
+								td [
+									Form.input ~input_type:`Text ~name:t_name ~value:t Form.string
+								];
+								td (
+									role.it (fun r_name r init' ->
+										Form.input ~input_type:`Text ~name:r_name ~value:r Form.string::init'
+									) rs
+									[]
+								)
+							]::init
+						) roles
+						[tr [td [Form.input ~input_type:`Submit ~value:"Save" Form.string]]]
+						(*match roles with
+						| [] -> []
+						| (th, [])::t -> List.rev (team_table_rows [] t [empty_row th])
+						| (th, (rh::rt))::t ->
+								List.rev (team_table_rows rt t [first_row th rh rt])*)
+					)
+				]) ()
 			]
 	)
 	(function
