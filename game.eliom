@@ -319,8 +319,8 @@ let signup_page game_id () =
 	| Some (my_uid, fname, lname, _) -> 
 		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg_id, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
-    let%lwt teams = Database.get_game_teams game_id in
-		let%lwt role_types = Database.get_game_role_types game_id in
+    let%lwt teams = Lwt.return [] (*Database.get_game_teams game_id*) in
+		let%lwt role_types = Lwt.return [] (*Database.get_game_role_types game_id*) in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
 		let%lwt users = Database.get_users ~unconfirmed:true ~provisional:true () in

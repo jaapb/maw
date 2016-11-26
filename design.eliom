@@ -15,10 +15,11 @@
 let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
 let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
-let remove_teams_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
+(*let remove_teams_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
 let add_team_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "team")) ();;
 let remove_role_types_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "role_types")) ();;
-let add_role_type_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;
+let add_role_type_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;*)
+let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
 let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
@@ -34,11 +35,12 @@ let design_page game_id () =
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
-		let%lwt role_types = Database.get_game_role_types game_id in
+		(*let%lwt role_types = Database.get_game_role_types game_id in*)
 			container (standard_menu ())
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
+				p [a ~service:role_service [pcdata "Set up roles and teams for this game"] game_id];
         p [a ~service:cast_service [pcdata "Cast this game"] game_id];
 				Form.post_form ~service:update_descr_service (fun descr -> [
 					table [
@@ -70,67 +72,6 @@ let design_page game_id () =
 							td [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
-				]) game_id;
-				Form.post_form ~service:remove_teams_service (fun team -> [
-					table [
-						tr [
-							td [pcdata "Teams:"]
-						];
-						tr (
-							match teams with
-							| [] -> [td [pcdata "No teams have been entered"]]
-							| h::t -> 
-								[
-									td [
-										Form.multiple_select ~name:team Form.string
-										(Form.Option ([], h, None, false))
-										(List.map (fun x -> (Form.Option ([], x, None, false))) t)
-									];
-									td [
-										Form.input ~input_type:`Submit ~value:"Remove" Form.string
-									]
-								]
-						)
-					]
-				]) game_id;
-				Form.post_form ~service:add_team_service (fun team -> [
-					table [
-						tr [
-							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:team
-								Form.string];
-							td [Form.input ~input_type:`Submit ~value:"Add" Form.string]
-						]
-					]
-				]) game_id;
-				Form.post_form ~service:remove_role_types_service (fun role_type -> [
-					table [
-						tr [
-							td [pcdata "Role types:"]
-						];
-						tr (match role_types with
-						| [] -> [td [pcdata "No role types have been entered"]]
-						| h::t -> 
-							[
-								td [
-									Form.multiple_select ~name:role_type Form.string
-									(Form.Option ([], h, None, false))
-									(List.map (fun x -> (Form.Option ([], x, None, false))) t)
-								];
-								td [
-									Form.input ~input_type:`Submit ~value:"Remove" Form.string
-								]
-							]
-						)
-					]
-				]) game_id;
-				Form.post_form ~service:add_role_type_service (fun role_type -> [
-					table [
-						tr [
-							td [Form.input ~a:[a_size 50] ~input_type:`Text ~name:role_type
-								Form.string];
-							td [Form.input ~input_type:`Submit ~value:"Add" Form.string]
-						]
-					]
 				]) game_id
 			]
 	)
@@ -154,7 +95,7 @@ let update_numbers game_id (min, max) =
 	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
 ;;
 
-let remove_teams game_id teams =
+(*let remove_teams game_id teams =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
@@ -181,7 +122,7 @@ let add_role_type game_id role_type =
 	match u with
 	| None -> Lwt.return ()
 	| Some (uid, _, _, _) -> Database.add_game_role_type game_id role_type
-;;
+;;*)
 
 let%client switch_active ev =
  	Js.Opt.iter (ev##.target) (fun e ->
@@ -257,6 +198,55 @@ let%client before_submit ev =
 	)) (Dom.list_of_nodeList td##.childNodes)
 ;;
 
+let role_page game_id () =
+	let empty_row ct =
+		tr [td [pcdata ct]; td [pcdata "empty"]]
+	in
+	let first_row cr ch ct =
+		tr [td ~a:[a_rowspan (List.length ct + 1)] [pcdata cr]; td [pcdata ch]]
+	in
+	let rec team_table_rows cr l res =
+	begin
+		match cr with 
+		| [] -> begin
+			match l with
+			| [] -> res
+			| (nh, [])::t -> team_table_rows [] t (empty_row nh::res)
+			| (nh, (rh::rt))::t -> team_table_rows rt t (first_row nh rh rt::res)
+			end
+		| rh::rt ->
+			team_table_rows rt l (tr [td [pcdata rh]]::res)
+	end in
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+  | Some (uid, _, _, _) -> let%lwt (title, _, _, _, _, dsg_id, _, _, _, _) =
+      Database.get_game_data game_id in
+    if uid <> dsg_id then error_page "You are not the designer of this game."
+    else
+			let%lwt roles = Database.get_game_roles game_id in
+			container (standard_menu ())
+			[
+				h1 [pcdata title];
+				table (
+					tr [
+						th [pcdata "Team"];
+						th [pcdata "Roles"]
+					]::
+					match roles with
+					| [] -> []
+					| (th, [])::t -> List.rev (team_table_rows [] t [empty_row th])
+					| (th, (rh::rt))::t ->
+							List.rev (team_table_rows rt t [first_row th rh rt])
+				)
+			]
+	)
+	(function
+	| Not_found -> unknown_game ()
+	| e -> error_page (Printexc.to_string e)
+	)
+;;
+
 let cast_page game_id () =
 	let partition_groups l =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
@@ -271,7 +261,7 @@ let cast_page game_id () =
 		| (_, _, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
 	in
   let%lwt u = Eliom_reference.get Maw.user in
-  match u with
+	Lwt.catch (fun () -> match u with
   | None -> not_logged_in ()
   | Some (uid, _, _, _) -> let%lwt (title, _, _, _, _, dsg_id, _, _, _, _) =
       Database.get_game_data game_id in
@@ -328,10 +318,14 @@ let cast_page game_id () =
 									td ~a:[
           	   			a_onclick [%client switch_active];
 							  		a_title n]
-									[
-										Form.input ~input_type:`Hidden ~name:p_uid ~value:pid Form.int32;
-										pcdata (Printf.sprintf "%s %s" pfname plname)
-									]
+									(match pid with
+									| None -> [ pcdata "vacancy" ];
+									| Some p ->
+										[
+											Form.input ~input_type:`Hidden ~name:p_uid ~value:p Form.int32;
+											pcdata (Printf.sprintf "%s %s" pfname plname)
+										]
+									)
 								]::init
 						  ) (List.filter (fun (n, _, _,  _, _, _, _) -> n = t) casting)
 							[]
@@ -362,6 +356,11 @@ let cast_page game_id () =
         ]
 			 ]) game_id
     ]
+	)
+	(function
+	| Not_found -> unknown_game ()
+	| e -> error_page (Printexc.to_string e)
+	)
 ;;
 
 let do_cast_page game_id (teams, publish) =
@@ -456,14 +455,15 @@ let () =
 		update_description;
 	Eliom_registration.Action.register ~service:update_numbers_service
 		update_numbers;
-	Eliom_registration.Action.register ~service:remove_teams_service
+(*Eliom_registration.Action.register ~service:remove_teams_service
 		remove_teams;
 	Eliom_registration.Action.register ~service:add_team_service
 		add_team;
 	Eliom_registration.Action.register ~service:remove_role_types_service
 		remove_role_types;
 	Eliom_registration.Action.register ~service:add_role_type_service
-		add_role_type;
+		add_role_type;*)
+  Maw_app.register ~service:role_service role_page;
   Maw_app.register ~service:cast_service cast_page;
 	Maw_app.register ~service:do_cast_service do_cast_page;
 	Maw_app.register ~service:message_service message_page;

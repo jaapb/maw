@@ -122,16 +122,16 @@ let get_nr_inscriptions game_id =
 
 let get_game_teams game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name \
-		FROM teams \
+	PGSQL(dbh) "SELECT DISTINCT(team_name) \
+		FROM game_casting \
 		WHERE game_id = $game_id";;
 
-let remove_game_teams game_id teams =
+(*let remove_game_teams game_id teams =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "DELETE FROM teams \
-		WHERE game_id = $game_id AND name IN $@teams";;
+		WHERE game_id = $game_id AND name IN $@teams";;*)
 
-let add_game_team game_id team =
+(*let add_game_team game_id team =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO teams (game_id, name) \
 		VALUES ($game_id, $team)";;
@@ -150,7 +150,26 @@ let remove_game_role_types game_id role_types =
 let add_game_role_type game_id role_type =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO role_types (game_id, name) \
-		VALUES ($game_id, $role_type)";;
+		VALUES ($game_id, $role_type)";;*)
+
+let get_game_roles game_id =
+	let rec aux_assoc_list l ct cr res =
+		match l with
+		| [] -> (ct, cr)::res
+		|	(ht, hr)::t -> begin
+				if ht = ct
+				then aux_assoc_list t ct (hr::cr) res 
+				else aux_assoc_list t ht [hr] ((ct, cr)::res)
+			end in
+	get_db () >>=
+	fun dbh -> PGSQL(dbh) "SELECT team_name, role_name \
+		FROM game_casting \
+		WHERE game_id = $game_id \
+		ORDER BY team_name" >>=
+	fun l -> match l with
+	| [] -> Lwt.return []
+	| (ht, hr)::t -> Lwt.return (aux_assoc_list t ht [hr] [])
+;;
 
 let set_game_numbers game_id min max =
 	get_db () >>= fun dbh ->
@@ -162,11 +181,11 @@ let change_things dbh game_id uid group_name team role =
 	(match team with
 	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET team_name = $g WHERE game_id = $game_id AND user_id = $uid") >>=
+			SET preferred_team = $g WHERE game_id = $game_id AND user_id = $uid") >>=
 	fun () -> (match role with
 	| None -> return ()
 	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET role_type = $r WHERE game_id = $game_id AND user_id = $uid") >>=
+			SET preferred_role = $r WHERE game_id = $game_id AND user_id = $uid") >>=
 	fun () -> (match group_name with
 	| None -> return ()
 	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
@@ -195,8 +214,8 @@ let add_inscription game_id uid group_name status team role note =
 
 let get_inscription_data uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT g2.user_id, first_name, last_name, g2.team_name, \
-		g2.role_type, g2.note, g2.group_name, g2.status \
+	PGSQL(dbh) "SELECT g2.user_id, first_name, last_name, g2.preferred_team, \
+		g2.preferred_role, g2.note, g2.group_name, g2.status \
 		FROM game_inscriptions g1 JOIN game_inscriptions g2 \ 
 		ON g1.game_id = g2.game_id AND \
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
@@ -210,14 +229,14 @@ let get_inscription_data uid game_id =
 let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
 	if filter_cast then PGSQL(dbh) "SELECT first_name, last_name, i.user_id, \
-	  i.team_name, role_type, note, group_name, status \
+	  i.preferred_team, i.preferred_role, note, group_name, status \
 		FROM game_inscriptions i JOIN users ON user_id = users.id 
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		ORDER BY group_name ASC, inscription_time ASC"
-	else PGSQL(dbh) "SELECT first_name, last_name, user_id, team_name, \
-		role_type, note, group_name, status \
+	else PGSQL(dbh) "SELECT first_name, last_name, user_id, preferred_team, \
+		preferred_role, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id \
 		ORDER BY group_name ASC, inscription_time ASC"
@@ -308,7 +327,7 @@ let set_published game_id b =
 
 let get_casting game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT c.team_name, role_name, first_name, last_name, c.user_id, \
+	PGSQL(dbh) "SELECT team_name, role_name, first_name, last_name, c.user_id, \
 	  note, group_name \
 		FROM game_casting c JOIN users ON c.user_id = users.id \
 		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
