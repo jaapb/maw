@@ -10,7 +10,6 @@
 - user profiles (visible to other users)
 - users should be able to see waiting list (or at least numbers)
 - show vacancies in game description
-- team composition can be different; numbers per team rather than per game
 - admin should be able to create accounts
 - log out should go back to main page
 - temporary account available for 48h
