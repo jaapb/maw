@@ -486,12 +486,12 @@ let show_casting_page game_id () =
 		if cp then
 		begin
 			let%lwt casting = Database.get_casting game_id in
-			let teams = List.sort_uniq (fun (t1, _, _, _, _, _, _) (t2, _, _, _, _, _, _) ->
-				compare t1 t2) casting in
+			(*let teams = List.sort_uniq (fun (t1, _, _, _, _, _, _) (t2, _, _, _, _, _, _) ->
+				compare t1 t2) casting in*)
 			container (standard_menu ())
 			(
 				h1 [pcdata (Printf.sprintf "Casting for %s" title)]::
-				List.map (fun (t, _, _, _, _, _, _) ->
+				List.map (fun (t, roles) ->
 					table ~a:[a_class ["team_table"]] (
 						tr [
 							th ~a:[a_class ["team_name"]; a_colspan 2] [pcdata t]
@@ -500,14 +500,17 @@ let show_casting_page game_id () =
 							th ~a:[a_class ["header"]] [pcdata "Role"];
 							th ~a:[a_class ["header"]] [pcdata "Name"]
 						]::
-						List.map (fun (_, rn, fname, lname, _, _, _) ->
+						List.map (fun (rn, fname, lname, _, _, _) ->
 							tr [
 								td [pcdata rn];
-								td [pcdata (Printf.sprintf "%s %s" fname lname)]
+								td [match fname, lname with
+								| Some f, Some l -> pcdata (Printf.sprintf "%s %s" f l)
+								| _, _ -> b [pcdata "vacancy"]
+								]
 							]
-						) (List.filter (fun (x, _, _, _, _, _, _) -> x = t) casting)
+						) roles
 					)
-				) teams
+				) casting
 			)
 		end
 		else error_page "The casting for this game has not been published."

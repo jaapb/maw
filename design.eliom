@@ -310,7 +310,6 @@ let cast_page game_id () =
     else
     let%lwt inscr = Database.get_inscription_list ~filter_cast:true game_id in
 		let%lwt casting = Database.get_casting game_id in
-    let%lwt teams = Database.get_game_teams game_id in
 		let%lwt pub = Database.is_published game_id in
     container (standard_menu ())
     [
@@ -338,7 +337,7 @@ let cast_page game_id () =
 			  ];
         div ~a:[a_id "teams"] (
 			  	h2 [pcdata "Teams"]::
-					team.it (fun (t_name, member) t init ->
+					team.it (fun (t_name, member) (t, roles) init ->
        	    table ~a:[a_class ["casting"; "team_table"]] (
          	  	tr [
 								th ~a:[a_class ["team_name"]; a_onclick [%client do_move];
@@ -351,27 +350,28 @@ let cast_page game_id () =
                 th ~a:[a_class ["header"]] [pcdata "Role"];
                 th ~a:[a_class ["header"]] [pcdata "Name"]
               ]::
-						  member.it (fun (p_role, p_uid) (_, rn, pfname, plname, pid, n, g) init ->
+						  member.it (fun (p_role, p_uid) (rn, pfname, plname, pid, n, g) init ->
 						 		tr ~a:[a_class ["player_row"]] [
 									td [
 										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
 									];
 									td ~a:[
           	   			a_onclick [%client switch_active];
-							  		a_title n]
+							  		a_title (default "" n)]
 									(match pid with
 									| None -> [ pcdata "vacancy" ];
 									| Some p ->
 										[
 											Form.input ~input_type:`Hidden ~name:p_uid ~value:p Form.int32;
-											pcdata (Printf.sprintf "%s %s" pfname plname)
+											pcdata (Printf.sprintf "%s %s"
+												(default "" pfname) (default "" plname))
 										]
 									)
 								]::init
-						  ) (List.filter (fun (n, _, _,  _, _, _, _) -> n = t) casting)
+						  ) roles 
 							[]
 						)::init
-      	  ) teams
+      	  ) casting
 					[]
         );
         div ~a:[a_id "general"] [

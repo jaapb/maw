@@ -44,6 +44,16 @@ let inscr_status_of_char s =
 	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %s" s))
 ;;
 
+let rec aux_assoc_list l ct cr res =
+	match l with
+	| [] -> (ct, cr)::res
+	|	(ht, hr)::t -> begin
+			if ht = ct
+			then aux_assoc_list t ct (hr::cr) res 
+			else aux_assoc_list t ht [hr] ((ct, cr)::res)
+		end
+;;
+
 let get_upcoming_games ?no_date () =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
@@ -126,41 +136,7 @@ let get_game_teams game_id =
 		FROM game_casting \
 		WHERE game_id = $game_id";;
 
-(*let remove_game_teams game_id teams =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "DELETE FROM teams \
-		WHERE game_id = $game_id AND name IN $@teams";;*)
-
-(*let add_game_team game_id team =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO teams (game_id, name) \
-		VALUES ($game_id, $team)";;
-
-let get_game_role_types game_id =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT name \
-		FROM role_types \
-		WHERE game_id = $game_id";;
-
-let remove_game_role_types game_id role_types =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "DELETE FROM role_types \
-		WHERE game_id = $game_id AND name IN $@role_types";;
-
-let add_game_role_type game_id role_type =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO role_types (game_id, name) \
-		VALUES ($game_id, $role_type)";;*)
-
 let get_game_roles game_id =
-	let rec aux_assoc_list l ct cr res =
-		match l with
-		| [] -> (ct, cr)::res
-		|	(ht, hr)::t -> begin
-				if ht = ct
-				then aux_assoc_list t ct (hr::cr) res 
-				else aux_assoc_list t ht [hr] ((ct, cr)::res)
-			end in
 	get_db () >>=
 	fun dbh -> PGSQL(dbh) "SELECT team_name, role_name \
 		FROM game_casting \
@@ -327,12 +303,22 @@ let set_published game_id b =
 
 let get_casting game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT team_name, role_name, first_name, last_name, c.user_id, \
+	PGSQL(dbh) "nullable-results"
+		"SELECT team_name, role_name, first_name, last_name, c.user_id, \
 	  note, group_name \
-		FROM game_casting c JOIN users ON c.user_id = users.id \
-		JOIN game_inscriptions i ON i.user_id = c.user_id AND i.game_id = c.game_id \
+		FROM game_casting c LEFT JOIN users ON c.user_id = users.id \
+		LEFT JOIN game_inscriptions i ON i.user_id = c.user_id \
+		  AND i.game_id = c.game_id \
 		WHERE c.game_id = $game_id \
-		ORDER BY role_name DESC"
+		ORDER BY team_name, role_name DESC" >>=
+	fun l -> Lwt_list.map_p (fun (ht, hr, hf, hl, hu, hn, hg) ->
+		match ht, hr with
+		| Some x, Some y -> Lwt.return (x, (y, hf, hl, hu, hn, hg))
+		| _, _ -> Lwt.fail_with "Inconsistent database") l >>=
+	fun l' -> match l' with
+	| [] -> Lwt.return []
+	| (ht, hr)::t ->
+		Lwt.return (aux_assoc_list t ht [hr] [])
 ;;
 
 let add_user ?id ?(confirm=true) fname lname email password address postcode town country phone =
