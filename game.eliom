@@ -176,20 +176,6 @@ let%client group_inscription_handler roles gname ev =
 ;;
 
 let do_signup_page game_id () (edit, (group_name, (team, users))) =
-	(* let handle_provisional search uid group_name team role note status =
-		let uri = Eliom_uri.make_string_uri ~absolute:true ~service:User.confirm_provisional_user_service uid in
-		Database.add_provisional_user search game_id >>=
-		fun uid -> Database.add_inscription game_id uid group_name status
- 			(if String.lowercase_ascii team = "any" then None else Some team)
- 			(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-		fun () -> Database.get_game_data game_id >>=
-		fun (t, dt, l, dsg_fname, dsg_lname, _, _, _, _, _) -> 
-			let dstr = match dt with
-			| Some d -> Printer.Date.sprint "%d %B %Y" d
-			| _ -> "TBD" in
-			Mail.send_provisional_inscription_mail uri search t l dstr dsg_fname dsg_lname;
-			Lwt.return ()
-	in *)
 	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname status =
 		match users with
 		| (uid, (role, note))::tl -> 

@@ -270,17 +270,21 @@ let update_user_data uid fname lname email password address postcode town countr
 		WHERE id = $uid"
 ;;
 
-let clear_casting game_id =
+(* CLears and re-adds, not ideal *)
+let update_casting game_id teams =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "DELETE FROM game_casting \
-		WHERE game_id = $game_id"
-;;
-
-let add_casting game_id team_name role_name user_id =
-	get_db () >>= fun dbh ->
-	PGSQL(dbh) "INSERT INTO game_casting \
-		(game_id, team_name, role_name, user_id) \
-		VALUES ($game_id, $team_name, $role_name, $user_id)"
+	PGOCaml.transact dbh (fun dbh ->
+		PGSQL(dbh) "DELETE FROM game_casting \
+			WHERE game_id = $game_id" >>=
+		fun () -> Lwt_list.iter_s (fun (t_name, roles) ->
+			Lwt_list.iter_s (fun (r_name, user_id) ->
+			PGSQL(dbh) "INSERT INTO game_casting \
+				(game_id, team_name, role_name, user_id) \
+				VALUES \
+				($game_id, $t_name, $r_name, $user_id)"
+			) roles
+		) teams
+	)
 ;;
 
 let is_published game_id =
@@ -440,3 +444,8 @@ let update_teams game_id teams =
 			) roles
 		) teams
 	)
+;;
+
+let get_user_history user_id =
+	Lwt.return []
+;;

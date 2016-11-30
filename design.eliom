@@ -288,6 +288,12 @@ let role_page game_id () =
 	)
 ;;
 
+let%client show_history service uid ev =
+	let window = Eliom_client.window_open ~window_name:(Js.string "Player")
+		~service uid in
+		Dom.preventDefault ev
+;;
+	
 let cast_page game_id () =
 	let partition_groups l =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
@@ -325,7 +331,9 @@ let cast_page game_id () =
         		List.map (fun (fname, lname, p_id, _, _, n, _, _) ->
         			tr ~a:[a_class ["player_row"]] [
 								td ~a:[
+									a_id (Printf.sprintf "player_%ld" p_id);
           	   		a_onclick [%client switch_active];
+									a_oncontextmenu [%client (show_history ~%(User.user_history_service) ~%p_id)];
 							  	a_title n
             		] [
 									Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
@@ -355,9 +363,17 @@ let cast_page game_id () =
 									td [
 										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
 									];
-									td ~a:[
-          	   			a_onclick [%client switch_active];
-							  		a_title (default "" n)]
+									td ~a:(
+          	   			a_onclick [%client switch_active]::
+							  		a_title (default "" n)::
+										(match pid with
+										| None -> []
+										| Some x -> [
+												a_oncontextmenu [%client (show_history ~%(User.user_history_service) ~%x)];
+												a_id (Printf.sprintf "player_%ld" x)
+											]
+										)
+									)
 									(match pid with
 									| None -> [ pcdata "vacancy" ];
 									| Some p ->
@@ -409,12 +425,7 @@ let do_cast_page game_id (teams, publish) =
 	(match u with
 	| None -> Lwt.return ()
 	| Some (uid, _, _, _) -> 
-		Database.clear_casting game_id >>=
-		fun () -> Lwt_list.iter_s (fun (name, members) ->
-			Lwt_list.iter_s (fun (role, pid) ->
-				Database.add_casting game_id name role pid
-			) members
-		) teams) >>=
+		Database.update_casting game_id teams) >>=
 	fun () -> Database.set_published game_id publish >>=
 	fun () -> container (standard_menu ())
 	[
