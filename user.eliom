@@ -4,6 +4,7 @@
 	open Html.D
 	open Eliom_service
 	open Eliom_parameter
+	open Utils
 ]
 
 [%%server
@@ -537,11 +538,37 @@ end;;
 	);;*)
 
 let user_history_page uid () =
+	let%lwt (fname, lname, _) = Database.get_user_data uid in
 	let%lwt history = Database.get_user_history uid in
 	Lwt.return (Eliom_tools.F.html ~title:"Player"
 	(body
 		[
-			h1 [pcdata "History"]
+			h1 [pcdata (Printf.sprintf "History for %s %s" fname lname)];
+			table (
+				tr [
+					th [pcdata "Date"];
+					th [pcdata "Game title"];
+					th [pcdata "Team"];
+					th [pcdata "Role"];
+					th [pcdata "Status"]
+				]::
+				(List.map (fun (title, date, tname, rname, status) ->
+					tr [
+						td [match date with
+							| None -> pcdata "Unknown"
+							| Some d -> pcdata (Printer.Date.sprint "%d %B %Y" d)
+						];
+						td [pcdata title];
+						td [pcdata tname];
+						td [pcdata rname];
+						td [match (inscr_status_of_char status) with
+							| `No_show -> b [pcdata "No-show"]
+							| `Confirmed | `Paid -> pcdata "Participated"
+							| _ -> pcdata "Did not participate" 
+						]
+					]
+				) history)
+			)
 		]
 	))
 ;;

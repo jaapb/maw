@@ -447,5 +447,10 @@ let update_teams game_id teams =
 ;;
 
 let get_user_history user_id =
-	Lwt.return []
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT title, date, c.team_name, c.role_name, status \
+		FROM games JOIN game_casting c ON games.id = c.game_id \
+			JOIN game_inscriptions i ON games.id = i.game_id \
+		WHERE date IS NOT NULL AND status IN ('X', 'N', 'P') \
+		ORDER BY games.date DESC"
 ;;
