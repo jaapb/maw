@@ -15,10 +15,6 @@
 let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
 let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
-(*let remove_teams_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "teams")) ();;
-let add_team_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "team")) ();;
-let remove_role_types_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), set string "role_types")) ();;
-let add_role_type_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "role_type")) ();;*)
 let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
@@ -35,7 +31,6 @@ let design_page game_id () =
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
-		(*let%lwt role_types = Database.get_game_role_types game_id in*)
 			container (standard_menu ())
 			[
 				h1 [pcdata title];
@@ -94,35 +89,6 @@ let update_numbers game_id (min, max) =
 	| None -> Lwt.return ()
 	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
 ;;
-
-(*let remove_teams game_id teams =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.remove_game_teams game_id teams
-;;
-
-let add_team game_id team =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.add_game_team game_id team
-;;
-
-let remove_role_types game_id role_types =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.remove_game_role_types game_id role_types
-;;
-
-let add_role_type game_id role_type =
-	Lwt_log.ign_info_f "ADD_GROUP %ld %s" game_id role_type;
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.add_game_role_type game_id role_type
-;;*)
 
 let%client switch_active ev =
  	Js.Opt.iter (ev##.target) (fun e ->
@@ -276,24 +242,6 @@ let do_role_page game_id () teams =
 let role_page game_id () =
 	let do_role_service = create_attached_post ~fallback:(preapply role_service game_id)
 		~post_params:(list "team" (string "name" ** list "role" (string "name"))) () in
-	(*let empty_row ct =
-		TR [TD [PCData ct]; td [pcdata "empty"]]
-	in
-	let first_row cr ch ct =
-		tr [td ~a:[a_rowspan (List.length ct + 1)] [pcdata cr]; td [pcdata ch]]
-	in
-	let rec team_table_rows cr l res =
-	begin
-		match cr with 
-		| [] -> begin
-			match l with
-			| [] -> res
-			| (nh, [])::t -> team_table_rows [] t (empty_row nh::res)
-			| (nh, (rh::rt))::t -> team_table_rows rt t (first_row nh rh rt::res)
-			end
-		| rh::rt ->
-			team_table_rows rt l (tr [td [pcdata rh]]::res)
-	end in*)
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:do_role_service (do_role_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -330,11 +278,6 @@ let role_page game_id () =
 						) roles
 						[tr ~a:[a_id "add_button_row"] [td [Raw.input ~a:[a_input_type `Button; a_value "Add group"; a_onclick [%client add_team ~%(List.length roles)]] ()]];
 						 tr [td ~a:[a_colspan 2] [Form.input ~a:[a_onclick [%client do_role_save]] ~input_type:`Submit ~value:"Save" Form.string]]]
-						(*match roles with
-						| [] -> []
-						| (th, [])::t -> List.rev (team_table_rows [] t [empty_row th])
-						| (th, (rh::rt))::t ->
-								List.rev (team_table_rows rt t [first_row th rh rt])*)
 					)
 				]) ()
 			]
@@ -553,14 +496,6 @@ let () =
 		update_description;
 	Eliom_registration.Action.register ~service:update_numbers_service
 		update_numbers;
-(*Eliom_registration.Action.register ~service:remove_teams_service
-		remove_teams;
-	Eliom_registration.Action.register ~service:add_team_service
-		add_team;
-	Eliom_registration.Action.register ~service:remove_role_types_service
-		remove_role_types;
-	Eliom_registration.Action.register ~service:add_role_type_service
-		add_role_type;*)
   Maw_app.register ~service:role_service role_page;
   Maw_app.register ~service:cast_service cast_page;
 	Maw_app.register ~service:do_cast_service do_cast_page;
