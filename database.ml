@@ -437,3 +437,20 @@ let get_provisional_user_data uid =
 	| [u] -> return u
 	| _ -> fail_with "Inconsistency in database"
 ;;
+
+(* This is far from ideal, as it deletes existing casting -> need to
+ * think about this *)
+let update_teams game_id teams =
+	get_db () >>= fun dbh ->
+	PGOCaml.transact dbh (fun dbh ->
+		PGSQL(dbh) "DELETE FROM game_casting \
+			WHERE game_id = $game_id" >>=
+		fun () -> Lwt_list.iter_s (fun (t_name, roles) ->
+			Lwt_list.iter_s (fun r_name ->
+			PGSQL(dbh) "INSERT INTO game_casting \
+				(game_id, team_name, role_name) \
+				VALUES \
+				($game_id, $t_name, $r_name)"
+			) roles
+		) teams
+	)

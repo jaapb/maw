@@ -137,3 +137,18 @@ select.gir_select
 {
 	color: red;
 }
+
+table.role_table
+{
+	width: 80%;
+}
+
+table.role_table td
+{
+	vertical-align: top;
+}
+
+table.role_table input.role
+{
+	width: 100%;
+}
