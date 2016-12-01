@@ -32,15 +32,16 @@ let char_of_inscr_status s =
 	| `Waiting -> "W"
 	| `Confirmed -> "C"
 	| `Paid -> "P"
-	| `Cancelled -> "N"
 	| `No_show -> "X"
 ;;
 
 let inscr_status_of_char s =
-	if s = "I" then `Interested
+	if s = "T" then `Potential
+	else if s = "I" then `Interested
 	else if s = "W" then `Waiting
 	else if s = "C" then `Confirmed
 	else if s = "P" then `Paid
+	else if s = "X" then `No_show
 	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %s" s))
 ;;
 
