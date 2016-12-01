@@ -468,7 +468,6 @@ let show_inscriptions_page game_id () =
 		| "W" -> "Waiting"
 		| "C" -> "Confirmed"
 		| "P" -> "Paid"
-		| "N" -> "Cancelled" 
 		| "X" -> "No-show" in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
