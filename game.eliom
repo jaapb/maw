@@ -107,17 +107,24 @@ let%client remove_my_row ev =
 ;;
 
 let%client new_row id roles =
-  tr ~a:[a_class ["group_inscription_row"]; a_id (Printf.sprintf "gir_%d" id)] [
-    td [
+	let tps = Dom_html.getElementById "team_preference_select" in
+	let r_names = Js.Opt.case (Dom_html.CoerceTo.select tps)
+		(fun () -> [])
+		(fun x -> try List.assoc (Js.to_string x##.value) roles
+			with Not_found -> []
+		) in
+	tr ~a:[a_class ["group_inscription_row"]; a_id (Printf.sprintf "gir_%d" id)]
+	[
+		td [
 			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "__co_eliom_person.uid[%d]" id); a_input_type `Search; a_value ""; a_list "users_list"] ();
 		];
 		td [
 			pcdata "[new user]"
 		];
-    td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] [option (pcdata "Any")](*::List.map (fun x -> (option (pcdata x))) roles)*)];
-    td [Raw.input ~a:[a_name (Printf.sprintf "__co_eliom_person.note[%d]" id); a_input_type `Text; a_value ""] ()];
-    td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
-  ]
+		td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] (option (pcdata "Any")::List.map (fun x -> option (pcdata x)) r_names)];
+		td [Raw.input ~a:[a_name (Printf.sprintf "__co_eliom_person.note[%d]" id); a_input_type `Text; a_value ""] ()];
+		td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
+	]
 ;;
 
 let%client nr_ids = ref 0
@@ -293,6 +300,21 @@ let udl = Dom_html.getElementById "users_list" in
 ;;
 
 let%client change_team roles ev =
+	let revamp_options sel =
+		List.iter (fun opt ->
+			Dom.removeChild sel opt
+		) (Dom.list_of_nodeList sel##.childNodes);
+		Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata "Any")));
+		Js.Opt.iter (ev##.target) (fun e ->
+			Js.Opt.iter (Dom_html.CoerceTo.select e) (fun t ->
+				let r_names = try
+					List.assoc (Js.to_string t##.value) roles
+					with Not_found -> [] in
+				List.iter (fun r ->
+					Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata r)))
+				) r_names
+			)
+		) in
 	let git = Dom_html.getElementById "inscription_table" in
 	List.iter (fun tr ->
 		Js.Opt.iter (Dom_html.CoerceTo.element tr) (fun e ->
@@ -301,18 +323,14 @@ let%client change_team roles ev =
 			begin
 				let name_td::role_td::_ = Dom.list_of_nodeList tr##.childNodes in
 				let sel::_ = Dom.list_of_nodeList role_td##.childNodes in
-				List.iter (fun opt ->
-					Dom.removeChild sel opt
-				) (Dom.list_of_nodeList sel##.childNodes);
-				Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata "Any")));
-				Js.Opt.iter (ev##.target) (fun e ->
-					Js.Opt.iter (Dom_html.CoerceTo.select e) (fun t ->
-						let r_names = List.assoc (Js.to_string t##.value) roles in
-						List.iter (fun r ->
-							Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata r)))
-						) r_names
-					)
-				)
+				revamp_options sel
+			end
+			else if Js.to_bool (e##.classList##contains (Js.string "group_inscription_row"))
+			then
+			begin
+				let name_td::_::role_td::_ = Dom.list_of_nodeList tr##.childNodes in
+				let sel::_ = Dom.list_of_nodeList role_td##.childNodes in
+				revamp_options sel
 			end
 		)
 	) (Dom.list_of_nodeList git##.childNodes)
@@ -382,7 +400,8 @@ let signup_page game_id () =
 						(tr ~a:[a_id "team_preference_row"] [
 							td ~a:[a_colspan 5] [
 								pcdata "Team preference: ";
-								Form.select ~a:[a_onchange [%client change_team ~%roles]] ~name:team
+								Form.select ~a:[a_id "team_preference_select";
+									a_onchange [%client change_team ~%roles]] ~name:team
 									Form.string
 								(Form.Option ([], "Any", None, false))
 								(List.map (fun (t, _) ->
