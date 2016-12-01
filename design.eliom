@@ -21,6 +21,8 @@ let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "g
 let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let do_message_service = create ~path:(Path ["messaging"]) ~meth:(Post (suffix (int32 "game_id"), string "team" ** string "subject" ** string "contents")) ();;
 
+let%client selected_player: int32 option ref = ref None;;
+
 let design_page game_id () = 
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -90,11 +92,44 @@ let update_numbers game_id (min, max) =
 	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
 ;;
 
-let%client switch_active ev =
+let%client switch_tds source target =
+	(* First, go up from the clicked thing. *)
+	Js.Opt.iter (source##.parentNode) (fun s_tr ->
+		Js.Opt.iter (target##.parentNode) (fun t_tr ->
+			Dom.replaceChild t_tr source target;
+			Dom.replaceChild s_tr target source
+		)
+	)
+;;
+
+let%client handle_player_click p_id ev =
  	Js.Opt.iter (ev##.target) (fun e ->
-		if Js.to_bool (e##.classList##contains (Js.string "active"))
-		then e##.classList##remove (Js.string "active")
-		else e##.classList##add (Js.string "active") 
+		match p_id, !selected_player with
+		| None, None -> (* clicked on empty field with no player selected *)
+				()
+		| None, Some s -> (* clicked on empty field with player selected *)
+			let old_td = Dom_html.getElementById (Printf.sprintf "player_%ld" s) in
+			begin
+				old_td##.classList##remove (Js.string "active");
+				selected_player := None;
+				switch_tds old_td e
+			end
+		| Some p, None ->
+			begin
+				e##.classList##add (Js.string "active");
+				selected_player := Some p
+			end
+		| Some p, Some s ->
+			let old_td = Dom_html.getElementById (Printf.sprintf "player_%ld" s) in
+			if old_td = e then begin
+				e##.classList##remove (Js.string "active");
+				selected_player := None;
+			end
+			else begin
+				old_td##.classList##remove (Js.string "active");
+				e##.classList##add (Js.string "active");
+				selected_player := Some p
+			end
 	)
 ;;
 
@@ -293,7 +328,11 @@ let%client show_history service uid ev =
 		~service uid in
 		Dom.preventDefault ev
 ;;
-	
+
+let%client cast_init ev =
+	selected_player := None;
+;;
+
 let cast_page game_id () =
 	let partition_groups l =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
@@ -317,7 +356,7 @@ let cast_page game_id () =
     let%lwt inscr = Database.get_inscription_list ~filter_cast:true game_id in
 		let%lwt casting = Database.get_casting game_id in
 		let%lwt pub = Database.is_published game_id in
-    container (standard_menu ())
+    container ~onload:[%client cast_init] (standard_menu ())
     [
       Form.post_form ~service:do_cast_service (fun (team, publish) ->
       [
@@ -332,7 +371,7 @@ let cast_page game_id () =
         			tr ~a:[a_class ["player_row"]] [
 								td ~a:[
 									a_id (Printf.sprintf "player_%ld" p_id);
-          	   		a_onclick [%client switch_active];
+          	   		a_onclick [%client (handle_player_click ~%(Some p_id))];
 									a_oncontextmenu [%client (show_history ~%(User.user_history_service) ~%p_id)];
 							  	a_title n
             		] [
@@ -364,8 +403,8 @@ let cast_page game_id () =
 										Form.input ~input_type:`Text ~name:p_role ~value:rn Form.string
 									];
 									td ~a:(
-          	   			a_onclick [%client switch_active]::
 							  		a_title (default "" n)::
+          	   			a_onclick [%client (handle_player_click ~%pid)]::
 										(match pid with
 										| None -> []
 										| Some x -> [
@@ -375,7 +414,7 @@ let cast_page game_id () =
 										)
 									)
 									(match pid with
-									| None -> [ pcdata "vacancy" ];
+									| None -> [ pcdata "" ];
 									| Some p ->
 										[
 											Form.input ~input_type:`Hidden ~name:p_uid ~value:p Form.int32;
