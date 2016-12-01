@@ -1,16 +1,35 @@
-- ability to change/merge teams (add teams)
-- social login (facebook/OpenID/...)
-- achievement system
-- notifications (baseline can't be turned off)
-- interests section (game tags)
+- ability to merge groups 
 - integrate with PayPal
-- design HTML
-- integrating with Google Maps
-- user profiles (visible to other users)
+- gate list (book people in at venue)
 - users should be able to see waiting list (or at least numbers)
 - show vacancies in game description
+- show vacancies to not-signed-up users and allow them to sign up for them
 - admin should be able to create accounts
-- log out should go back to main page
 - temporary account available for 48h
 - picture upload for description
-- put in vacancies manually
+- add admin interfaces (as backup for user actions)
+- log out should go back to main page
+- notifications (baseline can't be turned off)
+- send mail to users (and to designer)
+- add mailing list to admin
+- disable account (hide: user themselves, purge: by admin)
+* admin confirmation doesn't work
+* teams/roles for signup need to be retrieved properly
+* group signup doesn't work
+* need to be able to cancel inscription
+* confirmation needs to be done by game designer
+* cancellation is orthogonal to status
+* deadlines for inscription/cancellation/payment in database
+* admin: explicitly set visibility / bookability of games
+* group inscriptions: everyone (except for original user) needs to confirm
+
+- design HTML
+- forums
+- printing out name tags and role labels
+
+- social login (facebook/OpenID/...)
+- achievement system
+- interests section (game tags)
+- integrating with Google Maps
+- user profiles (visible to other users)
+- mail templates
