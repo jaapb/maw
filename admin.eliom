@@ -42,6 +42,8 @@ let rec admin_page () () =
       let%lwt games = Database.get_upcoming_games ~no_date:true () in
       let%lwt users = Database.get_users ~unconfirmed:true () in
 			let nonconf = List.filter (fun (_, _, _, _, s) -> s = Some "U") users in
+			let%lwt confirm_strs = Lwt_list.map_s (fun (id, _, _, _, _) ->
+				Database.get_confirmation id) nonconf in
       let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
 				Maw_app.register ~scope:Eliom_common.default_session_scope
@@ -124,23 +126,14 @@ let rec admin_page () () =
 							th [pcdata "E-mail address"];
 							th [pcdata ""]
 						]::
-						List.map (fun (id, fname, lname, email, c) ->
-							match c with
-							| None -> (* this should not happen *)
-								tr 
-								[	
-									td [pcdata (Printf.sprintf "%s %s" fname lname)];
-									td [pcdata email];
-									td [pcdata ""];
-								]
-							| Some confirm ->
-								tr
-								[
-									td [pcdata (Printf.sprintf "%s %s" fname lname)];
-									td [pcdata email];
-									td [a ~service:User.confirm_user_service [pcdata "Confirm"] (id, confirm)]
-								]
-						) nonconf 
+						List.map2 (fun (id, fname, lname, email, _) cstr ->
+							tr
+							[
+								td [pcdata (Printf.sprintf "%s %s" fname lname)];
+								td [pcdata email];
+								td [a ~service:User.confirm_user_service [pcdata "Confirm"] (id, cstr)]
+							]
+						) nonconf confirm_strs 
 					)
         ]
       end

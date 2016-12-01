@@ -454,3 +454,14 @@ let get_user_history user_id =
 		WHERE date IS NOT NULL AND status IN ('X', 'N', 'P') \
 		ORDER BY games.date DESC"
 ;;
+
+let get_confirmation user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT confirmation \
+		FROM users \
+		WHERE id = $user_id" >>=
+	function
+	| [] | [None] -> fail Not_found
+	| [Some c] -> Lwt.return c
+	| _ -> fail_with "Inconsistency in database"
+;;
