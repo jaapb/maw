@@ -9,11 +9,12 @@ CREATE TABLE game_inscriptions (
     game_id integer NOT NULL,
     user_id integer NOT NULL,
     inscription_time timestamp without time zone DEFAULT now() NOT NULL,
-    note character varying(150) NOT NULL,
+    note text NOT NULL,
     group_name text,
     status character(1) DEFAULT 'I'::bpchar NOT NULL,
     preferred_team text,
-    preferred_role text
+    preferred_role text,
+    cancelled boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE games (
@@ -76,6 +77,9 @@ CREATE TABLE user_ids (
 );
 
 ALTER TABLE ONLY games ALTER COLUMN id SET DEFAULT nextval('games_id_seq'::regclass);
+
+ALTER TABLE ONLY game_casting
+    ADD CONSTRAINT game_casting_game_id_team_name_role_name_key UNIQUE (game_id, team_name, role_name);
 
 ALTER TABLE ONLY game_casting
     ADD CONSTRAINT game_casting_game_id_user_id_key UNIQUE (game_id, user_id);
