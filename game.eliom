@@ -81,11 +81,11 @@ let%client rec renumber_children n trs =
 					Dom.list_of_nodeList tr##.childNodes in
 				let input_uid::_ =
 					Dom.list_of_nodeList td_name##.childNodes in	
-				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
+				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
-					Js.Unsafe.set input_uid "name" (Printf.sprintf "person.uid[%d]" n);
-					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role[%d]" n); 
-					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
+					Js.Unsafe.set input_uid "name" (Printf.sprintf "__co_eliom_person.uid[%d]" n);
+					Js.Unsafe.set input_role "name" (Printf.sprintf "__co_eliom_person.role[%d]" n); 
+					Js.Unsafe.set input_note "name" (Printf.sprintf "__co_eliom_person.note[%d]" n); 
 					renumber_children (n+1) t
 			end
 			else renumber_children n t
@@ -109,13 +109,13 @@ let%client remove_my_row ev =
 let%client new_row id roles =
   tr ~a:[a_class ["group_inscription_row"]; a_id (Printf.sprintf "gir_%d" id)] [
     td [
-			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "person.uid[%d]" id); a_input_type `Search; a_value ""; a_list "users_list"] ();
+			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "__co_eliom_person.uid[%d]" id); a_input_type `Search; a_value ""; a_list "users_list"] ();
 		];
 		td [
 			pcdata "[new user]"
 		];
-    td [Raw.select ~a:[a_name (Printf.sprintf "person.role[%d]" id)] [option (pcdata "Any")](*::List.map (fun x -> (option (pcdata x))) roles)*)];
-    td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
+    td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] [option (pcdata "Any")](*::List.map (fun x -> (option (pcdata x))) roles)*)];
+    td [Raw.input ~a:[a_name (Printf.sprintf "__co_eliom_person.note[%d]" id); a_input_type `Text; a_value ""] ()];
     td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
   ]
 ;;
@@ -134,7 +134,7 @@ let%shared group_name_row gname =
 	tr ~a:[a_id "group_name_row"] [
 		td ~a:[a_colspan 5] [
 			pcdata "Group name: ";
-			Raw.input ~a:[a_input_type `Text; a_name "group_name"; a_value gname] ()
+			Raw.input ~a:[a_input_type `Text; a_name "__co_eliom_group_name"; a_value gname] ()
 		]			
 	]
 ;;

@@ -13,7 +13,6 @@
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* group signup doesn't work
 * need to be able to cancel inscription
 * confirmation needs to be done by game designer
 * cancellation is orthogonal to status
