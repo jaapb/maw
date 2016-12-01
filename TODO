@@ -13,7 +13,6 @@
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* teams/roles for signup need to be retrieved properly
 * group signup doesn't work
 * need to be able to cancel inscription
 * confirmation needs to be done by game designer

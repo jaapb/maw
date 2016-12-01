@@ -84,7 +84,7 @@ let%client rec renumber_children n trs =
 				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in	
 				let input_note::_ = Dom.list_of_nodeList td_note##.childNodes in	
 					Js.Unsafe.set input_uid "name" (Printf.sprintf "person.uid[%d]" n);
-					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role_type[%d]" n); 
+					Js.Unsafe.set input_role "name" (Printf.sprintf "person.role[%d]" n); 
 					Js.Unsafe.set input_note "name" (Printf.sprintf "person.note[%d]" n); 
 					renumber_children (n+1) t
 			end
@@ -114,7 +114,7 @@ let%client new_row id roles =
 		td [
 			pcdata "[new user]"
 		];
-    td [Raw.select ~a:[a_name (Printf.sprintf "person.role_type[%d]" id)] (option (pcdata "Any")::List.map (fun x -> (option (pcdata x))) roles)];
+    td [Raw.select ~a:[a_name (Printf.sprintf "person.role[%d]" id)] [option (pcdata "Any")](*::List.map (fun x -> (option (pcdata x))) roles)*)];
     td [Raw.input ~a:[a_name (Printf.sprintf "person.note[%d]" id); a_input_type `Text; a_value ""] ()];
     td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
   ]
@@ -184,7 +184,8 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-						fun () -> Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
+						fun () -> if not edit then
+							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
 						Lwt.return () >>=
 				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_fname dsg_lname status
 		| _ -> Lwt.return ()
@@ -212,13 +213,13 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 				]::
 				tr [
 					th [pcdata "Player"];
-					th [pcdata "Role type"];
+					th [pcdata "Role"];
 					th [pcdata "Notes"]
 				]::
-				(List.map (fun (uid, (role_type, note)) ->
+				(List.map (fun (uid, (role, note)) ->
 					tr [
 						td [pcdata (Printf.sprintf "%ld" uid)];
-						td [pcdata role_type];
+						td [pcdata role];
 						td [pcdata note]
 					]
 				) users)
@@ -279,7 +280,6 @@ let%client check_signup_form ev =
 
 let%client initialise_signup me_inscr users e =
 let udl = Dom_html.getElementById "users_list" in
-begin
 	nr_ids := List.length me_inscr - 1;
 	List.iter (fun (uid, fname, lname, _, s) ->
 		let status = match s with
@@ -290,13 +290,39 @@ begin
 			(pcdata (Printf.sprintf "%s %s%s" fname lname status)) in
 		Dom.appendChild udl (Html.To_dom.of_element thing)
 	) users
-end
+;;
+
+let%client change_team roles ev =
+	let git = Dom_html.getElementById "inscription_table" in
+	List.iter (fun tr ->
+		Js.Opt.iter (Dom_html.CoerceTo.element tr) (fun e ->
+			if Js.to_bool (e##.classList##contains (Js.string "user_inscription_row"))
+			then
+			begin
+				let name_td::role_td::_ = Dom.list_of_nodeList tr##.childNodes in
+				let sel::_ = Dom.list_of_nodeList role_td##.childNodes in
+				List.iter (fun opt ->
+					Dom.removeChild sel opt
+				) (Dom.list_of_nodeList sel##.childNodes);
+				Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata "Any")));
+				Js.Opt.iter (ev##.target) (fun e ->
+					Js.Opt.iter (Dom_html.CoerceTo.select e) (fun t ->
+						let r_names = List.assoc (Js.to_string t##.value) roles in
+						List.iter (fun r ->
+							Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata r)))
+						) r_names
+					)
+				)
+			end
+		)
+	) (Dom.list_of_nodeList git##.childNodes)
+;;
 
 let signup_page game_id () =
 	let do_signup_service = create_attached_post
 		~fallback:(preapply signup_service game_id)
 		~post_params:(bool "edit" ** opt (string "group_name") **
-			string "team" ** list "person" (int32 "uid" ** string "role_type" **
+			string "team" ** list "person" (int32 "uid" ** string "role" **
 			string "note")) () in 
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -305,8 +331,7 @@ let signup_page game_id () =
 	| Some (my_uid, fname, lname, _) -> 
 		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg_id, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
-    let%lwt teams = Lwt.return [] (*Database.get_game_teams game_id*) in
-		let%lwt role_types = Lwt.return [] (*Database.get_game_role_types game_id*) in
+    let%lwt roles = Database.get_game_roles game_id in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
 		let%lwt users = Database.get_users ~unconfirmed:true ~provisional:true () in
