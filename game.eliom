@@ -404,7 +404,17 @@ let signup_page game_id () =
 				(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
 				(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
 				cond_list (signed_up)
-				(p [pcdata "Cancel this inscription"])
+				(Form.post_form ~service:do_cancel_service
+					(fun users ->
+						users.it (fun uid (ex_uid, _, _, _, _, _, _, _) init ->
+							Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32::
+							init
+						) me_inscr
+						[
+							Form.input ~input_type:`Submit ~value:"Cancel this inscription" Form.string
+						]
+					)
+				())
 				[Form.post_form ~service:do_signup_service
 				(fun (edit, (group_name, (team, person))) ->
 				[
