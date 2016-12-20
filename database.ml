@@ -75,7 +75,7 @@ let get_user_games uid =
 	PGSQL(dbh) 
 		"SELECT id, title, date, location, casting_published \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE date >= $today AND user_id = $uid \
+		WHERE date >= $today AND user_id = $uid AND NOT cancelled \
 		ORDER BY date ASC";;
 
 let get_designer_games uid =
@@ -115,7 +115,7 @@ let is_signed_up uid game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT game_id \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE user_id = $uid";;
+		WHERE user_id = $uid AND NOT cancelled";;
 
 let set_game_description game_id descr =
 	get_db () >>= fun dbh ->
@@ -126,7 +126,7 @@ let get_nr_inscriptions game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT COUNT(users.id) \
 		FROM users JOIN game_inscriptions ON users.id = user_id \
-		WHERE game_id = $game_id" >>=
+		WHERE game_id = $game_id AND NOT cancelled" >>=
 	function
 	| [Some n] -> return (Int64.to_int32 n)
 	| _ -> return 0l;;
@@ -197,7 +197,8 @@ let get_inscription_data uid game_id =
 		ON g1.game_id = g2.game_id AND \
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
-		WHERE g1.user_id = $uid AND g1.game_id = $game_id" >>=
+		WHERE g1.user_id = $uid AND g1.game_id = $game_id \
+		AND NOT g2.cancelled" >>=
 	fun l -> Lwt_list.map_p
 		(fun (u, fnm, lnm, tn, rt, nt, gn, s) ->
 			Lwt.return (u, fnm, lnm, tn, rt, nt, gn, inscr_status_of_char s)) l
@@ -211,11 +212,12 @@ let get_inscription_list ?(filter_cast = false) game_id =
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
+		AND NOT cancelled \
 		ORDER BY group_name ASC, inscription_time ASC"
 	else PGSQL(dbh) "SELECT first_name, last_name, user_id, preferred_team, \
 		preferred_role, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
-		WHERE game_id = $game_id \
+		WHERE game_id = $game_id AND NOT cancelled \
 		ORDER BY group_name ASC, inscription_time ASC"
 ;;
 
@@ -231,7 +233,8 @@ let get_group_name game_id uid_list =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT DISTINCT group_name \
 		FROM game_inscriptions \
-		WHERE game_id = $game_id AND user_id IN $@uid_list" >>=
+		WHERE game_id = $game_id AND user_id IN $@uid_list \
+		AND NOT cancelled" >>=
 	function
 	| [] | [None] -> return ""
 	| [Some gname] -> return gname
@@ -314,7 +317,7 @@ let get_casting game_id =
 		FROM game_casting c LEFT JOIN users ON c.user_id = users.id \
 		LEFT JOIN game_inscriptions i ON i.user_id = c.user_id \
 		  AND i.game_id = c.game_id \
-		WHERE c.game_id = $game_id \
+		WHERE c.game_id = $game_id AND NOT cancelled \
 		ORDER BY team_name, role_name DESC" >>=
 	fun l -> Lwt_list.map_p (fun (ht, hr, hf, hl, hu, hn, hg) ->
 		match ht, hr with
@@ -449,7 +452,7 @@ let update_teams game_id teams =
 
 let get_user_history user_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT title, date, c.team_name, c.role_name, status \
+	PGSQL(dbh) "SELECT title, date, c.team_name, c.role_name, status, cancelled \
 		FROM games JOIN game_casting c ON games.id = c.game_id \
 			JOIN game_inscriptions i ON games.id = i.game_id \
 		WHERE date IS NOT NULL AND status IN ('X', 'N', 'P') \
@@ -465,4 +468,11 @@ let get_confirmation user_id =
 	| [] | [None] -> fail Not_found
 	| [Some c] -> Lwt.return c
 	| _ -> fail_with "Inconsistency in database"
+;;
+
+let cancel_inscription game_id user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE game_inscriptions \
+		SET cancelled = true \
+		WHERE game_id = $game_id AND user_id = $user_id"
 ;;

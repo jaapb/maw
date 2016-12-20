@@ -552,7 +552,7 @@ let user_history_page uid () =
 					th [pcdata "Role"];
 					th [pcdata "Status"]
 				]::
-				(List.map (fun (title, date, tname, rname, status) ->
+				(List.map (fun (title, date, tname, rname, status, canc) ->
 					tr [
 						td [match date with
 							| None -> pcdata "Unknown"
@@ -561,7 +561,8 @@ let user_history_page uid () =
 						td [pcdata title];
 						td [pcdata tname];
 						td [pcdata rname];
-						td [match (inscr_status_of_char status) with
+						td [if canc then pcdata "Cancelled"
+							else match (inscr_status_of_char status) with
 							| `No_show -> b [pcdata "No-show"]
 							| `Confirmed | `Paid -> pcdata "Participated"
 							| _ -> pcdata "Did not participate" 

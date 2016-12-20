@@ -243,6 +243,23 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	(fun e -> error_page (Printexc.to_string e))
 ;;
 
+let do_cancel_page game_id () (users) =
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (uid, _, _, _) -> 
+		Lwt_list.iter_p (fun u ->
+			Database.cancel_inscription game_id u
+		) users >>=
+		fun () -> container (standard_menu ())
+			[
+				h1 [pcdata "Cancellation complete"];
+				p [pcdata "Your inscription has been cancelled."]
+			]	
+	)
+	(fun e -> error_page (Printexc.to_string e))
+;;
+
 let%client check_signup_form ev =
 	let email_regexp = Regexp.regexp "[^@]*@[^@]*\\.[^@]*" in
 	let it = Dom_html.getElementById "inscription_table" in
@@ -342,7 +359,11 @@ let signup_page game_id () =
 		~post_params:(bool "edit" ** opt (string "group_name") **
 			string "team" ** list "person" (int32 "uid" ** string "role" **
 			string "note")) () in 
+	let do_cancel_service = create_attached_post
+		~fallback:(preapply signup_service game_id)
+		~post_params:(list "person" (int32 "uid")) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
+	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_cancel_service (do_cancel_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -381,9 +402,10 @@ let signup_page game_id () =
 				p [pcdata d]::
 				cond_list (nr_inscr >= max_pl)
 				(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
-				[h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")];
-				p [i [pcdata "For group inscriptions, you can either find an existing user with the dropdown box, or enter an e-mail address. In the latter case, if it does not exist already, a new account will be created for that user."]];
-				Form.post_form ~service:do_signup_service
+				(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
+				cond_list (signed_up)
+				(p [pcdata "Cancel this inscription"])
+				[Form.post_form ~service:do_signup_service
 				(fun (edit, (group_name, (team, person))) ->
 				[
 					table ~a:[a_id "inscription_table"] (
@@ -453,6 +475,7 @@ let signup_page game_id () =
 					)
 				]) ()
 			])
+		)
 	)
 	(function 
 	| Not_found -> unknown_game ()
