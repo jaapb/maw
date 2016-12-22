@@ -13,7 +13,6 @@
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* need to be able to cancel inscription
 * confirmation needs to be done by game designer
 * cancellation is orthogonal to status
 * deadlines for inscription/cancellation/payment in database
