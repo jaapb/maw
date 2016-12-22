@@ -16,6 +16,7 @@ let game_service = create ~path:(Path ["game"]) ~meth:(Get (suffix (int32 "game_
 let signup_service = create ~path:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let show_inscriptions_service = create ~path:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let cancel_service = create ~path:(Path ["cancel"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_fname dsg_lname d full =
@@ -243,23 +244,6 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	(fun e -> error_page (Printexc.to_string e))
 ;;
 
-let do_cancel_page game_id () (users) =
-	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> 
-		Lwt_list.iter_p (fun u ->
-			Database.cancel_inscription game_id u
-		) users >>=
-		fun () -> container (standard_menu ())
-			[
-				h1 [pcdata "Cancellation complete"];
-				p [pcdata "Your inscription has been cancelled."]
-			]	
-	)
-	(fun e -> error_page (Printexc.to_string e))
-;;
-
 let%client check_signup_form ev =
 	let email_regexp = Regexp.regexp "[^@]*@[^@]*\\.[^@]*" in
 	let it = Dom_html.getElementById "inscription_table" in
@@ -359,11 +343,7 @@ let signup_page game_id () =
 		~post_params:(bool "edit" ** opt (string "group_name") **
 			string "team" ** list "person" (int32 "uid" ** string "role" **
 			string "note")) () in 
-	let do_cancel_service = create_attached_post
-		~fallback:(preapply signup_service game_id)
-		~post_params:(list "person" (int32 "uid")) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
-	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_cancel_service (do_cancel_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -403,18 +383,6 @@ let signup_page game_id () =
 				cond_list (nr_inscr >= max_pl)
 				(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
 				(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
-				cond_list (signed_up)
-				(Form.post_form ~service:do_cancel_service
-					(fun users ->
-						users.it (fun uid (ex_uid, _, _, _, _, _, _, _) init ->
-							Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32::
-							init
-						) me_inscr
-						[
-							Form.input ~input_type:`Submit ~value:"Cancel this inscription" Form.string
-						]
-					)
-				())
 				[Form.post_form ~service:do_signup_service
 				(fun (edit, (group_name, (team, person))) ->
 				[
@@ -590,9 +558,70 @@ let show_casting_page game_id () =
 	)
 ;;
 
+let do_cancel_page game_id () user_id =
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (my_uid, _, _, _) -> 
+		let%lwt () = Database.cancel_inscription game_id user_id in
+		let%lwt (fn, ln, _) = Database.get_user_data user_id in
+		let%lwt (title, date, location, _, _, _, _, _, _, _) =
+			Database.get_game_data game_id in
+		let game_dstr = match date with
+		| Some d -> Printer.Date.sprint "%d %B %Y" d
+		| None -> "TBD" in
+		container (standard_menu ())
+			[
+				h1 [pcdata "Cancellation complete"];
+				p [pcdata "The following inscription has been cancelled:"];
+				p [b [pcdata "User:"]; pcdata (Printf.sprintf " %s %s" fn ln)];
+				p [b [pcdata "Game: "]; pcdata title;
+					pcdata (Printf.sprintf " (%s, %s)" location game_dstr)]
+			]	
+	)
+	(fun e -> error_page (Printexc.to_string e))
+;;
+
+let cancel_page game_id () =
+	let do_cancel_service = create_attached_post ~fallback:(preapply cancel_service game_id) ~post_params:(int32 "uid") () in
+	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_cancel_service (do_cancel_page game_id);
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (my_uid, _, _, _) ->
+		let%lwt isu = Database.is_signed_up my_uid game_id in
+		let%lwt (title, date, location, _, _, _, _, _, _, _) = Database.get_game_data game_id in
+		let game_dstr = match date with
+		| Some d -> Printer.Date.sprint "%d %B %Y" d
+		| None -> "TBD" in
+		if not isu then
+			container (standard_menu ())
+			[
+				h1 [pcdata "Not signed up"];
+				p [pcdata "You are not signed up for the game you are trying to cancel."]
+			]
+		else
+			container (standard_menu ())
+			[
+				h1 [pcdata "Cancel inscription"];
+				p [pcdata "This will cancel your inscription for the following game:"];
+				p [b [pcdata title]; pcdata (Printf.sprintf " (%s, %s)" location game_dstr)];
+				p [pcdata "This action cannot be undone. Please confirm that you wish to continue by clicking the button below."];
+				Form.post_form ~service:do_cancel_service (fun user_id ->
+					[
+						Form.input ~input_type:`Hidden ~name:user_id ~value:my_uid Form.int32;
+						Form.input ~input_type:`Submit ~value:"Confirm" Form.string
+					]
+				) ()
+			]
+	)
+	(fun e -> error_page (Printexc.to_string e))
+;;
+
 let _ =
 	Maw_app.register ~service:game_service game_page;
 	Maw_app.register ~service:signup_service signup_page;
 	Maw_app.register ~service:show_inscriptions_service show_inscriptions_page;
-	Maw_app.register ~service:show_casting_service show_casting_page
+	Maw_app.register ~service:show_casting_service show_casting_page;
+	Maw_app.register ~service:cancel_service cancel_page
 ;;
