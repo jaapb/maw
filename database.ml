@@ -115,7 +115,11 @@ let is_signed_up uid game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT game_id \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE user_id = $uid AND NOT cancelled";;
+		WHERE user_id = $uid AND NOT cancelled" >>=
+	function
+	| [_] -> Lwt.return true
+	| _ -> Lwt.return false
+;;
 
 let set_game_description game_id descr =
 	get_db () >>= fun dbh ->
