@@ -562,7 +562,7 @@ let user_history_page uid () =
 						td [pcdata tname];
 						td [pcdata rname];
 						td [if canc then pcdata "Cancelled"
-							else match (inscr_status_of_char status) with
+							else match (inscr_status_of_int32 status) with
 							| `No_show -> b [pcdata "No-show"]
 							| `Confirmed | `Paid -> pcdata "Participated"
 							| _ -> pcdata "Did not participate" 

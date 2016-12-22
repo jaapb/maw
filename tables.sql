@@ -11,7 +11,7 @@ CREATE TABLE game_inscriptions (
     inscription_time timestamp without time zone DEFAULT now() NOT NULL,
     note text NOT NULL,
     group_name text,
-    status character(1) DEFAULT 'I'::bpchar NOT NULL,
+    status integer DEFAULT 3 NOT NULL,
     preferred_team text,
     preferred_role text,
     cancelled boolean DEFAULT false NOT NULL

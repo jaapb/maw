@@ -25,24 +25,24 @@ let random_string length =
 	String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng length)) 0 length
 ;;
 
-let char_of_inscr_status s =
+let int32_of_inscr_status s =
 	match s with
-	| `Potential -> "T"
-	| `Interested -> "I"
-	| `Waiting -> "W"
-	| `Confirmed -> "C"
-	| `Paid -> "P"
-	| `No_show -> "X"
+	| `No_show -> 0l
+	| `Confirmed -> 1l
+	| `Paid -> 2l
+	| `Interested -> 3l
+	| `Potential -> 4l
+	| `Waiting -> 5l
 ;;
 
-let inscr_status_of_char s =
-	if s = "T" then `Potential
-	else if s = "I" then `Interested
-	else if s = "W" then `Waiting
-	else if s = "C" then `Confirmed
-	else if s = "P" then `Paid
-	else if s = "X" then `No_show
-	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %s" s))
+let inscr_status_of_int32 s =
+	if s = 0l then `No_show
+	else if s = 1l then `Confirmed
+	else if s = 2l then `Paid
+	else if s = 3l then `Interested
+	else if s = 4l then `Potential
+	else if s = 5l then `Waiting
+	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %ld" s))
 ;;
 
 let rec aux_assoc_list l ct cr res =
@@ -175,7 +175,7 @@ let change_things dbh game_id uid group_name team role =
 
 let add_inscription game_id uid group_name status team role note =
 	let stamp = CalendarLib.Calendar.now () in
-	let st = char_of_inscr_status status in
+	let st = int32_of_inscr_status status in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
 		PGSQL(dbh) "SELECT game_id, user_id \
@@ -205,7 +205,7 @@ let get_inscription_data uid game_id =
 		AND NOT g2.cancelled" >>=
 	fun l -> Lwt_list.map_p
 		(fun (u, fnm, lnm, tn, rt, nt, gn, s) ->
-			Lwt.return (u, fnm, lnm, tn, rt, nt, gn, inscr_status_of_char s)) l
+			Lwt.return (u, fnm, lnm, tn, rt, nt, gn, inscr_status_of_int32 s)) l
 ;;
 
 let get_inscription_list ?(filter_cast = false) game_id =
@@ -217,12 +217,12 @@ let get_inscription_list ?(filter_cast = false) game_id =
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		AND NOT cancelled \
-		ORDER BY group_name ASC, inscription_time ASC"
+		ORDER BY group_name ASC, status ASC, inscription_time ASC"
 	else PGSQL(dbh) "SELECT first_name, last_name, user_id, preferred_team, \
 		preferred_role, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id AND NOT cancelled \
-		ORDER BY group_name ASC, inscription_time ASC"
+		ORDER BY group_name ASC, status ASC, inscription_time ASC"
 ;;
 
 let search_for_user search =
@@ -459,7 +459,7 @@ let get_user_history user_id =
 	PGSQL(dbh) "SELECT title, date, c.team_name, c.role_name, status, cancelled \
 		FROM games JOIN game_casting c ON games.id = c.game_id \
 			JOIN game_inscriptions i ON games.id = i.game_id \
-		WHERE date IS NOT NULL AND status IN ('X', 'N', 'P') \
+		WHERE date IS NOT NULL AND status IN (0, 2) \
 		ORDER BY games.date DESC"
 ;;
 

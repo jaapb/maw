@@ -463,13 +463,13 @@ let signup_page game_id () =
 
 let show_inscriptions_page game_id () =
 	let status_word st =
-		match st with
-		| "T" -> "Potential"
-		| "I" -> "Interested"
-		| "W" -> "Waiting"
-		| "C" -> "Confirmed"
-		| "P" -> "Paid"
-		| "X" -> "No-show" in
+		match (Database.inscr_status_of_int32 st) with
+		| `Potential-> "Potential"
+		| `Interested-> "Interested"
+		| `Waiting -> "Waiting"
+		| `Confirmed -> "Confirmed"
+		| `Paid-> "Paid"
+		| `No_show -> "No-show" in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
