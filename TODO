@@ -14,7 +14,6 @@
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
 * confirmation needs to be done by game designer
-* cancellation is orthogonal to status
 * deadlines for inscription/cancellation/payment in database
 * admin: explicitly set visibility / bookability of games
 * group inscriptions: everyone (except for original user) needs to confirm
