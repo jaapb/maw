@@ -461,7 +461,18 @@ let signup_page game_id () =
 	)
 ;;
 
-let show_inscriptions_page game_id () =
+let rec confirm_page game_id () user_id =
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (uid, _, _, _) -> 
+		Database.change_status game_id user_id `Confirmed >>=
+		fun () -> show_inscriptions_page game_id ())
+	(fun e -> error_page (Printexc.to_string e))
+and show_inscriptions_page game_id () =
+	let confirm_service = create_attached_post
+		~fallback:(preapply show_inscriptions_service game_id)
+		~post_params:(int32 "user_id") () in
 	let status_word st =
 		match (Database.inscr_status_of_int32 st) with
 		| `Potential-> "Potential"
@@ -470,6 +481,8 @@ let show_inscriptions_page game_id () =
 		| `Confirmed -> "Confirmed"
 		| `Paid-> "Paid"
 		| `No_show -> "No-show" in
+	Maw_app.register ~scope:Eliom_common.default_session_scope
+		~service:confirm_service (confirm_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -485,6 +498,7 @@ let show_inscriptions_page game_id () =
 					p [pcdata (Printf.sprintf "There are currently %d inscriptions." (List.length inscr))];
 					table (
 						tr [
+							th [];
 							th [pcdata "Status"];
 							th [pcdata "Group name"];
 							th [pcdata "Player name"];
@@ -492,8 +506,18 @@ let show_inscriptions_page game_id () =
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (fname, lname, _, t, r, nt, g, st) ->
+						List.map (fun (fname, lname, ex_uid, t, r, nt, g, st) ->
 							tr [
+								td (match (Database.inscr_status_of_int32 st) with
+									| `Potential | `Interested | `Waiting ->
+										[Form.post_form ~service:confirm_service
+										(fun u ->
+											[
+												Form.input ~input_type:`Hidden ~name:u ~value:ex_uid Form.int32;
+												Form.input ~input_type:`Submit ~value:"Confirm" Form.string
+											]
+										) ()]
+									| _ -> []);
 								td [pcdata (status_word st)];
 								td [pcdata (default "" g)];
 								td [pcdata (Printf.sprintf "%s %s" fname lname)];

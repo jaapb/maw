@@ -13,10 +13,12 @@
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* confirmation needs to be done by game designer
 * deadlines for inscription/cancellation/payment in database
 * admin: explicitly set visibility / bookability of games
 * group inscriptions: everyone (except for original user) needs to confirm
+
+* add confirmation boxes for things like cancellation and confirmation
+* send notification email when cancelling/confirming 
 
 - design HTML
 - forums

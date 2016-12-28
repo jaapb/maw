@@ -480,3 +480,11 @@ let cancel_inscription game_id user_id =
 		SET cancelled = true \
 		WHERE game_id = $game_id AND user_id = $user_id"
 ;;
+
+let change_status game_id user_id new_status =
+	let st_int = int32_of_inscr_status new_status in
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE game_inscriptions \
+		SET status = $st_int \
+		WHERE game_id = $game_id AND user_id = $user_id"
+;;
