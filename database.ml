@@ -217,12 +217,12 @@ let get_inscription_list ?(filter_cast = false) game_id =
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		AND NOT cancelled \
-		ORDER BY group_name ASC, status ASC, inscription_time ASC"
+		ORDER BY status ASC, group_name ASC, inscription_time ASC"
 	else PGSQL(dbh) "SELECT first_name, last_name, user_id, preferred_team, \
 		preferred_role, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id AND NOT cancelled \
-		ORDER BY group_name ASC, status ASC, inscription_time ASC"
+		ORDER BY status ASC, group_name ASC, inscription_time ASC"
 ;;
 
 let search_for_user search =
