@@ -15,6 +15,7 @@
 let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
 let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
+let update_deadlines_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "inscription" ** string "cancellation" ** string "payment")) ();;
 let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
@@ -30,6 +31,16 @@ let design_page game_id () =
 	| Some (uid, _, _, _) -> 
 		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
+		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
+		let idate = match id with
+		| None -> ""
+		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
+		let cdate = match cd with
+		| None -> ""
+		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
+		let pdate = match pd with
+		| None -> ""
+		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
@@ -69,6 +80,28 @@ let design_page game_id () =
 							td [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
+				]) game_id;
+				Form.post_form ~service:update_deadlines_service (fun (id, (cd, pd)) -> [
+					table [
+						tr [
+							td ~a:[a_colspan 2] [pcdata "Deadlines:"]
+						];
+						tr [
+							td [pcdata "Inscription:"];
+							td [Form.input ~input_type:`Date ~name:id ~value:idate Form.string];
+						];
+						tr [
+							td [pcdata "Cancellation:"];
+							td [Form.input ~input_type:`Date ~name:cd ~value:cdate Form.string];
+						];
+						tr [
+							td [pcdata "Payment:"];
+							td [Form.input ~input_type:`Date ~name:pd ~value:pdate Form.string];
+						];
+						tr [
+							td ~a:[a_colspan 2] [Form.input ~input_type:`Submit ~value:"Save" Form.string]
+						]
+					]
 				]) game_id
 			]
 	)
@@ -91,6 +124,21 @@ let update_numbers game_id (min, max) =
 	| None -> Lwt.return ()
 	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
 ;;
+
+let update_deadlines game_id (id, (cd, pd)) =
+	let inscr_date = if id = ""
+		then None
+		else Some (Printer.Date.from_fstring "%d-%m-%Y" id) in
+	let cancel_date = if cd = ""
+		then None
+		else Some (Printer.Date.from_fstring "%d-%m-%Y" cd) in
+	let pay_date = if pd = ""
+		then None
+		else Some (Printer.Date.from_fstring "%d-%m-%Y" pd) in
+	let%lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
 
 let%client switch_tds source target =
 	(* First, go up from the clicked thing. *)
@@ -546,6 +594,8 @@ let () =
 		update_description;
 	Eliom_registration.Action.register ~service:update_numbers_service
 		update_numbers;
+	Eliom_registration.Action.register ~service:update_deadlines_service
+		update_deadlines;
   Maw_app.register ~service:role_service role_page;
   Maw_app.register ~service:cast_service cast_page;
 	Maw_app.register ~service:do_cast_service do_cast_page;

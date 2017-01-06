@@ -489,3 +489,23 @@ let change_status game_id user_id new_status =
 		SET status = $st_int \
 		WHERE game_id = $game_id AND user_id = $user_id"
 ;;
+
+let set_game_deadlines game_id inscr cancel pay =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET inscription_deadline = $?inscr, cancellation_deadline = $?cancel, \
+			payment_deadline = $?pay \
+		WHERE id = $game_id"
+;;
+
+let get_game_deadlines game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT inscription_deadline, cancellation_deadline, \
+			payment_deadline \
+		FROM games \
+		WHERE id = $game_id" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> return x
+	| _ -> fail_with "Inconsistent database"
+;

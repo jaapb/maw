@@ -26,7 +26,13 @@ CREATE TABLE games (
     designer integer NOT NULL,
     min_players integer DEFAULT 0 NOT NULL,
     max_players integer DEFAULT 0 NOT NULL,
-    casting_published boolean DEFAULT false NOT NULL
+    casting_published boolean DEFAULT false NOT NULL,
+    inscription_deadline date,
+    cancellation_deadline date,
+    payment_deadline date,
+    CONSTRAINT games_check CHECK ((inscription_deadline <= date)),
+    CONSTRAINT games_check1 CHECK ((cancellation_deadline <= date)),
+    CONSTRAINT games_check2 CHECK ((payment_deadline <= date))
 );
 
 CREATE SEQUENCE games_id_seq
