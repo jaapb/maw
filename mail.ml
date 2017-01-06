@@ -85,7 +85,7 @@ game_title dsg_fname dsg_lname game_loc game_date uri)
 
 let send_cancellation_mail fname lname email game_title game_loc game_date =
 	send_mail [(Printf.sprintf "%s %s" fname lname), email] (Printf.sprintf "Cancellation for %s" game_title) 
-	(Printf.sprintf "Hello,\n
+	(Printf.sprintf "Hello %s,\n
 \n
 Your inscription for the following game has been cancelled:\n
 \n
@@ -99,7 +99,7 @@ Kind regards,\n
   Maw.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
-game_title game_loc game_date)
+fname game_title game_loc game_date)
 ;;
 let _ =
 	Nettls_gnutls.init ()
