@@ -116,7 +116,7 @@ let sign_up_status uid game_id =
 	PGSQL(dbh) "SELECT game_id, preferred_team, preferred_role, status, \
 		cancelled \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE user_id = $uid" >>=
+		WHERE user_id = $uid AND games.id = $game_id" >>=
 	function
 	| [(_, t, r, s, false)] -> Lwt.return (`Yes (t, r, inscr_status_of_int32 s))
 	| [(_, _, _, _, true)] -> Lwt.return `Cancelled
