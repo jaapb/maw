@@ -34,13 +34,13 @@ let design_page game_id () =
 		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
 		let idate = match id with
 		| None -> ""
-		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
+		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
 		let cdate = match cd with
 		| None -> ""
-		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
+		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
 		let pdate = match pd with
 		| None -> ""
-		| Some d -> Printer.Date.sprint "%d-%m-%Y" d in
+		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
@@ -128,13 +128,13 @@ let update_numbers game_id (min, max) =
 let update_deadlines game_id (id, (cd, pd)) =
 	let inscr_date = if id = ""
 		then None
-		else Some (Printer.Date.from_fstring "%d-%m-%Y" id) in
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" id) in
 	let cancel_date = if cd = ""
 		then None
-		else Some (Printer.Date.from_fstring "%d-%m-%Y" cd) in
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" cd) in
 	let pay_date = if pd = ""
 		then None
-		else Some (Printer.Date.from_fstring "%d-%m-%Y" pd) in
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" pd) in
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
