@@ -58,7 +58,8 @@ let game_page game_id () =
 							];
 							pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
 						];
-						a ~service:signup_service [pcdata "Edit my inscription"] game_id
+						a ~service:signup_service [pcdata "Edit my inscription"] game_id;
+						a ~service:cancel_service [pcdata "Cancel my inscription"] game_id
 					]
 					| `Cancelled -> [
 						p [pcdata "You have cancelled your inscription for this game."]
@@ -591,12 +592,13 @@ let do_cancel_page game_id () user_id =
 	| None -> not_logged_in ()
 	| Some (my_uid, _, _, _) -> 
 		let%lwt () = Database.cancel_inscription game_id user_id in
-		let%lwt (fn, ln, _) = Database.get_user_data user_id in
+		let%lwt (fn, ln, email) = Database.get_user_data user_id in
 		let%lwt (title, date, location, _, _, _, _, _, _, _) =
 			Database.get_game_data game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
+		Mail.send_cancellation_mail fn ln email title game_dstr location;
 		container (standard_menu ())
 			[
 				h1 [pcdata "Cancellation complete"];

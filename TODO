@@ -17,9 +17,6 @@
 * admin: explicitly set visibility / bookability of games
 * group inscriptions: everyone (except for original user) needs to confirm
 
-* add confirmation boxes for things like cancellation and confirmation
-* send notification email when cancelling/confirming 
-
 - design HTML
 - forums
 - printing out name tags and role labels

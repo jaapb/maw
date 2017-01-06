@@ -40,6 +40,7 @@ let format_my_games mg dg =
 				[tr (
 					td (location_bar id title date loc)::
 					td [a ~service:Game.signup_service [pcdata "Edit inscription"] id]::
+					td [a ~service:Game.cancel_service [pcdata "Cancel inscription"] id]::
 					if cast
 					then [td [a ~service:Game.show_casting_service [pcdata "Show casting"] id]]
 					else []
