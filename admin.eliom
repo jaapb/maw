@@ -19,7 +19,7 @@ let add_game_page f () (title, designer) =
 let set_game_data_page f () games =
 	(try
 		Lwt_list.iter_s (fun (game_id, (date_str, location)) ->
-			let date = Printer.Date.from_fstring "%d/%m/%Y" date_str in
+			let date = Printer.Date.from_fstring "%d-%m-%Y" date_str in
 			Database.set_game_data game_id date location
 		) games
 	with Invalid_argument s ->
@@ -64,7 +64,7 @@ let rec admin_page () () =
 							]::
 							game.it (fun (game_id, (date, location)) (i, t, d, l) init ->
 								let dstr = match d with
-								| Some dt -> Printer.Date.sprint "%d/%m/%Y" dt
+								| Some dt -> Printer.Date.sprint "%d-%m-%Y" dt
 								| None -> "" in
 								tr [
 									td [
