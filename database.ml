@@ -111,14 +111,16 @@ let check_password email password =
 	  as it would give away information *)
 ;;
 
-let is_signed_up uid game_id =
+let sign_up_status uid game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT game_id \
+	PGSQL(dbh) "SELECT game_id, preferred_team, preferred_role, status, \
+		cancelled \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE user_id = $uid AND NOT cancelled" >>=
+		WHERE user_id = $uid" >>=
 	function
-	| [_] -> Lwt.return true
-	| _ -> Lwt.return false
+	| [(_, t, r, s, false)] -> Lwt.return (`Yes (t, r, inscr_status_of_int32 s))
+	| [(_, _, _, _, true)] -> Lwt.return `Cancelled
+	| _ -> Lwt.return `No
 ;;
 
 let set_game_description game_id descr =
@@ -158,22 +160,21 @@ let set_game_numbers game_id min max =
 		SET min_players = $min, max_players = $max \
 		WHERE id = $game_id";;
 
-let change_things dbh game_id uid group_name team role =
-	(match team with
-	| None -> return ()
-	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET preferred_team = $g WHERE game_id = $game_id AND user_id = $uid") >>=
-	fun () -> (match role with
-	| None -> return ()
-	| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET preferred_role = $r WHERE game_id = $game_id AND user_id = $uid") >>=
-	fun () -> (match group_name with
-	| None -> return ()
-	| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
-			SET group_name = $g WHERE game_id = $game_id AND user_id = $uid")
-;;
-
 let add_inscription game_id uid group_name status team role note =
+	let change_things dbh game_id uid group_name team role =
+		(match team with
+		| None -> return ()
+		| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
+				SET preferred_team = $g WHERE game_id = $game_id AND user_id = $uid") >>=
+		fun () -> (match role with
+		| None -> return ()
+		| Some r -> PGSQL(dbh) "UPDATE game_inscriptions \
+				SET preferred_role = $r WHERE game_id = $game_id AND user_id = $uid") >>=
+		fun () -> (match group_name with
+		| None -> return ()
+		| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
+				SET group_name = $g WHERE game_id = $game_id AND user_id = $uid")
+	in
 	let stamp = CalendarLib.Calendar.now () in
 	let st = int32_of_inscr_status status in
 	get_db () >>= fun dbh ->
@@ -202,7 +203,7 @@ let get_inscription_data uid game_id =
 			(g1.user_id = g2.user_id OR g1.group_name = g2.group_name) \
 		JOIN users ON g2.user_id = users.id \
 		WHERE g1.user_id = $uid AND g1.game_id = $game_id \
-		AND NOT g2.cancelled" >>=
+		AND NOT g1.cancelled AND NOT g2.cancelled" >>=
 	fun l -> Lwt_list.map_p
 		(fun (u, fnm, lnm, tn, rt, nt, gn, s) ->
 			Lwt.return (u, fnm, lnm, tn, rt, nt, gn, inscr_status_of_int32 s)) l

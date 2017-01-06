@@ -35,7 +35,7 @@ let game_page game_id () =
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl))
 	  | Some (uid, _, _, _) ->
-			let%lwt l = Database.get_inscription_data uid game_id in
+			let%lwt isu = Database.sign_up_status uid game_id in
 			container (standard_menu ()) 
 			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl) @
 		  	if uid = dsg then
@@ -44,26 +44,29 @@ let game_page game_id () =
 					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id];
 					p [a ~service:Design.message_service [pcdata "Send a message to players"] game_id]
 				]
-				else if List.length l > 0 then
-				let (_, _, _, team, role, _, _, status) = List.find
-					(fun (u, _, _, _, _, _, _, _) -> uid = u) l in
-				[
-					p [
-						i [pcdata (match status with
-						| `Interested -> "You have registered your interest for this game."
-						| `Confirmed -> "Your place for this game is confirmed."
-						| `Paid -> "You have paid for this game and your place is confirmed."
-						| `Provisional -> "You have no account, but are still seeing this. That shouldn't happen. Weird."
-						| `Waiting -> "You are on the waiting list for this game.")
+				else 
+				begin
+					match isu with
+					| `Yes (team, role, status) -> [
+						p [
+							i [pcdata (match status with
+							| `Interested -> "You have registered your interest for this game."
+							| `Confirmed -> "Your place for this game is confirmed."
+							| `Paid -> "You have paid for this game and your place is confirmed."
+							| `Provisional -> "You have no account, but are still seeing this. That shouldn't happen. Weird."
+							| `Waiting -> "You are on the waiting list for this game.")
+							];
+							pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
 						];
-						pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
-					];
-					a ~service:signup_service [pcdata "Edit my inscription"] game_id
-				]
-				else
-				[
-					a ~service:signup_service [pcdata "Sign up for this game"] game_id
-				]
+						a ~service:signup_service [pcdata "Edit my inscription"] game_id
+					]
+					| `Cancelled -> [
+						p [pcdata "You have cancelled your inscription for this game."]
+					]
+					| `No -> [
+						a ~service:signup_service [pcdata "Sign up for this game"] game_id
+					]
+				end
 			)
 	)
 	(function
@@ -613,31 +616,32 @@ let cancel_page game_id () =
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (my_uid, _, _, _) ->
-		let%lwt isu = Database.is_signed_up my_uid game_id in
+		let%lwt isu = Database.sign_up_status my_uid game_id in
 		let%lwt (title, date, location, _, _, _, _, _, _, _) = Database.get_game_data game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
-		if not isu then
-			container (standard_menu ())
-			[
-				h1 [pcdata "Not signed up"];
-				p [pcdata "You are not signed up for the game you are trying to cancel."]
-			]
-		else
-			container (standard_menu ())
-			[
-				h1 [pcdata "Cancel inscription"];
-				p [pcdata "This will cancel your inscription for the following game:"];
-				p [b [pcdata title]; pcdata (Printf.sprintf " (%s, %s)" location game_dstr)];
-				p [pcdata "This action cannot be undone. Please confirm that you wish to continue by clicking the button below."];
-				Form.post_form ~service:do_cancel_service (fun user_id ->
-					[
-						Form.input ~input_type:`Hidden ~name:user_id ~value:my_uid Form.int32;
-						Form.input ~input_type:`Submit ~value:"Confirm" Form.string
-					]
-				) ()
-			]
+			match isu with
+			| `Cancelled | `No ->
+				container (standard_menu ())
+				[
+					h1 [pcdata "Not signed up"];
+					p [pcdata "You are not signed up for the game you are trying to cancel."]
+				]
+			| `Yes _ ->
+				container (standard_menu ())
+				[
+					h1 [pcdata "Cancel inscription"];
+					p [pcdata "This will cancel your inscription for the following game:"];
+					p [b [pcdata title]; pcdata (Printf.sprintf " (%s, %s)" location game_dstr)];
+					p [pcdata "This action cannot be undone. Please confirm that you wish to continue by clicking the button below."];
+					Form.post_form ~service:do_cancel_service (fun user_id ->
+						[
+							Form.input ~input_type:`Hidden ~name:user_id ~value:my_uid Form.int32;
+							Form.input ~input_type:`Submit ~value:"Confirm" Form.string
+						]
+					) ()
+				]
 	)
 	(fun e -> error_page (Printexc.to_string e))
 ;;
