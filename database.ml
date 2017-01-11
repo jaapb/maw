@@ -379,7 +379,7 @@ let confirm_user user_id random =
 
 let add_game title designer =
 	get_db () >>= fun dbh -> PGSQL(dbh) "INSERT INTO games \
-		(title, designer) VALUES
+		(title, designer) VALUES \
 		($title, $designer)"
 ;;
 
