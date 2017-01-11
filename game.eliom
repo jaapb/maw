@@ -28,9 +28,11 @@ let game_page game_id () =
     then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
     else []) in
 	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg, d, _, max_pl, _) =
+	Lwt.catch (fun () ->
+		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg, d, _, max_pl, _) =
 		Database.get_game_data game_id in
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
+		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
     match u with
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl))
@@ -56,16 +58,21 @@ let game_page game_id () =
 							| `Provisional -> "You have no account, but are still seeing this. That shouldn't happen. Weird."
 							| `Waiting -> "You are on the waiting list for this game.")
 							];
-							pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
+							pcdata (Printf.sprintf " Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
 						];
 						a ~service:signup_service [pcdata "Edit my inscription"] game_id;
+						p [pcdata " "];
 						a ~service:cancel_service [pcdata "Cancel my inscription"] game_id
 					]
 					| `Cancelled -> [
 						p [pcdata "You have cancelled your inscription for this game."]
 					]
 					| `No -> [
-						a ~service:signup_service [pcdata "Sign up for this game"] game_id
+						match id with
+						| Some ddl when Date.compare ddl (Date.today ()) < 0 ->
+							p [pcdata "The inscription deadline for this game has passed."]
+						| _ ->
+							a ~service:signup_service [pcdata "Sign up for this game"] game_id
 					]
 				end
 			)
@@ -358,6 +365,7 @@ let signup_page game_id () =
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
 		let%lwt users = Database.get_users ~unconfirmed:true ~provisional:true () in
+		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _, _, _) -> u = my_uid) inscr
 			then inscr 
 			else (my_uid, fname, lname, None, None, "", None, `Interested)::inscr in
@@ -384,79 +392,85 @@ let signup_page game_id () =
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 				p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
 				p [pcdata d]::
-				cond_list (nr_inscr >= max_pl)
-				(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
-				(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
-				[Form.post_form ~service:do_signup_service
-				(fun (edit, (group_name, (team, person))) ->
-				[
-					table ~a:[a_id "inscription_table"] (
-						tr [
-							td ~a:[a_colspan 5] [
-								Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%roles (default "" ~%ex_group_name))]::(match ex_group_name with
-								| None -> []
-								| Some _ -> [a_checked ()])) ();
-          			pcdata "This is a group inscription"
-							]
-						]::
-						cond_list multiple_inscr
-						(group_name_row (default "" ex_group_name))
-						(tr ~a:[a_id "team_preference_row"] [
-							td ~a:[a_colspan 5] [
-								pcdata "Team preference: ";
-								Form.select ~a:[a_id "team_preference_select";
-									a_onchange [%client change_team ~%roles]] ~name:team
-									Form.string
-								(Form.Option ([], "Any", None, false))
-								(List.map (fun (t, _) ->
-									Form.Option ([], t, None, false)
-								) roles)
-							]
-						]::
-						tr [
-							th ~a:[a_colspan 2] [pcdata "Name"];
-							th [pcdata "Role preference"];
-							th [pcdata "Note"];
-            	th [];
-						]::
-						person.it (fun (uid, (role, note))
-							(ex_uid, ex_fname, ex_lname, _, r, ex_note, _, _) init ->
-							let ex_role = default "Any" r in
-							tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
-								else "group_inscription_row"]] [
-								td ~a:[a_colspan 2] [
-									Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
-									pcdata (Printf.sprintf "%s %s" ex_fname ex_lname)
-								]; 
-								td [
-									Form.select ~a:[a_class ["role_select"]] ~name:role Form.string
-									(Form.Option ([], "Any", None, ex_role = "Any"))
-									[]
-								];
-								td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string];
-    						td (if multiple_inscr then
-									[Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
-								else
-									[]
-								)
+				(match id with
+				| Some ddl when Date.compare ddl (Date.today ()) < 0 ->
+					[p [pcdata "The inscription deadline for this game has passed."]]
+				| _ ->
+				begin
+					cond_list (nr_inscr >= max_pl)
+					(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
+					(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
+					[Form.post_form ~service:do_signup_service
+					(fun (edit, (group_name, (team, person))) ->
+					[
+						table ~a:[a_id "inscription_table"] (
+							tr [
+								td ~a:[a_colspan 5] [
+									Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%roles (default "" ~%ex_group_name))]::(match ex_group_name with
+									| None -> []
+									| Some _ -> [a_checked ()])) ();
+          				pcdata "This is a group inscription"
+								]
 							]::
-							init
-						) me_inscr
-						[
-							tr ~a:[a_id "button_row"] [
-								td ~a:[a_id "button_field"; a_colspan 5] (
-								cond_list
-									(List.length me_inscr > 1)
-									(new_button roles)
-									(Form.input ~a:[a_id "submit_button"; a_onclick [%client check_signup_form]] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
-									if signed_up
-									then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
-									else [])
-							)]	
-						])
-					)
-				]) ()
-			])
+							cond_list multiple_inscr
+							(group_name_row (default "" ex_group_name))
+							(tr ~a:[a_id "team_preference_row"] [
+								td ~a:[a_colspan 5] [
+									pcdata "Team preference: ";
+									Form.select ~a:[a_id "team_preference_select";
+										a_onchange [%client change_team ~%roles]] ~name:team
+										Form.string
+									(Form.Option ([], "Any", None, false))
+									(List.map (fun (t, _) ->
+										Form.Option ([], t, None, false)
+									) roles)
+								]
+							]::
+							tr [
+								th ~a:[a_colspan 2] [pcdata "Name"];
+								th [pcdata "Role preference"];
+								th [pcdata "Note"];
+            		th [];
+							]::
+							person.it (fun (uid, (role, note))
+								(ex_uid, ex_fname, ex_lname, _, r, ex_note, _, _) init ->
+								let ex_role = default "Any" r in
+								tr ~a:[a_class [if ex_uid = my_uid then "user_inscription_row"
+									else "group_inscription_row"]] [
+									td ~a:[a_colspan 2] [
+										Form.input ~input_type:`Hidden ~name:uid ~value:ex_uid Form.int32;
+										pcdata (Printf.sprintf "%s %s" ex_fname ex_lname)
+									]; 
+									td [
+										Form.select ~a:[a_class ["role_select"]] ~name:role Form.string
+										(Form.Option ([], "Any", None, ex_role = "Any"))
+										[]
+									];
+									td [Form.input ~input_type:`Text ~name:note ~value:ex_note Form.string];
+    							td (if multiple_inscr then
+										[Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick [%client remove_my_row]] ()]
+									else
+										[]
+									)
+								]::
+								init
+							) me_inscr
+							[
+								tr ~a:[a_id "button_row"] [
+									td ~a:[a_id "button_field"; a_colspan 5] (
+									cond_list
+										(List.length me_inscr > 1)
+										(new_button roles)
+										(Form.input ~a:[a_id "submit_button"; a_onclick [%client check_signup_form]] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
+										if signed_up
+										then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]
+										else [])
+								)]	
+							])
+						)
+					]) ()
+				])
+			end)
 		)
 	)
 	(function 
