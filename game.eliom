@@ -634,30 +634,41 @@ let cancel_page game_id () =
 	| Some (my_uid, _, _, _) ->
 		let%lwt isu = Database.sign_up_status my_uid game_id in
 		let%lwt (title, date, location, _, _, _, _, _, _, _) = Database.get_game_data game_id in
+		let%lwt (_, cd, _) = Database.get_game_deadlines game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
-			match isu with
-			| `Cancelled | `No ->
 				container (standard_menu ())
-				[
-					h1 [pcdata "Not signed up"];
-					p [pcdata "You are not signed up for the game you are trying to cancel."]
-				]
-			| `Yes _ ->
-				container (standard_menu ())
-				[
-					h1 [pcdata "Cancel inscription"];
-					p [pcdata "This will cancel your inscription for the following game:"];
-					p [b [pcdata title]; pcdata (Printf.sprintf " (%s, %s)" location game_dstr)];
-					p [pcdata "This action cannot be undone. Please confirm that you wish to continue by clicking the button below."];
-					Form.post_form ~service:do_cancel_service (fun user_id ->
-						[
-							Form.input ~input_type:`Hidden ~name:user_id ~value:my_uid Form.int32;
-							Form.input ~input_type:`Submit ~value:"Confirm" Form.string
-						]
-					) ()
-				]
+				(match isu with
+				| `Cancelled | `No ->
+					[
+						h1 [pcdata "Not signed up"];
+						p [pcdata "You are not signed up for the game you are trying to cancel."]
+					]
+				| `Yes _ ->
+					(
+						h1 [pcdata "Cancel inscription"]::
+						p [pcdata "This will cancel your inscription for the following game:"]::
+						p [b [pcdata title]; pcdata (Printf.sprintf " (%s, %s)" location game_dstr)]::
+						p [pcdata "This action cannot be undone. Please confirm that you wish to continue by clicking the button below."]::
+						(Form.post_form ~service:do_cancel_service (fun user_id ->
+							[
+								Form.input ~input_type:`Hidden ~name:user_id ~value:my_uid Form.int32;
+								Form.input ~input_type:`Submit ~value:"Confirm" Form.string
+							]
+						) ())::
+						(match cd with
+						| Some ddl when Date.compare ddl (Date.today ()) < 0 ->
+							[
+								p [
+									b [pcdata "Please note: "]; 
+									i [pcdata "The cancellation deadline for this game has passed. You can still cancel, but you will not be refunded."]
+								]
+							]	
+						| _ -> []
+						)
+					)
+				)
 	)
 	(fun e -> error_page (Printexc.to_string e))
 ;;
