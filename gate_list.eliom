@@ -45,9 +45,9 @@ let gate_list_page game_id () =
 		| Some d -> Printer.Date.sprint "%d %B %Y" d in
 		match u with
 		| None -> not_logged_in ()
-		| Some (uid, _, _, _) ->
-			if uid <> dsg_uid
-			then error_page "You are not the designer of this game."
+		| Some (uid, _, _, is_admin) ->
+			if uid <> dsg_uid && not is_admin
+			then error_page "You are not the designer of this game (or an admin)."
 			else
 				container (standard_menu ())
 				(
@@ -119,8 +119,8 @@ let print_gate_list_page game_id () =
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) ->
-			if uid <> dsg_uid
-			then error_page "You are not the designer of this game."
+			if uid <> dsg_uid && not is_admin
+			then error_page "You are not the designer of this game (or an admin)."
 			else
 				container (standard_menu ())
 				(
