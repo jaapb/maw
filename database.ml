@@ -28,20 +28,22 @@ let random_string length =
 let int32_of_inscr_status s =
 	match s with
 	| `No_show -> 0l
-	| `Confirmed -> 1l
-	| `Paid -> 2l
-	| `Interested -> 3l
-	| `Potential -> 4l
-	| `Waiting -> 5l
+	| `Attended -> 1l
+	| `Confirmed -> 2l
+	| `Paid -> 3l
+	| `Interested -> 4l
+	| `Potential -> 5l
+	| `Waiting -> 6l
 ;;
 
 let inscr_status_of_int32 s =
 	if s = 0l then `No_show
-	else if s = 1l then `Confirmed
-	else if s = 2l then `Paid
-	else if s = 3l then `Interested
-	else if s = 4l then `Potential
-	else if s = 5l then `Waiting
+	else if s = 1l then `Attended
+	else if s = 2l then `Confirmed
+	else if s = 3l then `Paid
+	else if s = 4l then `Interested
+	else if s = 5l then `Potential
+	else if s = 6l then `Waiting
 	else raise (Invalid_argument (Printf.sprintf "Unknown status code: %ld" s))
 ;;
 

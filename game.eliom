@@ -58,8 +58,10 @@ let game_page game_id () =
 							| `Interested -> "You have registered your interest for this game."
 							| `Confirmed -> "Your place for this game is confirmed."
 							| `Paid -> "You have paid for this game and your place is confirmed."
-							| `Provisional -> "You have no account, but are still seeing this. That shouldn't happen. Weird."
-							| `Waiting -> "You are on the waiting list for this game.")
+							| `Potential -> "You have no account, but are still seeing this. That shouldn't happen. Weird."
+							| `Waiting -> "You are on the waiting list for this game."
+							| `Attended -> "You attended this game."
+							| `No_show -> "You signed up for this game, but did not attend.")
 							];
 							pcdata (Printf.sprintf " Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
 						];
@@ -503,7 +505,8 @@ and show_inscriptions_page game_id () =
 		| `Waiting -> "Waiting"
 		| `Confirmed -> "Confirmed"
 		| `Paid-> "Paid"
-		| `No_show -> "No-show" in
+		| `No_show -> "No-show" 
+		| `Attended -> "Attended" in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:confirm_service (confirm_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
