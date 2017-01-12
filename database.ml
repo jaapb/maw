@@ -48,7 +48,7 @@ let inscr_status_of_int32 s =
 let rec aux_assoc_list l ct cr res =
 	match l with
 	| [] -> (ct, cr)::res
-	|	(ht, hr)::t -> begin
+	| (ht, hr)::t -> begin
 			if ht = ct
 			then aux_assoc_list t ct (hr::cr) res 
 			else aux_assoc_list t ht [hr] ((ct, cr)::res)
