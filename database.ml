@@ -522,3 +522,21 @@ let get_game_visibility game_id =
 	| [x] -> return x
 	| _ -> fail_with "Inconsistent database"
 ;;
+
+let get_gate_list_status game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT gate_list_closed \
+		FROM games \
+		WHERE id = $game_id" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> return x
+	| _ -> fail_with "Inconsistent database"
+;;
+
+let close_gate_list game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET gate_list_closed = true \
+		WHERE id = $game_id"
+;;

@@ -32,6 +32,7 @@ CREATE TABLE games (
     payment_deadline date,
     bookable boolean DEFAULT false NOT NULL,
     visible boolean DEFAULT false NOT NULL,
+    gate_list_closed boolean DEFAULT false NOT NULL,
     CONSTRAINT games_check CHECK ((inscription_deadline <= date)),
     CONSTRAINT games_check1 CHECK ((cancellation_deadline <= date)),
     CONSTRAINT games_check2 CHECK ((payment_deadline <= date))
