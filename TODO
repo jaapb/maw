@@ -17,6 +17,8 @@
 
 * refactor code
 * extend visibility across all pages (not visible = unknown)
+* turn manual confirmation into Action
+* also make sure casting works properly (some empty roles not displayed?)
 
 - design HTML
 - forums
