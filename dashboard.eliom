@@ -23,7 +23,7 @@ let format_upcoming_games ug =
 	| l ->
 		table (
 			List.flatten (List.map (function
-			| (id, title, date, loc) -> 
+			| (id, title, date, loc, _, _) -> 
 				[tr [td (location_bar id title date loc)]]
 			) l)
 		)

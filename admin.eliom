@@ -18,9 +18,9 @@ let add_game_page f () (title, designer) =
 
 let set_game_data_page f () games =
 	(try
-		Lwt_list.iter_s (fun (game_id, (date_str, location)) ->
+		Lwt_list.iter_s (fun (game_id, (date_str, (location, (visible, bookable)))) ->
 			let date = Printer.Date.from_fstring "%Y-%m-%d" date_str in
-			Database.set_game_data game_id date location
+			Database.set_game_data game_id date location visible bookable
 		) games
 	with Invalid_argument s ->
 		Lwt.return (ignore ([%client (Eliom_lib.alert "Error: %s" ~%s: unit)]))) >>=
@@ -32,14 +32,14 @@ let rec admin_page () () =
 		~post_params:(string "title" ** int32 "designer") () in
 	let set_game_data_service = create_attached_post ~fallback:admin_service
  	 ~post_params:(list "game" (int32 "game_id" ** string "date" **
-		string "location")) () in
+		string "location" ** bool "visible" ** bool "bookable")) () in
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
     match u with
     | None -> not_logged_in ()
     | Some (_, _, _, is_admin) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
-      let%lwt games = Database.get_upcoming_games ~no_date:true () in
+      let%lwt games = Database.get_upcoming_games ~all:true () in
       let%lwt users = Database.get_users ~unconfirmed:true () in
 			let nonconf = List.filter (fun (_, _, _, _, s) -> s = Some "U") users in
 			let%lwt confirm_strs = Lwt_list.map_s (fun (id, _, _, _, _) ->
@@ -53,7 +53,7 @@ let rec admin_page () () =
         container (standard_menu ())
         [
           h1 [pcdata "Administration"];
-          h2 [pcdata "Set game date and location"];
+          h2 [pcdata "Set game data"];
           Form.post_form ~service:set_game_data_service
           (fun (game) ->
 						[table (
@@ -61,8 +61,10 @@ let rec admin_page () () =
 								th [pcdata "Game title"];
 								th [pcdata "Date"];
 								th [pcdata "Location"];
+								th [pcdata "V"];
+								th [pcdata "B"];
 							]::
-							game.it (fun (game_id, (date, location)) (i, t, d, l) init ->
+							game.it (fun (game_id, (date, (location, (visible, bookable)))) (i, t, d, l, v, b) init ->
 								let dstr = match d with
 								| Some dt -> Printer.Date.sprint "%Y-%m-%d" dt
 								| None -> "" in
@@ -76,6 +78,12 @@ let rec admin_page () () =
 									];
 									td [
 										Form.input ~input_type:`Text ~name:location ~value:l Form.string
+									];
+									td [
+										bool_checkbox visible v
+									];
+									td [
+										bool_checkbox bookable b
 									]
 								]::
 								init

@@ -33,7 +33,10 @@ let game_page game_id () =
 		Database.get_game_data game_id in
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
-    match u with
+		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
+		if not visible
+		then unknown_game ()
+		else match u with
 	  | None -> container (standard_menu ()) 
 			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl))
 	  | Some (uid, _, _, _) ->
@@ -72,7 +75,9 @@ let game_page game_id () =
 						| Some ddl when Date.compare ddl (Date.today ()) < 0 ->
 							p [pcdata "The inscription deadline for this game has passed."]
 						| _ ->
-							a ~service:signup_service [pcdata "Sign up for this game"] game_id
+							(if bookable
+							then a ~service:signup_service [pcdata "Sign up for this game"] game_id
+							else p [pcdata "Inscriptions for this game will be opened later."])
 					]
 				end
 			)

@@ -13,11 +13,10 @@
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* deadlines for inscription/cancellation/payment in database
-* admin: explicitly set visibility / bookability of games
 * group inscriptions: everyone (except for original user) needs to confirm
 
-* refactorcode
+* refactor code
+* extend visibility across all pages (not visible = unknown)
 
 - design HTML
 - forums

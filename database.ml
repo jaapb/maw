@@ -55,18 +55,17 @@ let rec aux_assoc_list l ct cr res =
 		end
 ;;
 
-let get_upcoming_games ?no_date () =
+let get_upcoming_games ?(all=false) () =
 	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
-  match no_date with
-  | Some true -> PGSQL(dbh) "SELECT id, title, date, location \
+	if all then PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
     FROM games \
-    WHERE date >= $today OR DATE IS NULL \
+    WHERE date >= $today \
     ORDER BY date ASC"
-  | _ -> PGSQL(dbh) "SELECT id, title, date, location \
-		FROM games \
-		WHERE date >= $today \
-		ORDER BY date ASC"
+	else PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
+    FROM games \
+    WHERE date >= $today AND visible \
+    ORDER BY date ASC"
 ;;
 
 let get_user_games uid =
@@ -383,9 +382,10 @@ let add_game title designer =
 		($title, $designer)"
 ;;
 
-let set_game_data game_id date location =
+let set_game_data game_id date location visible bookable =
 	get_db () >>= fun dbh -> PGSQL(dbh) "UPDATE games \
-		SET date = $date, location = $location \
+		SET date = $date, location = $location, visible = $visible, \
+			bookable = $bookable \
 		WHERE id = $game_id"
 ;;
 
@@ -508,4 +508,15 @@ let get_game_deadlines game_id =
 	| [] -> fail Not_found
 	| [x] -> return x
 	| _ -> fail_with "Inconsistent database"
-;
+;;
+
+let get_game_visibility game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT visible, bookable \
+		FROM games \
+		WHERE id = $game_id" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> return x
+	| _ -> fail_with "Inconsistent database"
+;;

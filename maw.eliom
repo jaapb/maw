@@ -159,6 +159,12 @@ let unknown_game () =
 		p [pcdata "Sorry, that game does not exist."]
 	];;
 
+(* Random stuff *)
+
+let bool_checkbox name value =
+	Form.input ~input_type:`Checkbox ~a:(if value then [a_checked ()] else []) ~name:name Form.bool
+	;;
+
 let () =
 	Eliom_config.parse_config [mail_el];
 	Eliom_registration.Action.register ~service:login_service login_action;
