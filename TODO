@@ -1,29 +1,33 @@
-- ability to merge groups 
-- integrate with PayPal
-- gate list (book people in at venue)
+Things that need to be done before testing release:
+(+: may be difficult; -: easy)
++ ability to merge groups 
++ integrate with PayPal
+- gate list (book people in at venue) (print it out)
 - users should be able to see waiting list (or at least numbers)
-- show vacancies in game description
-- show vacancies to not-signed-up users and allow them to sign up for them
+- show roles in game description
++ show vacancies to not-signed-up users and allow them to sign up for them
 - admin should be able to create accounts
 - temporary account available for 48h
-- picture upload for description
-- add admin interfaces (as backup for user actions)
++ picture upload for description
++ add admin interfaces (as backup for user actions)
 - log out should go back to main page
-- notifications (baseline can't be turned off)
++ notifications (baseline can't be turned off)
 - send mail to users (and to designer)
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
-* group inscriptions: everyone (except for original user) needs to confirm
+- group inscriptions: everyone (except for original user) needs to confirm
++ refactor code
+- extend visibility across all pages (not visible = unknown)
+- turn manual confirmation into Action
++ also make sure casting works properly (some empty roles not displayed?)
+- game numbers taken from roles
 
-* refactor code
-* extend visibility across all pages (not visible = unknown)
-* turn manual confirmation into Action
-* also make sure casting works properly (some empty roles not displayed?)
-
+Stuff that can wait a bit:
 - design HTML
 - forums
 - printing out name tags and role labels
 
+Would be nice to have:
 - social login (facebook/OpenID/...)
 - achievement system
 - interests section (game tags)
