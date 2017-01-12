@@ -18,6 +18,8 @@ Things that need to be done before testing release:
 - turn manual confirmation into Action
 + also make sure casting works properly (some empty roles not displayed?)
 - game numbers taken from roles
++ Sort out menus
++ Give feedback when saving things
 
 Stuff that can wait a bit:
 - design HTML
