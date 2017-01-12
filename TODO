@@ -17,6 +17,8 @@
 * admin: explicitly set visibility / bookability of games
 * group inscriptions: everyone (except for original user) needs to confirm
 
+* refactorcode
+
 - design HTML
 - forums
 - printing out name tags and role labels
