@@ -19,14 +19,15 @@ let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (i
 let cancel_service = create ~path:(Path ["cancel"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
-  let standard_game_data title loc date dsg_fname dsg_lname d full =
+  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl =
 		h1 [pcdata title]::
 		p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 		p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
 		p [pcdata d]::
-    (if full
+    (if nr_inscr >= max_pl
     then [p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]]
-    else []) in
+    else [p [pcdata (Printf.sprintf "This game currently has %ld inscription(s), for %ld places." nr_inscr max_pl)]]
+		) in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () ->
 		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg, d, _, max_pl, _) =
@@ -34,15 +35,15 @@ let game_page game_id () =
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
 		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
-		if not visible
-		then unknown_game ()
-		else match u with
+		match u with
 	  | None -> container (standard_menu ()) 
-			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl))
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl)
 	  | Some (uid, _, _, _) ->
 			let%lwt isu = Database.sign_up_status uid game_id in
-			container (standard_menu ()) 
-			(standard_game_data title loc date dsg_fname dsg_lname d (nr_inscr >= max_pl) @
+			if not visible && uid <> dsg 	
+			then unknown_game ()
+			else container (standard_menu ()) 
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl @
 		  	if uid = dsg then
 				[
 					p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
