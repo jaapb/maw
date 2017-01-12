@@ -2,7 +2,6 @@ Things that need to be done before testing release:
 (+: may be difficult; -: easy)
 + ability to merge groups 
 + integrate with PayPal
-- gate list (book people in at venue) (print it out)
 - users should be able to see waiting list (or at least numbers)
 - show roles in game description
 + show vacancies to not-signed-up users and allow them to sign up for them
