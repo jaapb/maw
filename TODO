@@ -2,7 +2,6 @@ Things that need to be done before testing release:
 (+: may be difficult; -: easy)
 + ability to merge groups 
 + integrate with PayPal
-- show roles in game description
 + show vacancies to not-signed-up users and allow them to sign up for them
 - admin should be able to create accounts
 - temporary account available for 48h
