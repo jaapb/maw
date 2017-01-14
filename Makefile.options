@@ -5,10 +5,25 @@
 
 PROJECT_NAME := maw
 
-ELIOM_FILES=	services.eliom maw.eliom role.eliom cast.eliom message.eliom \
-	design.eliom game.eliom signup.eliom show_inscriptions.eliom \
-	show_casting.eliom cancel.eliom account.eliom register.eliom \
-	confirm_user.eliom confirm_provisional_user.eliom admin.eliom gate_list.eliom
+ELIOM_FILES=	\
+	account.eliom \
+	admin.eliom \
+	cancel.eliom \
+	cast.eliom \
+	confirm_provisional_user.eliom \
+	confirm_user.eliom \
+	design.eliom \
+	game.eliom \
+	gate_list.eliom \
+	maw.eliom \
+	message.eliom \
+	register.eliom \
+	role.eliom \
+	signup.eliom \
+	show_inscriptions.eliom \
+	show_casting.eliom \
+	services.eliom \
+	user_history.eliom
 # Source files for the server
 SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
 # Source files for the client

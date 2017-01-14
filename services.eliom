@@ -24,8 +24,5 @@ let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_
 let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let show_inscriptions_service = create ~path:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let signup_service = create ~path:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let update_deadlines_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "inscription" ** string "cancellation" ** string "payment")) ();;
-let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
-let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
 let user_history_service = create ~path:(Path ["history"]) ~meth:(Get (int32 "user_id")) ();;
 

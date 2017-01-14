@@ -13,7 +13,51 @@
 	open Maw
 ]
 
+let update_description game_id () descr =
+	let%lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) -> Database.set_game_description game_id descr
+;;
+
+let update_numbers game_id () (min, max) =
+	let%lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
+;;
+
+let update_deadlines game_id () (id, (cd, pd)) =
+	let inscr_date = if id = ""
+		then None
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" id) in
+	let cancel_date = if cd = ""
+		then None
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" cd) in
+	let pay_date = if pd = ""
+		then None
+		else Some (Printer.Date.from_fstring "%Y-%m-%d" pd) in
+	let%lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
+
 let design_page game_id () = 
+	let update_deadlines_service = create_attached_post
+		~fallback:(preapply design_service game_id)
+		~post_params:(string "inscription" ** string "cancellation" ** string "payment") () in
+	let update_descr_service = create_attached_post
+		~fallback:(preapply design_service game_id)
+		~post_params:(string "description") () in
+	let update_numbers_service = create_attached_post
+		~fallback:(preapply design_service game_id)
+		~post_params:(int32 "min" ** int32 "max") () in
+	Eliom_registration.Action.register ~service:update_descr_service
+		(update_description game_id);
+	Eliom_registration.Action.register ~service:update_numbers_service
+		(update_numbers game_id);
+	Eliom_registration.Action.register ~service:update_deadlines_service
+		(update_deadlines game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -55,7 +99,7 @@ let design_page game_id () =
 							]
 						]
 					]
-				]) game_id;
+				]) ();
 				Form.post_form ~service:update_numbers_service (fun (min, max) -> [
 					table [
 						tr [
@@ -69,7 +113,7 @@ let design_page game_id () =
 							td [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
-				]) game_id;
+				]) ();
 				Form.post_form ~service:update_deadlines_service (fun (id, (cd, pd)) -> [
 					table [
 						tr [
@@ -91,7 +135,7 @@ let design_page game_id () =
 							td ~a:[a_colspan 2] [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
-				]) game_id
+				]) ()
 			]
 	)
 	(function
@@ -100,41 +144,6 @@ let design_page game_id () =
 	)
 ;;
 
-let update_description game_id descr =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_description game_id descr
-;;
-
-let update_numbers game_id (min, max) =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
-;;
-
-let update_deadlines game_id (id, (cd, pd)) =
-	let inscr_date = if id = ""
-		then None
-		else Some (Printer.Date.from_fstring "%Y-%m-%d" id) in
-	let cancel_date = if cd = ""
-		then None
-		else Some (Printer.Date.from_fstring "%Y-%m-%d" cd) in
-	let pay_date = if pd = ""
-		then None
-		else Some (Printer.Date.from_fstring "%Y-%m-%d" pd) in
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
-
 let () =
-	Maw_app.register ~service:design_service design_page;
-	Eliom_registration.Action.register ~service:update_descr_service
-		update_description;
-	Eliom_registration.Action.register ~service:update_numbers_service
-		update_numbers;
-	Eliom_registration.Action.register ~service:update_deadlines_service
-		update_deadlines
+	Maw_app.register ~service:design_service design_page
 ;;
