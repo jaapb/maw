@@ -7,7 +7,6 @@ Things that need to be done before testing release:
 - temporary account available for 48h
 + picture upload for description
 + add admin interfaces (as backup for user actions)
-- log out should go back to main page
 + notifications (baseline can't be turned off)
 - send mail to users (and to designer)
 - add mailing list to admin
