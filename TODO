@@ -12,7 +12,6 @@ Things that need to be done before testing release:
 - add mailing list to admin
 - disable account (hide: user themselves, purge: by admin)
 - group inscriptions: everyone (except for original user) needs to confirm
-+ refactor code
 - extend visibility across all pages (not visible = unknown)
 - turn manual confirmation into Action
 + also make sure casting works properly (some empty roles not displayed?)
