@@ -5,22 +5,13 @@
 	open Eliom_service
 	open Eliom_parameter
 	open Utils
+	open Services
 ]
 
 [%%server
 	open CalendarLib
 	open Maw
 ]
-
-let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let update_descr_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "description")) ();;
-let update_numbers_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), int32 "min" ** int32 "max")) ();;
-let update_deadlines_service = create ~path:(Path ["design"]) ~meth:(Post (suffix (int32 "game_id"), string "inscription" ** string "cancellation" ** string "payment")) ();;
-let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) ();;
-let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let do_message_service = create ~path:(Path ["messaging"]) ~meth:(Post (suffix (int32 "game_id"), string "team" ** string "subject" ** string "contents")) ();;
 
 let%client selected_player: int32 option ref = ref None;;
 
@@ -381,7 +372,27 @@ let%client cast_init ev =
 	selected_player := None;
 ;;
 
+let do_cast_page game_id (teams, publish) =
+	let%lwt u = Eliom_reference.get Maw.user in
+	(match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) -> 
+		Database.update_casting game_id teams) >>=
+	fun () -> Database.set_published game_id publish >>=
+	fun () -> container (standard_menu ())
+	[
+		h1 [pcdata "Casting"];
+		p [pcdata
+			(if publish
+			then "Casting saved and published."
+			else "Casting saved.")]
+	]
+;;
+
 let cast_page game_id () =
+	let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) () in
+	Maw_app.register ~scope:Eliom_common.default_session_scope
+		~service:do_cast_service do_cast_page;
 	let partition_groups l =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
 			match l with
@@ -420,7 +431,7 @@ let cast_page game_id () =
 								td ~a:[
 									a_id (Printf.sprintf "player_%ld" p_id);
           	   		a_onclick [%client (handle_player_click ~%(Some p_id))];
-									a_oncontextmenu [%client (show_history ~%(User.user_history_service) ~%p_id)];
+									a_oncontextmenu [%client (show_history ~%(user_history_service) ~%p_id)];
 							  	a_title n
             		] [
 									Raw.input ~a:[a_input_type `Hidden; a_value (Int32.to_string p_id)] (); 	
@@ -456,7 +467,7 @@ let cast_page game_id () =
 										(match pid with
 										| None -> []
 										| Some x -> [
-												a_oncontextmenu [%client (show_history ~%(User.user_history_service) ~%x)];
+												a_oncontextmenu [%client (show_history ~%(user_history_service) ~%x)];
 												a_id (Printf.sprintf "player_%ld" x)
 											]
 										)
@@ -507,24 +518,26 @@ let cast_page game_id () =
 	)
 ;;
 
-let do_cast_page game_id (teams, publish) =
-	let%lwt u = Eliom_reference.get Maw.user in
-	(match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> 
-		Database.update_casting game_id teams) >>=
-	fun () -> Database.set_published game_id publish >>=
-	fun () -> container (standard_menu ())
-	[
-		h1 [pcdata "Casting"];
-		p [pcdata
-			(if publish
-			then "Casting saved and published."
-			else "Casting saved.")]
-	]
+let do_message_page game_id _ =
+  let%lwt u = Eliom_reference.get Maw.user in
+  match u with
+  | None -> not_logged_in ()
+  | Some (uid, _, _, _) -> 
+		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
+			Database.get_game_data game_id in
+		if uid <> dsg_id then error_page "You are not the designer of this game."
+    else
+		container (standard_menu ())
+		[
+			h1 [pcdata "Message sent"];
+			p [pcdata "Aren't you proud of me?"] 
+		]
 ;;
 
 let message_page game_id () =
+	let do_message_service = create ~path:(Path ["messaging"]) ~meth:(Post (suffix (int32 "game_id"), string "team" ** string "subject" ** string "contents")) () in
+	Maw_app.register ~scope:Eliom_common.default_session_scope
+		~service:do_message_service do_message_page;
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
@@ -573,21 +586,6 @@ let message_page game_id () =
 		]
 ;;
 
-let do_message_page game_id _ =
-  let%lwt u = Eliom_reference.get Maw.user in
-  match u with
-  | None -> not_logged_in ()
-  | Some (uid, _, _, _) -> 
-		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
-			Database.get_game_data game_id in
-		if uid <> dsg_id then error_page "You are not the designer of this game."
-    else
-		container (standard_menu ())
-		[
-			h1 [pcdata "Message sent"];
-			p [pcdata "Aren't you proud of me?"] 
-		]
-;;
 let () =
 	Maw_app.register ~service:design_service design_page;;
 	Eliom_registration.Action.register ~service:update_descr_service
@@ -598,7 +596,5 @@ let () =
 		update_deadlines;
   Maw_app.register ~service:role_service role_page;
   Maw_app.register ~service:cast_service cast_page;
-	Maw_app.register ~service:do_cast_service do_cast_page;
 	Maw_app.register ~service:message_service message_page;
-	Maw_app.register ~service:do_message_service do_message_page
 ;;

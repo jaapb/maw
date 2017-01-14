@@ -5,18 +5,13 @@
 	open Eliom_service
 	open Eliom_parameter
 	open Utils
+	open Services
 ]
 
 [%%server
 	open CalendarLib
 	open Maw
 ]
-
-let game_service = create ~path:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let signup_service = create ~path:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let show_inscriptions_service = create ~path:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
-let cancel_service = create ~path:(Path ["cancel"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let game_page game_id () =
   let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles =
@@ -57,9 +52,9 @@ let game_page game_id () =
 			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles @
 		  	if uid = dsg then
 				[
-					p [a ~service:Design.design_service [pcdata "Edit the game design"] game_id];
+					p [a ~service:design_service [pcdata "Edit the game design"] game_id];
 					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id];
-					p [a ~service:Design.message_service [pcdata "Send a message to players"] game_id]
+					p [a ~service:message_service [pcdata "Send a message to players"] game_id]
 				]
 				else 
 				begin

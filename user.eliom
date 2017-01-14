@@ -5,6 +5,7 @@
 	open Eliom_service
 	open Eliom_parameter
 	open Utils
+	open Services
 ]
 
 [%%server
@@ -12,13 +13,6 @@
 	open Maw
 	open Database
 ]
-
-let add_user_service = create ~path:(Path ["register"])
-	~meth:(Post (unit, string "first_name" ** string "last_name" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone")) ();;
-let confirm_user_service = create ~path:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;
-let confirm_provisional_user_service = create ~path:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
-(* let find_user_service = Eliom_service.create ~path:No_path ~meth:(Get (int "row_id")) ();; *)
-let user_history_service = create ~path:(Path ["history"]) ~meth:(Get (int32 "user_id")) ();;
 
 let update_user_page () (fname, (lname, (email, (password, (address, (postcode, (town, (country, phone))))))))  =
 	Lwt.catch (fun () ->
@@ -576,10 +570,9 @@ let user_history_page uid () =
 
 let _ =
 	Maw_app.register ~service:account_service account_page;
-	Maw_app.register ~service:Maw.register_service register_page;
+	Maw_app.register ~service:register_service register_page;
 	Maw_app.register ~service:add_user_service add_user_page;
 	Maw_app.register ~service:confirm_user_service confirm_user_page;
 	Maw_app.register ~service:confirm_provisional_user_service confirm_provisional_user_page;
-	(*Maw_app.register ~service:find_user_service find_user_page*)
 	Maw_app.register ~service:user_history_service user_history_page
 ;;

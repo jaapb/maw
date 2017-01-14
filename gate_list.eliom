@@ -34,7 +34,7 @@ let do_close_gate_list game_id () () =
 		) roles
 	) cast in
 	let%lwt () = Database.close_gate_list game_id in
-	Dashboard.dashboard_page () ()
+	Maw.dashboard_page () ()
 ;;	
 
 let gate_list_page game_id () =

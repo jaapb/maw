@@ -4,6 +4,7 @@
 	open Html.D
 	open Eliom_service
 	open Eliom_parameter
+	open Services
 ]
 
 [%%server
@@ -139,7 +140,7 @@ let rec admin_page () () =
 							[
 								td [pcdata (Printf.sprintf "%s %s" fname lname)];
 								td [pcdata email];
-								td [a ~service:User.confirm_user_service [pcdata "Confirm"] (id, cstr)]
+								td [a ~service:confirm_user_service [pcdata "Confirm"] (id, cstr)]
 							]
 						) nonconf confirm_strs 
 					)

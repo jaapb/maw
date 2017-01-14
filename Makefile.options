@@ -5,7 +5,7 @@
 
 PROJECT_NAME := maw
 
-ELIOM_FILES=	maw.eliom dashboard.eliom design.eliom game.eliom user.eliom \
+ELIOM_FILES=	services.eliom maw.eliom design.eliom game.eliom user.eliom \
 	admin.eliom gate_list.eliom
 # Source files for the server
 SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
