@@ -7,7 +7,8 @@ PROJECT_NAME := maw
 
 ELIOM_FILES=	services.eliom maw.eliom role.eliom cast.eliom message.eliom \
 	design.eliom game.eliom signup.eliom show_inscriptions.eliom \
-	show_casting.eliom cancel.eliom user.eliom admin.eliom gate_list.eliom
+	show_casting.eliom cancel.eliom account.eliom register.eliom \
+	confirm_user.eliom confirm_provisional_user.eliom admin.eliom gate_list.eliom
 # Source files for the server
 SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
 # Source files for the client
