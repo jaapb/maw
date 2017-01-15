@@ -73,6 +73,7 @@ following game:\n
 This game will be held in %s on %s.\n
 \n
 As you did not yet have an account, a provisional account has been created for you. You can confirm this account here: %s\n
+This link will stay active for 48 hours.\n
 (If you already have an account or if you wish to cancel this inscription, you can also do that at the link mentioned above.)\n
 \n
 Kind regards,\n
