@@ -61,7 +61,7 @@ let game_page game_id () =
 				[
 					p [a ~service:design_service [pcdata "Edit the game design"] game_id];
 					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id];
-					p [a ~service:message_service [pcdata "Send a message to players"] game_id]
+					p [a ~service:designer_message_service [pcdata "Send a message to players"] game_id]
 				]
 				else 
 				begin

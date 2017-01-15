@@ -13,10 +13,10 @@ ELIOM_FILES=	\
 	confirm_provisional_user.eliom \
 	confirm_user.eliom \
 	design.eliom \
+	designer_message.eliom \
 	game.eliom \
 	gate_list.eliom \
 	maw.eliom \
-	message.eliom \
 	new_game.eliom \
 	new_provisional_user.eliom \
 	register.eliom \

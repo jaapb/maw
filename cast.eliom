@@ -157,13 +157,13 @@ let cast_page game_id () =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
 			match l with
 			| [] -> ((g, rhd)::res)
-			| (_, _, _, _, _, _, g', _) as x::l' -> 
+			| (_, _, _, _, _, _, _, g', _) as x::l' -> 
 				if g = g' then pg_aux l' g (x::rhd) res
 				else pg_aux l' g' [x] ((g, rhd)::res)
 		in
 		match l with
 		| [] -> []
-		| (_, _, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
+		| (_, _, _, _, _, _, _, g, _) as x::l' -> pg_aux l' g [x] [] 
 	in
   let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -186,7 +186,7 @@ let cast_page game_id () =
 					(List.map (fun (gn, g) -> 
 						table ~a:[a_class ["casting"]]
 						(tr [th ~a:[a_class ["group_name"]; a_colspan 2] [pcdata (default "Ungrouped" gn)]]::
-        		List.map (fun (fname, lname, p_id, _, _, n, _, _) ->
+        		List.map (fun (fname, lname, _, p_id, _, _, n, _, _) ->
         			tr ~a:[a_class ["player_row"]] [
 								td ~a:[
 									a_id (Printf.sprintf "player_%ld" p_id);

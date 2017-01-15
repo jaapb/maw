@@ -12,13 +12,13 @@ let confirm_user_service = create ~path:(Path ["confirm"]) ~meth:(Get (suffix (i
 let confirm_provisional_user_service = create ~path:(Path ["confirm_provisional"]) ~meth:(Get (suffix (int32 "user_id"))) ();;
 let dashboard_service = create ~path:(Path []) ~meth:(Get unit) ();;
 let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let designer_message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let game_service = create ~path:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let login_service = create ~path:No_path
 	~meth:(Post (unit, (string "name" ** string "password"))) ();;
 let logout_service = create_attached_post
 	~fallback:dashboard_service
 	~post_params:unit ();;
-let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let new_game_service = create ~path:(Path ["new_game"]) ~meth:(Get unit) ();;
 let new_provisional_user_service = create ~path:(Path ["new_provisional_user"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let register_service = create ~path:(Path ["register"]) ~meth:(Get unit) ();;

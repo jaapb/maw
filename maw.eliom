@@ -190,7 +190,7 @@ let format_my_games mg dg =
 						td [a ~service:design_service [pcdata "Edit design"] id];
 						td [a ~service:show_inscriptions_service [pcdata "Show inscriptions"] id];
 						td [a ~service:cast_service [pcdata "Casting"] id];
-						td [a ~service:message_service [pcdata "Messages"] id]
+						td [a ~service:designer_message_service [pcdata "Messages"] id]
 					]]
 				) l))
 			])

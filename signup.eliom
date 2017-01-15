@@ -13,6 +13,8 @@
 	open Maw
 ]
 
+let%client nr_ids = ref 0
+
 let%client rec renumber_children n trs =
 	match trs with
 	| [] -> ()
@@ -70,8 +72,6 @@ let%client new_row game_id id roles =
 		td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
 	]
 ;;
-
-let%client nr_ids = ref 0
 
 let%client add_inscription_row game_id it roles =
 	let br = Dom_html.getElementById "button_row" in

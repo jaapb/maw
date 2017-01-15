@@ -209,16 +209,16 @@ let get_inscription_data uid game_id =
 
 let get_inscription_list ?(filter_cast = false) game_id =
 	get_db () >>= fun dbh ->
-	if filter_cast then PGSQL(dbh) "SELECT first_name, last_name, i.user_id, \
-	  i.preferred_team, i.preferred_role, note, group_name, status \
+	if filter_cast then PGSQL(dbh) "SELECT first_name, last_name, email,
+		i.user_id, i.preferred_team, i.preferred_role, note, group_name, status \
 		FROM game_inscriptions i JOIN users ON user_id = users.id 
 			LEFT JOIN game_casting c \
 			ON i.user_id = c.user_id AND i.game_id = c.game_id \
 		WHERE i.game_id = $game_id AND role_name IS NULL \
 		AND NOT cancelled \
 		ORDER BY status ASC, group_name ASC, inscription_time ASC"
-	else PGSQL(dbh) "SELECT first_name, last_name, user_id, preferred_team, \
-		preferred_role, note, group_name, status \
+	else PGSQL(dbh) "SELECT first_name, last_name, email, user_id, \
+		preferred_team, preferred_role, note, group_name, status \
 		FROM game_inscriptions JOIN users ON user_id = users.id \
 		WHERE game_id = $game_id AND NOT cancelled \
 		ORDER BY status ASC, group_name ASC, inscription_time ASC"
@@ -538,4 +538,11 @@ let close_gate_list game_id =
 	PGSQL(dbh) "UPDATE games \
 		SET gate_list_closed = true \
 		WHERE id = $game_id"
+;;
+
+let get_team_members game_id team =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT email, first_name, last_name \
+		FROM game_casting JOIN users ON game_casting.user_id = users.id \
+		WHERE game_casting.game_id = $game_id AND team_name = $team"
 ;;

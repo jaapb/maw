@@ -59,7 +59,7 @@ and show_inscriptions_page game_id () =
 							th [pcdata "Role"];
 							th [pcdata "Note"]
 						]::
-						List.map (fun (fname, lname, ex_uid, t, r, nt, g, st) ->
+						List.map (fun (fname, lname, _, ex_uid, t, r, nt, g, st) ->
 							tr [
 								td (match (Database.inscr_status_of_int32 st) with
 									| `Potential | `Interested | `Waiting ->
