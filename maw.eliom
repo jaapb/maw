@@ -96,7 +96,12 @@ let standard_menu () =
 				td [a ~service:account_service [pcdata "My account"] ()]
 			]::
 			(if is_admin
-			then [tr [td [a ~service:admin_service [b [pcdata "Admin"]] ()]]]
+			then [
+				tr [td [a ~service:new_user_service [b [pcdata "Create a new user"]] ()]];
+				tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]];
+				tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]];
+				tr [td [a ~service:admin_confirm_user_service [b [pcdata "Manually confirm users"]] ()]]
+			]
 			else [])
 		)]
 ;;
