@@ -20,6 +20,7 @@ let logout_service = create_attached_post
 	~post_params:unit ();;
 let message_service = create ~path:(Path ["messaging"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let new_game_service = create ~path:(Path ["new_game"]) ~meth:(Get unit) ();;
+let new_provisional_user_service = create ~path:(Path ["new_provisional_user"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let register_service = create ~path:(Path ["register"]) ~meth:(Get unit) ();;
 let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let set_game_data_service = create ~path:(Path ["set_game_data"]) ~meth:(Get unit) ();;

@@ -48,7 +48,7 @@ let%client remove_my_row ev =
   )
 ;;
 
-let%client new_row id roles =
+let%client new_row game_id id roles =
 	let tps = Dom_html.getElementById "team_preference_select" in
 	let r_names = Js.Opt.case (Dom_html.CoerceTo.select tps)
 		(fun () -> [])
@@ -61,7 +61,9 @@ let%client new_row id roles =
 			Raw.input ~a:[a_class ["gir_text"]; a_id (Printf.sprintf "gir_text[%d]" id); a_name (Printf.sprintf "__co_eliom_person.uid[%d]" id); a_input_type `Search; a_value ""; a_list "users_list"] ();
 		];
 		td [
-			pcdata "[new user]"
+			Raw.input ~a:[a_onclick (fun e ->
+				ignore (Eliom_client.window_open ~window_name:(Js.string "New user") ~service:~%new_provisional_user_service game_id));
+			a_input_type `Button; a_value "New user"] ()
 		];
 		td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] (option (pcdata "Any")::List.map (fun x -> option (pcdata x)) r_names)];
 		td [Raw.input ~a:[a_name (Printf.sprintf "__co_eliom_person.note[%d]" id); a_input_type `Text; a_value ""] ()];
@@ -71,11 +73,11 @@ let%client new_row id roles =
 
 let%client nr_ids = ref 0
 
-let%client add_inscription_row it roles =
+let%client add_inscription_row game_id it roles =
 	let br = Dom_html.getElementById "button_row" in
   begin
     incr nr_ids;
-    Dom.insertBefore it (Html.To_dom.of_element (new_row !nr_ids roles)) (Js.some br);
+    Dom.insertBefore it (Html.To_dom.of_element (new_row game_id !nr_ids roles)) (Js.some br);
   end
 ;;
 
@@ -88,11 +90,11 @@ let%shared group_name_row gname =
 	]
 ;;
 
-let%shared new_button roles =
-  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row (Dom_html.getElementById "inscription_table") ~%roles)]] ()
+let%shared new_button game_id roles =
+  Raw.input ~a:[a_id "add_button"; a_input_type `Button; a_value "Add group member"; a_onclick [%client (fun ev -> add_inscription_row ~%game_id (Dom_html.getElementById "inscription_table") ~%roles)]] ()
 ;;
 
-let%client group_inscription_handler roles gname ev =
+let%client group_inscription_handler game_id roles gname ev =
 	Js.Opt.iter (ev##.target) (fun x ->
 		Js.Opt.iter (Dom_html.CoerceTo.input x) (fun i ->
 			let it = Dom_html.getElementById "inscription_table" in
@@ -103,8 +105,8 @@ let%client group_inscription_handler roles gname ev =
 			let tpr = Dom_html.getElementById "team_preference_row" in
 				nr_ids := 0;
 				Dom.insertBefore it (Html.To_dom.of_element (group_name_row gname)) (Js.some tpr);
-				add_inscription_row it roles;
-				Dom.insertBefore bf (Html.To_dom.of_element (new_button roles)) (Js.some sb)
+				add_inscription_row game_id it roles;
+				Dom.insertBefore bf (Html.To_dom.of_element (new_button game_id roles)) (Js.some sb)
       end
       else
       begin
@@ -336,7 +338,7 @@ let signup_page game_id () =
 						table ~a:[a_id "inscription_table"] (
 							tr [
 								td ~a:[a_colspan 5] [
-									Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%roles (default "" ~%ex_group_name))]::(match ex_group_name with
+									Raw.input ~a:(a_input_type `Checkbox::a_onclick [%client (group_inscription_handler ~%game_id ~%roles (default "" ~%ex_group_name))]::(match ex_group_name with
 									| None -> []
 									| Some _ -> [a_checked ()])) ();
           				pcdata "This is a group inscription"
@@ -390,7 +392,7 @@ let signup_page game_id () =
 									td ~a:[a_id "button_field"; a_colspan 5] (
 									cond_list
 										(List.length me_inscr > 1)
-										(new_button roles)
+										(new_button game_id roles)
 										(Form.input ~a:[a_id "submit_button"; a_onclick [%client check_signup_form]] ~input_type:`Submit ~value:(if signed_up then "Save changes" else "Sign up") Form.string::
 										if signed_up
 										then [Form.input ~input_type:`Hidden ~name:edit ~value:true Form.bool]

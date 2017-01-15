@@ -18,6 +18,7 @@ ELIOM_FILES=	\
 	maw.eliom \
 	message.eliom \
 	new_game.eliom \
+	new_provisional_user.eliom \
 	register.eliom \
 	role.eliom \
 	set_game_data.eliom \

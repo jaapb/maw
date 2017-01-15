@@ -418,12 +418,13 @@ let get_users ?(confirmed = true) ?(unconfirmed = false) ?(provisional = false) 
 	fun c_users -> Lwt.return (p_users @ uc_users @ c_users)
 ;;
 
-let add_provisional_user email game_id =
+let add_provisional_user email fname lname game_id =
 	get_db () >>= fun dbh -> PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
 	fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
 	function
-	| [Some uid] -> PGSQL(dbh) "INSERT INTO provisional_users (id, email, game_id) \
-		VALUES ($uid, $email, $game_id)" >>=
+	| [Some uid] -> PGSQL(dbh) "INSERT INTO provisional_users \
+		(id, email, first_name, last_name, game_id) \
+		VALUES ($uid, $email, $fname, $lname, $game_id)" >>=
 		fun () -> Lwt.return uid
 	| _ -> Lwt.fail_with "User creation did not succeed."
 ;;
