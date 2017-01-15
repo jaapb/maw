@@ -84,6 +84,13 @@ let get_designer_games uid =
 		WHERE designer = $uid \
 		ORDER BY date ASC";;
 
+let get_all_games () =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh)
+		"SELECT title \
+		FROM games \
+		ORDER BY date ASC";;
+
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT title, date, location, first_name, last_name, designer,

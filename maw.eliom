@@ -101,6 +101,7 @@ let standard_menu extra_rows =
 			then 
 				List.rev
 				(
+					tr [td [a ~service:admin_message_service [b [pcdata "Send messages"]] ()]]::
 					tr [td [a ~service:admin_confirm_users_service [b [pcdata "Manually confirm users"]] ()]]::
 					tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]]::
 					tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]]::
