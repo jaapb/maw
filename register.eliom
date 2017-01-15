@@ -23,7 +23,7 @@ let add_user_page () (first_name, (last_name, (email, (password, (address, (post
 	end >>=
 	fun rstr -> let uri = Eliom_uri.make_string_uri ~absolute:true ~service:confirm_user_service (uid, rstr) in
 	Mail.send_register_mail first_name last_name email uri;
-	container (standard_menu ())
+	container (standard_menu [])
 	[
 		h1 [pcdata "Account created"];
 		p [pcdata "Please reply to the confirmation mail."]
@@ -132,7 +132,7 @@ let register_page () () =
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:add_user_service add_user_page;
 	Lwt.catch (fun () ->
-		container (standard_menu ())
+		container (standard_menu [])
 		[
 			h1 [pcdata "Create a new account"];
 			p ~a:[a_class ["error"]; a_id "error_paragraph"] [];

@@ -22,7 +22,7 @@ let do_message_page game_id _ =
 			Database.get_game_data game_id in
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
-		container (standard_menu ())
+		container (standard_menu [])
 		[
 			h1 [pcdata "Message sent"];
 			p [pcdata "Aren't you proud of me?"] 
@@ -42,7 +42,7 @@ let message_page game_id () =
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 			let%lwt teams = Database.get_game_teams game_id in
-		container (standard_menu ())
+		container (standard_menu [])
 		[
 			h1 [pcdata "Send message"];
 			Form.post_form ~service:do_message_service (fun (dest, (subject, text)) ->

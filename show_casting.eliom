@@ -21,7 +21,7 @@ let show_casting_page game_id () =
 			let%lwt casting = Database.get_casting game_id in
 			(*let teams = List.sort_uniq (fun (t1, _, _, _, _, _, _) (t2, _, _, _, _, _, _) ->
 				compare t1 t2) casting in*)
-			container (standard_menu ())
+			container (standard_menu [])
 			(
 				h1 [pcdata (Printf.sprintf "Casting for %s" title)]::
 				List.map (fun (t, roles) ->

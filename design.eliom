@@ -77,7 +77,7 @@ let design_page game_id () =
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
-			container (standard_menu ())
+			container (standard_menu [])
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];

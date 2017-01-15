@@ -24,7 +24,7 @@ let admin_confirm_users_page () () =
 				Database.get_confirmation id) nonconf in
       let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
-        container (standard_menu ())
+        container (standard_menu [])
         [
 					h1 [pcdata "Manually confirm users"];
 					table

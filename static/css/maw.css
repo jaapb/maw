@@ -152,3 +152,8 @@ table.role_table input.role
 {
 	width: 100%;
 }
+
+tr.separator
+{
+	height: 1ex;
+}

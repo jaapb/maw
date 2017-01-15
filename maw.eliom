@@ -83,7 +83,7 @@ let login_box () =
 
 (* The standard webpage container *)
 
-let standard_menu () = 
+let standard_menu extra_rows = 
 	let%lwt u = Eliom_reference.get user in
 	match u with
 	| None -> Lwt.return []
@@ -95,13 +95,19 @@ let standard_menu () =
 			tr [
 				td [a ~service:account_service [pcdata "My account"] ()]
 			]::
+			tr ~a:[a_class ["separator"]] [
+			]::
 			(if is_admin
-			then [
-				tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]];
-				tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]];
-				tr [td [a ~service:admin_confirm_users_service [b [pcdata "Manually confirm users"]] ()]]
-			]
-			else [])
+			then 
+				List.rev
+				(
+					tr [td [a ~service:admin_confirm_users_service [b [pcdata "Manually confirm users"]] ()]]::
+					tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]]::
+					tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]]::
+					tr ~a:[a_class ["separator"]] []::
+					extra_rows
+				)
+			else extra_rows)
 		)]
 ;;
 
@@ -129,7 +135,7 @@ let container ?onload menu_thread cts_div =
 	);;
 
 let error_page e =
-	container (standard_menu ())
+	container (standard_menu [])
 	[
 		h1 [pcdata "Error"];
 		p [pcdata e]
@@ -200,7 +206,7 @@ let dashboard_page () () =
 				fun mg -> Database.get_designer_games uid >>=
 				fun dg -> format_my_games mg dg
 		in
-		container (standard_menu ())
+		container (standard_menu [])
 		(
 			h1 [pcdata "Upcoming games"]::
 			format_upcoming_games ug::
@@ -218,13 +224,13 @@ end;;
 (* Generic messages *)
 
 let not_logged_in () =
-	container (standard_menu ())
+	container (standard_menu [])
 	[
 		p [pcdata "You need to be logged in for this to work. You can log in (or create a new account) on the top right of the screen."]
 	];;
 
 let unknown_game () =
-	container (standard_menu ())
+	container (standard_menu [])
 	[
 		h1 [pcdata "Unknown game"];
 		p [pcdata "Sorry, that game does not exist."]

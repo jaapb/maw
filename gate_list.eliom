@@ -75,7 +75,7 @@ let gate_list_page game_id () =
 			else if is_closed
 			then error_page "The gate list is already closed."
 			else
-				container (standard_menu ())
+				container (standard_menu [])
 				(
 					h1 [pcdata (Printf.sprintf "Gate list for %s" title)]::
 					p [pcdata (Printf.sprintf "By %s %s; %s, %s" dsg_fn dsg_ln loc date_str)]::
@@ -158,7 +158,7 @@ let print_gate_list_page game_id () =
 			else if is_closed
 			then error_page "The gate list is already closed."
 			else
-				container (standard_menu ())
+				container (standard_menu [])
 				(
 					h1 [pcdata (Printf.sprintf "Gate list for %s" title)]::
 					p [pcdata (Printf.sprintf "By %s %s; %s, %s" dsg_fn dsg_ln loc date_str)]::

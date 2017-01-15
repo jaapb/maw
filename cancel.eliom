@@ -26,7 +26,7 @@ let do_cancel_page game_id () user_id =
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
 		Mail.send_cancellation_mail fn ln email title game_dstr location;
-		container (standard_menu ())
+		container (standard_menu [])
 			[
 				h1 [pcdata "Cancellation complete"];
 				p [pcdata "The following inscription has been cancelled:"];
@@ -51,7 +51,7 @@ let cancel_page game_id () =
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
-				container (standard_menu ())
+				container (standard_menu [])
 				(match isu with
 				| `Cancelled | `No ->
 					[

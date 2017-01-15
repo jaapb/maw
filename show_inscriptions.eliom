@@ -44,7 +44,7 @@ and show_inscriptions_page game_id () =
 			Database.get_game_data game_id in
 		let%lwt inscr = Database.get_inscription_list game_id in
 		if uid = dsg_id then
-			container (standard_menu ())
+			container (standard_menu [])
 			(
 				(h1 [pcdata	title])::
 				[
@@ -83,7 +83,7 @@ and show_inscriptions_page game_id () =
 				]
 			)
 		else
-			container (standard_menu ())
+			container (standard_menu [])
 			[
 				p [pcdata "You are not the designer of this game."]
 			]

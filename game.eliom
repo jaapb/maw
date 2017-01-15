@@ -13,6 +13,13 @@
 	open Maw
 ]
 
+let game_menu game_id isu =
+	[
+		tr [td [a ~service:signup_service [pcdata (if isu then "Edit inscription" else "Sign up")] game_id]];
+		tr [td [a ~service:cancel_service [pcdata "Cancel inscription"] game_id]]
+	]
+;;
+
 let game_page game_id () =
   let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles =
 		h1 [pcdata title]::
@@ -42,13 +49,13 @@ let game_page game_id () =
 		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		match u with
-	  | None -> container (standard_menu ()) 
+	  | None -> container (standard_menu (game_menu game_id false)) 
 			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles)
 	  | Some (uid, _, _, _) ->
-			let%lwt isu = Database.sign_up_status uid game_id in
+			let%lwt sus = Database.sign_up_status uid game_id in
 			if not visible && uid <> dsg 	
 			then unknown_game ()
-			else container (standard_menu ()) 
+			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false)))
 			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles @
 		  	if uid = dsg then
 				[
@@ -58,7 +65,7 @@ let game_page game_id () =
 				]
 				else 
 				begin
-					match isu with
+					match sus with
 					| `Yes (team, role, status) -> [
 						p [
 							i [pcdata (match status with
@@ -69,25 +76,23 @@ let game_page game_id () =
 							| `Waiting -> "You are on the waiting list for this game."
 							| `Attended -> "You attended this game."
 							| `No_show -> "You signed up for this game, but did not attend.")
-							];
-							pcdata (Printf.sprintf " Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
+							]
 						];
-						a ~service:signup_service [pcdata "Edit my inscription"] game_id;
-						p [pcdata " "];
-						a ~service:cancel_service [pcdata "Cancel my inscription"] game_id
+						p [
+							pcdata (Printf.sprintf "Your team preference is %s and your role preference is %s." (default "Any" team) (default "Any" role))
+						]
 					]
 					| `Cancelled -> [
 						p [pcdata "You have cancelled your inscription for this game."]
 					]
-					| `No -> [
+					| `No -> 
 						match id with
 						| Some ddl when Date.compare ddl (Date.today ()) < 0 ->
-							p [pcdata "The inscription deadline for this game has passed."]
+							[p [pcdata "The inscription deadline for this game has passed."]]
 						| _ ->
-							(if bookable
-							then a ~service:signup_service [pcdata "Sign up for this game"] game_id
-							else p [pcdata "Inscriptions for this game will be opened later."])
-					]
+							(if not bookable
+							then [p [pcdata "Inscriptions for this game will be opened later."]]
+							else [])
 				end
 			)
 	)

@@ -36,7 +36,7 @@ let rec set_game_data_page () () =
       else
       let%lwt games = Database.get_upcoming_games ~all:true () in
       begin
-        container (standard_menu ())
+        container (standard_menu [])
         [
           h1 [pcdata "Set game data"];
           Form.post_form ~service:set_game_data_service

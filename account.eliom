@@ -20,7 +20,7 @@ let update_user_page () (fname, (lname, (email, (password, (address, (postcode, 
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) -> Database.update_user_data uid fname lname email password address postcode town country phone>>=
-		fun () -> container (standard_menu ())
+		fun () -> container (standard_menu [])
 		[
 			p [pcdata "Changes successfully saved."]
 		]
@@ -136,7 +136,7 @@ let account_page () () =
 		| Some (uid, _, _, _) -> 
 			let%lwt (ex_fname, ex_lname, ex_email) = Database.get_user_data uid in
 			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Database.get_extra_user_data uid in
-			container (standard_menu ())
+			container (standard_menu [])
 			[
 				h1 [pcdata "Your account"];
 				p ~a:[a_class ["error"]; a_id "error_paragraph"] [];

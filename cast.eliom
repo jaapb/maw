@@ -139,7 +139,7 @@ let do_cast_page game_id (teams, publish) =
 	| Some (uid, _, _, _) -> 
 		Database.update_casting game_id teams) >>=
 	fun () -> Database.set_published game_id publish >>=
-	fun () -> container (standard_menu ())
+	fun () -> container (standard_menu [])
 	[
 		h1 [pcdata "Casting"];
 		p [pcdata
@@ -175,7 +175,7 @@ let cast_page game_id () =
     let%lwt inscr = Database.get_inscription_list ~filter_cast:true game_id in
 		let%lwt casting = Database.get_casting game_id in
 		let%lwt pub = Database.is_published game_id in
-    container ~onload:[%client cast_init] (standard_menu ())
+    container ~onload:[%client cast_init] (standard_menu [])
     [
       Form.post_form ~service:do_cast_service (fun (team, publish) ->
       [

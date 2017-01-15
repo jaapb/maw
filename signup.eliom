@@ -150,7 +150,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			| _ -> "TBD" in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
-		fun () -> container (standard_menu ())
+		fun () -> container (standard_menu [])
 		[
 			h1 [pcdata "Summary"];
 			p [pcdata (match group_name with
@@ -307,7 +307,7 @@ let signup_page game_id () =
 				compare u1 u2) inscr))
 			else None in
 		if my_uid = dsg_id then
-			container (standard_menu ())
+			container (standard_menu [])
 			[
 				h1 [pcdata title];
 				p [pcdata "You are the designer of this game, and as such you do not need to sign up."]
@@ -315,7 +315,7 @@ let signup_page game_id () =
 		else
 			container
 				~onload:[%client (fun e -> initialise_signup ~%me_inscr ~%users e)]
-			(standard_menu ())
+			(standard_menu [])
 			(
 				datalist ~a:[a_id "users_list"] ()::
 				h1 [pcdata title]::

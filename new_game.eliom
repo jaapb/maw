@@ -30,7 +30,7 @@ let rec new_game_page () () =
       let%lwt users = Database.get_users ~unconfirmed:true () in
       let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
-        container (standard_menu ())
+        container (standard_menu [])
         [
           h1 [pcdata "Create new game"];
           Form.post_form ~service:add_game_service (fun (title, designer) -> [

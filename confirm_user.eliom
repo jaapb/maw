@@ -16,7 +16,7 @@
 
 let confirm_user_page (user_id, random) () =
 	Lwt.catch (fun () -> Database.confirm_user user_id random >>=
-	fun res -> container (standard_menu ())
+	fun res -> container (standard_menu [])
 	[
 		h1 [pcdata "Account activated"];
 		p [pcdata "You can now login normally."]

@@ -75,7 +75,7 @@ let%client do_role_save ev =
 
 let do_role_page game_id () teams =
 	Database.update_teams game_id teams >>=
-	fun () -> container (standard_menu ())
+	fun () -> container (standard_menu [])
 	(
 		h1 [pcdata "Your teams"]::
 		(List.flatten (List.map (fun (name, roles) ->
@@ -103,7 +103,7 @@ let role_page game_id () =
     else
 			let%lwt roles = Database.get_game_roles game_id in
 			let nr = ref 0 in
-			container (standard_menu ())
+			container (standard_menu [])
 			[
 				h1 [pcdata title];
       	Form.post_form ~service:do_role_service (fun team -> [
