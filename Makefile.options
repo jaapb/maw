@@ -7,7 +7,7 @@ PROJECT_NAME := maw
 
 ELIOM_FILES=	\
 	account.eliom \
-	admin.eliom \
+	admin_confirm_users.eliom \
 	cancel.eliom \
 	cast.eliom \
 	confirm_provisional_user.eliom \
@@ -17,8 +17,10 @@ ELIOM_FILES=	\
 	gate_list.eliom \
 	maw.eliom \
 	message.eliom \
+	new_game.eliom \
 	register.eliom \
 	role.eliom \
+	set_game_data.eliom \
 	signup.eliom \
 	show_inscriptions.eliom \
 	show_casting.eliom \
