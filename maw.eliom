@@ -217,7 +217,7 @@ let dashboard_page () () =
 
 let do_logout_page () () =
 begin
-	Eliom_reference.set user None;
+	ignore (Eliom_reference.set user None);
 	dashboard_page () ()
 end;;
 
