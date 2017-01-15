@@ -31,7 +31,8 @@ let update_provisional_user_service = create_attached_post
 	~post_params:(string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
 	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
-	fun ex_email -> container (standard_menu [])
+	fun (ex_email, ex_fname, ex_lname) ->
+	container (standard_menu [])
 	[
 		h1 [pcdata "User data"];
 		Form.post_form ~service:update_provisional_user_service
@@ -52,11 +53,11 @@ let update_provisional_user_service = create_attached_post
 				];
 				tr [
 					th [pcdata "First name"];
-					td [Form.input ~a:[a_id "fname_input"] ~input_type:`Text ~name:first_name Form.string] 
+					td [Form.input ~a:[a_id "fname_input"] ~input_type:`Text ~name:first_name ~value:ex_fname Form.string] 
 				];
 				tr [
 					th [pcdata "Last name"];
-					td [Form.input ~a:[a_id "lname_input"] ~input_type:`Text ~name:last_name Form.string] 
+					td [Form.input ~a:[a_id "lname_input"] ~input_type:`Text ~name:last_name ~value:ex_lname Form.string] 
 				];
 				tr [
 					th [pcdata "Address"];

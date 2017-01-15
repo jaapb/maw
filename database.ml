@@ -58,25 +58,23 @@ let rec aux_assoc_list l ct cr res =
 ;;
 
 let get_upcoming_games ?(all=false) () =
-	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
 	if all then PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
     FROM games \
-    WHERE date >= $today \
+    WHERE date >= current_date \
     ORDER BY date ASC"
 	else PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
     FROM games \
-    WHERE date >= $today AND visible \
+    WHERE date >= current_date AND visible \
     ORDER BY date ASC"
 ;;
 
 let get_user_games uid =
-	let today = CalendarLib.Date.today () in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) 
 		"SELECT id, title, date, location, casting_published \
 		FROM games JOIN game_inscriptions ON games.id = game_id \
-		WHERE date >= $today AND user_id = $uid AND NOT cancelled \
+		WHERE date >= current_date AND user_id = $uid AND NOT cancelled \
 		ORDER BY date ASC";;
 
 let get_designer_games uid =
@@ -176,7 +174,6 @@ let add_inscription game_id uid group_name status team role note =
 		| Some g -> PGSQL(dbh) "UPDATE game_inscriptions \
 				SET group_name = $g WHERE game_id = $game_id AND user_id = $uid")
 	in
-	let stamp = CalendarLib.Calendar.now () in
 	let st = int32_of_inscr_status status in
 	get_db () >>= fun dbh ->
 	PGOCaml.transact dbh (fun dbh ->
@@ -187,7 +184,7 @@ let add_inscription game_id uid group_name status team role note =
 		| [] -> PGSQL(dbh) "INSERT INTO game_inscriptions \
 		  	(game_id, user_id, inscription_time, note, status) \
 		  	VALUES \
-		  	($game_id, $uid, $stamp, $note, $st)"
+		  	($game_id, $uid, current_timestamp, $note, $st)"
 		| _ -> PGSQL(dbh) "UPDATE game_inscriptions \
 				SET note = $note \
 				WHERE game_id = $game_id AND user_id = $uid") >>=
@@ -431,9 +428,10 @@ let add_provisional_user email fname lname game_id =
 
 let get_provisional_user_data uid =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT email \
-		FROM provisional_users \
-		WHERE id = $uid" >>=
+	PGSQL(dbh) "SELECT email, first_name, last_name \
+		FROM provisional_users JOIN user_ids ON provisional_users.id = user_ids.id \
+		WHERE provisional_users.id = $uid \
+		AND creation_time >= current_timestamp - interval '48 hours'" >>=
 	function
 	| [] -> fail Not_found
 	| [u] -> return u
