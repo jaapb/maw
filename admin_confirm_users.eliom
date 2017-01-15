@@ -22,7 +22,6 @@ let admin_confirm_users_page () () =
 			let nonconf = List.filter (fun (_, _, _, _, s) -> s = Some "U") users in
 			let%lwt confirm_strs = Lwt_list.map_s (fun (id, _, _, _, _) ->
 				Database.get_confirmation id) nonconf in
-      let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
         container (standard_menu [])
         [
