@@ -100,7 +100,7 @@ let standard_menu () =
 				tr [td [a ~service:new_user_service [b [pcdata "Create a new user"]] ()]];
 				tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]];
 				tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]];
-				tr [td [a ~service:admin_confirm_user_service [b [pcdata "Manually confirm users"]] ()]]
+				tr [td [a ~service:admin_confirm_users_service [b [pcdata "Manually confirm users"]] ()]]
 			]
 			else [])
 		)]
