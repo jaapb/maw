@@ -20,21 +20,7 @@ let design_menu game_id =
 	]
 ;;
 
-let update_description game_id () descr =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_description game_id descr
-;;
-
-let update_numbers game_id () (min, max) =
-	let%lwt u = Eliom_reference.get Maw.user in
-	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_numbers game_id min max
-;;
-
-let update_deadlines game_id () (id, (cd, pd)) =
+let update_game_data game_id () (descr, (min, (max, (id, (cd, pd))))) =
 	let inscr_date = if id = ""
 		then None
 		else Some (Printer.Date.from_fstring "%Y-%m-%d" id) in
@@ -47,26 +33,22 @@ let update_deadlines game_id () (id, (cd, pd)) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
+	| Some (uid, _, _, _) -> 
+		begin
+			Database.set_game_description game_id descr >>=
+			fun () -> Database.set_game_numbers game_id min max >>=
+			fun () -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
+		end
+;;
 
 let design_page game_id () = 
-	let update_deadlines_service = create_attached_post
+	let update_game_data_service = create_attached_post
 		~fallback:(preapply design_service game_id)
-		~post_params:(string "inscription" ** string "cancellation" ** string "payment") () in
-	let update_descr_service = create_attached_post
-		~fallback:(preapply design_service game_id)
-		~post_params:(string "description") () in
-	let update_numbers_service = create_attached_post
-		~fallback:(preapply design_service game_id)
-		~post_params:(int32 "min" ** int32 "max") () in
-	Eliom_registration.Action.register ~service:update_descr_service
-		(update_description game_id);
-	Eliom_registration.Action.register ~service:update_numbers_service
-		(update_numbers game_id);
-	Eliom_registration.Action.register ~service:update_deadlines_service
-		(update_deadlines game_id);
-	let%lwt u = Eliom_reference.get Maw.user in
-	Lwt.catch (fun () -> match u with
+		~post_params:(string "description" ** int32 "min" ** int32 "max" ** string "inscription" ** string "cancellation" ** string "payment") () in
+	Eliom_registration.Action.register ~scope:Eliom_common.default_session_scope
+		~service:update_game_data_service (update_game_data game_id);
+	Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
+	match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
 		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
@@ -89,59 +71,46 @@ let design_page game_id () =
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
-				Form.post_form ~service:update_descr_service (fun descr -> [
+				Form.post_form ~service:update_game_data_service
+				(fun (descr, (min, (max, (id, (cd, pd))))) -> [
 					table [
 						tr [
-							td [pcdata "Game description:"]
+							td ~a:[a_colspan 4] [pcdata "Game description:"]
 						];
 						tr [	
-							td [
+							td ~a:[a_colspan 4] [
 								Form.textarea ~a:[a_cols 60; a_rows 10] ~name:descr ~value:d ()
 							]
 						];
 						tr [
-							td [
-								Form.input ~input_type:`Submit ~value:"Save" Form.string
-							]
-						]
-					]
-				]) ();
-				Form.post_form ~service:update_numbers_service (fun (min, max) -> [
-					table [
-						tr [
-							td ~a:[a_colspan 5] [pcdata "Numbers:"]
+							th ~a:[a_colspan 4] [pcdata "Numbers"]
 						];
 						tr [
-							td ~a:[a_colspan 5] [pcdata (Printf.sprintf "(there are %d roles currently set up for this game)" (List.length roles))]
+							td ~a:[a_colspan 4] [pcdata (Printf.sprintf "(there are %d roles currently set up for this game)" (List.length roles))]
 						];
 						tr [
 							td [pcdata "Minimum:"];
 							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:min ~value:min_nr Form.int32];
 							td [pcdata "Maximum:"];
 							td [Form.input ~a:[a_size 5] ~input_type:`Text ~name:max ~value:max_nr Form.int32];
-							td [Form.input ~input_type:`Submit ~value:"Save" Form.string]
-						]
-					]
-				]) ();
-				Form.post_form ~service:update_deadlines_service (fun (id, (cd, pd)) -> [
-					table [
+						];
 						tr [
-							td ~a:[a_colspan 2] [pcdata "Deadlines:"]
+							th ~a:[a_colspan 4] [pcdata "Deadlines"]
 						];
 						tr [
 							td [pcdata "Inscription:"];
-							td [Form.input ~input_type:`Date ~name:id ~value:idate Form.string];
+							td ~a:[a_colspan 3] [Form.input ~input_type:`Date ~name:id ~value:idate Form.string];
 						];
 						tr [
 							td [pcdata "Cancellation:"];
-							td [Form.input ~input_type:`Date ~name:cd ~value:cdate Form.string];
+							td ~a:[a_colspan 3] [Form.input ~input_type:`Date ~name:cd ~value:cdate Form.string];
 						];
 						tr [
 							td [pcdata "Payment:"];
-							td [Form.input ~input_type:`Date ~name:pd ~value:pdate Form.string];
+							td ~a:[a_colspan 3] [Form.input ~input_type:`Date ~name:pd ~value:pdate Form.string];
 						];
 						tr [
-							td ~a:[a_colspan 2] [Form.input ~input_type:`Submit ~value:"Save" Form.string]
+							td ~a:[a_colspan 4] [Form.input ~input_type:`Submit ~value:"Save" Form.string]
 						]
 					]
 				]) ()
