@@ -4,15 +4,17 @@ module PGOCaml = PGOCaml_generic.Make(struct include Lwt include Lwt_chan end)
 
 let db_handler = ref None;;
 
+let database_server = ref "";;
+let database_port = ref None;;
+let database_name = ref "";;
+let database_user = ref "";;
+let database_password = ref None;;
+
 let get_db () =
-	let host = try Some (Sys.getenv "PGHOST") with Not_found -> None in
-	let database = try Some (Sys.getenv "PGDATABASE") with Not_found -> None in
-	let user = try Some (Sys.getenv "PGUSER") with Not_found -> None in
-	let password = try Some (Sys.getenv "PGPASSWORD") with Not_found -> None in
 	match !db_handler with
 	| Some h -> return h
 	| None -> begin
-			PGOCaml.connect ?host ?database ?user ?password () >>=
+			PGOCaml.connect ~host:!database_server ?port:!database_port ~database:!database_name ~user:!database_user ?password:!database_password () >>=
 			fun dbh -> db_handler := Some dbh; return dbh
 		end
 ;;

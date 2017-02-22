@@ -32,6 +32,13 @@
 					<user></user>
 					<password></password>
 				</mail>
+				<database>
+					<server></server>
+					<port></port> <!-- optional -->
+					<name></name>
+					<user></user>
+					<password></password> <!-- optional -->
+				</database>
 	</eliommodule>
       <eliom/>
     </host>

@@ -29,6 +29,25 @@ let mail_el = Ocsigen_extensions.Configuration.element
 	~elements:[mail_server_el; mail_port_el; mail_user_el; mail_password_el]
 	();;
 
+let database_server_el = Ocsigen_extensions.Configuration.element
+	~name:"server" ~obligatory:true
+	~pcdata:(fun s -> Database.database_server := s) ();;
+let database_port_el = Ocsigen_extensions.Configuration.element
+	~name:"port"
+	~pcdata:(fun s -> Database.database_port := Some (int_of_string s)) ();;
+let database_name_el = Ocsigen_extensions.Configuration.element
+	~name:"name" ~obligatory:true
+	~pcdata:(fun s -> Database.database_name := s) ();;
+let database_user_el = Ocsigen_extensions.Configuration.element
+	~name:"user" ~obligatory:true
+	~pcdata:(fun s -> Database.database_user := s) ();;
+let database_password_el = Ocsigen_extensions.Configuration.element
+	~name:"password" ~pcdata:(fun s -> Database.database_password := Some s) ();;
+let database_el = Ocsigen_extensions.Configuration.element
+	~name:"database" ~obligatory:true ~elements:[database_server_el;
+		database_port_el; database_name_el; database_user_el; database_password_el]
+		();;
+
 (* References *)
 
 let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope
@@ -244,7 +263,7 @@ let bool_checkbox name value =
 	;;
 
 let () =
-	Eliom_config.parse_config [mail_el];
+	Eliom_config.parse_config [mail_el; database_el];
 	Eliom_registration.Action.register ~service:login_service login_action;
 	Maw_app.register ~service:logout_service do_logout_page;
 	Maw_app.register ~service:dashboard_service dashboard_page
