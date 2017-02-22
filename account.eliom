@@ -17,9 +17,9 @@
 let account_menu hidden =
 	[
 		if hidden then
-			tr [td [a ~service:hide_account_service [pcdata "Hide account"] ()]]
-		else
 			tr [td [a ~service:hide_account_service [pcdata "Unhide account"] ()]]
+		else
+			tr [td [a ~service:hide_account_service [pcdata "Hide account"] ()]]
 	]
 ;;
 
