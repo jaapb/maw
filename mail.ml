@@ -44,7 +44,7 @@ let send_simple_inscription_mail fname lname email game_title game_loc game_date
 	(Printf.sprintf "Inscription for %s" game_title) 
 	(Printf.sprintf "Hello %s,\n
 \n
-You have (or have been) signed up through the Megagame Makers website for the\n
+You have signed up through the Megagame Makers website for the\n
 following game:\n
 \n
 %s (by %s %s)\n
@@ -61,11 +61,12 @@ P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title dsg_fname dsg_lname game_loc game_date)
 ;;
 
-let send_provisional_inscription_mail uri email game_title game_loc game_date dsg_fname dsg_lname =
-	send_mail ["New User", email] (Printf.sprintf "Inscription for %s" game_title) 
-	(Printf.sprintf "Hello,\n
+let send_provisional_inscription_mail uri fname lname email game_title game_loc game_date dsg_fname dsg_lname =
+	send_mail [Printf.sprintf "%s %s" fname lname, email]
+	(Printf.sprintf "Inscription for %s" game_title) 
+	(Printf.sprintf "Hello %s,\n
 \n
-You have (or have been) signed up through the Megagame Makers website for the\n
+You have been signed up through the Megagame Makers website for the\n
 following game:\n
 \n
 %s (by %s %s)\n
@@ -81,7 +82,7 @@ Kind regards,\n
   Maw.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
-game_title dsg_fname dsg_lname game_loc game_date uri)
+fname game_title dsg_fname dsg_lname game_loc game_date uri)
 ;;
 
 let send_cancellation_mail fname lname email game_title game_loc game_date =

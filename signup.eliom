@@ -130,14 +130,31 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname status =
 		match users with
 		| (uid, (role, note))::tl -> 
+			Lwt.catch (fun () ->
 				Database.get_user_data uid >>=
 				fun (fname, lname, email, _) ->
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-						fun () -> if not edit then
+						fun () -> Ocsigen_messages.console (fun () -> Printf.sprintf "Sending SIM to %ld (%s %s)" uid fname lname);
+							if not edit then
 							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
-						Lwt.return () >>=
+						Lwt.return ())
+				(function
+				| Not_found -> Database.get_provisional_user_data uid >>=
+					fun (email, fname, lname) ->
+      		Database.add_inscription game_id uid group_name status
+  		  		(if String.lowercase_ascii team = "any" then None else Some team)
+			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
+						fun () -> Ocsigen_messages.console (fun () -> Printf.sprintf "Sending PIM to %ld (%s %s)" uid fname lname);
+							if not edit then
+							begin
+								let uri = Eliom_uri.make_string_uri ~absolute:true
+									~service:confirm_provisional_user_service uid in
+								Mail.send_provisional_inscription_mail uri fname lname email game_title game_loc game_dstr dsg_fname dsg_lname
+							end;
+						Lwt.return ()
+				| e -> Lwt.fail e) >>=
 				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_fname dsg_lname status
 		| _ -> Lwt.return ()
 	in
