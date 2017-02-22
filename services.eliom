@@ -29,5 +29,6 @@ let set_game_data_service = create ~path:(Path ["set_game_data"]) ~meth:(Get uni
 let show_casting_service = create ~path:(Path ["casting"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let show_inscriptions_service = create ~path:(Path ["inscriptions"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let signup_service = create ~path:(Path ["signup"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let unhide_account_service = create ~path:(Path ["unhide_account"]) ~meth:(Get unit) ();;
 let user_history_service = create ~path:(Path ["history"]) ~meth:(Get (int32 "user_id")) ();;
 

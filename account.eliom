@@ -14,9 +14,12 @@
 	open Database
 ]
 
-let account_menu () =
+let account_menu hidden =
 	[
-		tr [td [a ~service:hide_account_service [pcdata "Hide account"] ()]]
+		if hidden then
+			tr [td [a ~service:hide_account_service [pcdata "Hide account"] ()]]
+		else
+			tr [td [a ~service:hide_account_service [pcdata "Unhide account"] ()]]
 	]
 ;;
 
@@ -140,9 +143,9 @@ let account_page () () =
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) -> 
-			let%lwt (ex_fname, ex_lname, ex_email) = Database.get_user_data uid in
+			let%lwt (ex_fname, ex_lname, ex_email, hidden) = Database.get_user_data uid in
 			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Database.get_extra_user_data uid in
-			container (standard_menu (account_menu ()))
+			container (standard_menu (account_menu hidden))
 			[
 				h1 [pcdata "Your account"];
 				p ~a:[a_class ["error"]; a_id "error_paragraph"] [];

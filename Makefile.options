@@ -28,6 +28,7 @@ ELIOM_FILES=	\
 	show_inscriptions.eliom \
 	show_casting.eliom \
 	services.eliom \
+	unhide_account.eliom \
 	user_history.eliom
 # Source files for the server
 SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
