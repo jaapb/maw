@@ -555,3 +555,17 @@ let get_team_members game_id team =
 		FROM game_casting JOIN users ON game_casting.user_id = users.id \
 		WHERE game_casting.game_id = $game_id AND team_name = $team"
 ;;
+
+let hide_user user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE users \
+		SET hidden = true \
+		WHERE id = $user_id"
+;;
+
+let unhide_user user_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE users \
+		SET hidden = false \
+		WHERE id = $user_id"
+;;

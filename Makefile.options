@@ -17,6 +17,7 @@ ELIOM_FILES=	\
 	designer_message.eliom \
 	game.eliom \
 	gate_list.eliom \
+	hide_account.eliom \
 	maw.eliom \
 	new_game.eliom \
 	new_provisional_user.eliom \
