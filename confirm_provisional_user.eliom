@@ -18,7 +18,8 @@ let update_provisional_user_page user_id () (first_name, (last_name, (old_email,
 	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password address postcode town country phone >>=
 	fun (_, c_random) -> container (standard_menu [])
 	[
-		h1 [pcdata "Placeholder"]
+		h1 [pcdata "Success"];
+		p [pcdata "Your account has been confirmed."]
 	])
 	(function
 	| e -> error_page (Printexc.to_string e)
@@ -87,6 +88,7 @@ let update_provisional_user_service = create_attached_post
 		]) ()			
 	]) 
 	(function
+	| Not_found -> error_page ("Provisional user not found or expired.")
 	| e -> error_page (Printexc.to_string e)
 	)
 ;;
