@@ -46,8 +46,11 @@ let rec new_game_page () () =
                 td [
                   Form.select ~name:designer Form.int32
                   (Form.Option ([], uhid, Some (pcdata (Printf.sprintf "%s %s" uhfname uhlname)), false))
-                  (List.map (fun (id, fname, lname, _, _) ->
-                    Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fname lname)), false)
+                  (List.map (fun (id, fname, lname, _, s) ->
+										if s = "C" then
+                    	Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fname lname)), false)
+										else
+											Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s (HIDDEN)" fname lname)), false)
                   ) (List.tl users))
                 ]
               ];
