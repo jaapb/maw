@@ -28,10 +28,14 @@ let game_menu game_id isu is_dsg =
 ;;
 
 let game_page game_id () =
-  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl =
+  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn =
 		h1 [pcdata title]::
 		p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 		p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
+		(match fn with
+		| None -> p [pcdata "[no image]"]
+		| Some f -> img ~a:[a_height 200; a_width 320] ~alt:"[Image]" ~src:(make_uri ~service:(Eliom_service.static_dir ()) [f]) ()
+		)::
 		p [pcdata d]::
     [if nr_inscr >= max_pl
     then p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]
@@ -46,15 +50,16 @@ let game_page game_id () =
 		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
 		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
 		let%lwt roles = Database.get_game_roles game_id in
+		let%lwt fn = Database.get_picture_filename game_id in
 		match u with
 	  | None -> container (standard_menu (game_menu game_id false false)) 
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl)
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn)
 	  | Some (uid, _, _, _) ->
 			let%lwt sus = Database.sign_up_status uid game_id in
 			if not visible && uid <> dsg 	
 			then unknown_game ()
 			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) (uid = dsg)))
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl @
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn @
 				if uid <> dsg then 
 				begin
 					h2 [pcdata "Available teams and roles"]::

@@ -577,3 +577,21 @@ let unhide_user user_id =
 		SET hidden = false \
 		WHERE id = $user_id"
 ;;
+
+let set_picture_filename game_id filename =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE games \
+		SET picture_filename = $filename \
+		WHERE id = $game_id"
+;;
+
+let get_picture_filename game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT picture_filename \
+		FROM games \
+		WHERE id = $game_id" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> Lwt.return x
+	| _ -> fail_with "Inconsistent database"
+;;

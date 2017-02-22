@@ -41,12 +41,35 @@ let update_game_data game_id () (descr, (min, (max, (id, (cd, pd))))) =
 		end
 ;;
 
+let upload_picture game_id () picture =
+	let%lwt u = Eliom_reference.get Maw.user in
+	match u with
+	| None -> Lwt.return ()
+	| Some (uid, _, _, _) ->
+		begin
+			let new_name = Eliom_request_info.get_original_filename picture in
+			let new_path = Printf.sprintf "static/%s" new_name in
+			let old_path = Eliom_request_info.get_tmp_filename picture in
+			Ocsigen_messages.console (fun () -> old_path);
+			Ocsigen_messages.console (fun () -> new_path);
+			(try
+				Unix.unlink new_path
+			with _ -> ());
+			Lwt_unix.link old_path new_path >>=
+			fun () -> Database.set_picture_filename game_id new_name
+		end
+		
 let design_page game_id () = 
 	let update_game_data_service = create_attached_post
 		~fallback:(preapply design_service game_id)
 		~post_params:(string "description" ** int32 "min" ** int32 "max" ** string "inscription" ** string "cancellation" ** string "payment") () in
+	let upload_picture_service = create_attached_post
+		~fallback:(preapply design_service game_id)
+		~post_params:(file "picture") () in
 	Eliom_registration.Action.register ~scope:Eliom_common.default_session_scope
 		~service:update_game_data_service (update_game_data game_id);
+	Eliom_registration.Action.register ~scope:Eliom_common.default_session_scope
+		~service:upload_picture_service (upload_picture game_id);
 	Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
 	match u with
 	| None -> not_logged_in ()
@@ -67,6 +90,7 @@ let design_page game_id () =
     else
 		let%lwt teams = Database.get_game_teams game_id in
 		let%lwt roles = Database.get_game_roles game_id in
+		let%lwt fn = Database.get_picture_filename game_id in
 			container (standard_menu (design_menu game_id))
 			[
 				h1 [pcdata title];
@@ -111,6 +135,22 @@ let design_page game_id () =
 						];
 						tr [
 							td ~a:[a_colspan 4] [Form.input ~input_type:`Submit ~value:"Save" Form.string]
+						]
+					]
+				]) ();
+				Form.post_form ~service:upload_picture_service
+				(fun picture -> [
+					table [
+						tr [
+							th ~a:[a_colspan 3] [pcdata "Picture"]
+						];
+						tr [
+							td (match fn with
+							| None -> []
+							| Some p -> [pcdata "[Picture uploaded]"]
+							);
+							td [Form.file_input ~name:picture ()];
+							td [Form.input ~input_type:`Submit ~value:"Send" Form.string]
 						]
 					]
 				]) ()
