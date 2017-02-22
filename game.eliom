@@ -13,7 +13,14 @@
 	open Maw
 ]
 
-let game_menu game_id isu =
+let game_menu game_id isu is_dsg =
+	if is_dsg then
+	[
+		tr [td [a ~service:design_service [pcdata "Edit design"] game_id]];
+		tr [td [a ~service:show_inscriptions_service [pcdata "Show inscriptions"] game_id]];
+		tr [td [a ~service:designer_message_service [pcdata "Message players"] game_id]]
+	]
+	else
 	[
 		tr [td [a ~service:signup_service [pcdata (if isu then "Edit inscription" else "Sign up")] game_id]];
 		tr [td [a ~service:cancel_service [pcdata "Cancel inscription"] game_id]]
@@ -21,24 +28,15 @@ let game_menu game_id isu =
 ;;
 
 let game_page game_id () =
-  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles =
+  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl =
 		h1 [pcdata title]::
 		p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
 		p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
 		p [pcdata d]::
-    (if nr_inscr >= max_pl
+    [if nr_inscr >= max_pl
     then p [i [pcdata "This game has reached its maximum number of inscriptions. You can still sign up, but you will be placed on a waiting list."]]
     else p [pcdata (Printf.sprintf "This game currently has %ld inscription(s), for %ld places." nr_inscr max_pl)]
-		)::
-		h2 [pcdata "Available teams and roles"]::
-		List.flatten (List.map (fun (team_name, role_names) ->
-			[
-				h3 [pcdata team_name];
-				ul (List.map (fun rn ->
-					li [pcdata rn] 
-				) role_names)
-			]
-		) roles)
+		]
 		in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () ->
@@ -49,23 +47,26 @@ let game_page game_id () =
 		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		match u with
-	  | None -> container (standard_menu (game_menu game_id false)) 
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles)
+	  | None -> container (standard_menu (game_menu game_id false false)) 
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl)
 	  | Some (uid, _, _, _) ->
 			let%lwt sus = Database.sign_up_status uid game_id in
 			if not visible && uid <> dsg 	
 			then unknown_game ()
-			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false)))
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl roles @
-		  	if uid = dsg then
-				[
-					p [a ~service:design_service [pcdata "Edit the game design"] game_id];
-					p [a ~service:show_inscriptions_service [pcdata "Show inscriptions for this game"] game_id];
-					p [a ~service:designer_message_service [pcdata "Send a message to players"] game_id]
-				]
-				else 
+			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) (uid = dsg)))
+			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl @
+				if uid <> dsg then 
 				begin
-					match sus with
+					h2 [pcdata "Available teams and roles"]::
+					(List.flatten (List.map (fun (team_name, role_names) ->
+						[
+							h3 [pcdata team_name];
+							ul (List.map (fun rn ->
+								li [pcdata rn] 
+							) role_names)
+						]
+					) roles) @
+					(match sus with
 					| `Yes (team, role, status) -> [
 						p [
 							i [pcdata (match status with
@@ -93,7 +94,10 @@ let game_page game_id () =
 							(if not bookable
 							then [p [pcdata "Inscriptions for this game will be opened later."]]
 							else [])
+				))
 				end
+				else
+					[]
 			)
 	)
 	(function
