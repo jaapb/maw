@@ -23,7 +23,7 @@ let do_hide_account_page () () =
 			let%lwt () = Database.hide_user uid in
 			container (standard_menu []) 
 			[
-				h1 [pcdata "Account hidden."];
+				h1 [pcdata "Account hidden"];
 				p [pcdata "Your account has been hidden."]
 			]
 	)
