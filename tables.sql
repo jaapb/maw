@@ -68,7 +68,8 @@ CREATE TABLE users (
     phone_number text NOT NULL,
     town text NOT NULL,
     postcode text NOT NULL,
-    country text NOT NULL
+    country text NOT NULL,
+    hidden boolean DEFAULT false NOT NULL
 );
 
 CREATE SEQUENCE users_id_seq
