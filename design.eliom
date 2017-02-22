@@ -13,6 +13,13 @@
 	open Maw
 ]
 
+let design_menu game_id =
+	[
+		tr [td [a ~service:role_service [pcdata "Set up roles"] game_id]];
+		tr [td [a ~service:cast_service [pcdata "Do casting"] game_id]]
+	]
+;;
+
 let update_description game_id () descr =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
@@ -77,12 +84,11 @@ let design_page game_id () =
 		if uid <> dsg_id then error_page "You are not the designer of this game."
     else
 		let%lwt teams = Database.get_game_teams game_id in
-			container (standard_menu [])
+		let%lwt roles = Database.get_game_roles game_id in
+			container (standard_menu (design_menu game_id))
 			[
 				h1 [pcdata title];
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))];
-				p [a ~service:role_service [pcdata "Set up roles and teams for this game"] game_id];
-        p [a ~service:cast_service [pcdata "Cast this game"] game_id];
 				Form.post_form ~service:update_descr_service (fun descr -> [
 					table [
 						tr [
@@ -104,6 +110,9 @@ let design_page game_id () =
 					table [
 						tr [
 							td ~a:[a_colspan 5] [pcdata "Numbers:"]
+						];
+						tr [
+							td ~a:[a_colspan 5] [pcdata (Printf.sprintf "(there are %d roles currently set up for this game)" (List.length roles))]
 						];
 						tr [
 							td [pcdata "Minimum:"];
