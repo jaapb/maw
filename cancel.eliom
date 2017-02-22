@@ -19,7 +19,7 @@ let do_cancel_page game_id () user_id =
 	| None -> not_logged_in ()
 	| Some (my_uid, _, _, _) -> 
 		let%lwt () = Database.cancel_inscription game_id user_id in
-		let%lwt (fn, ln, email) = Database.get_user_data user_id in
+		let%lwt (fn, ln, email, _) = Database.get_user_data user_id in
 		let%lwt (title, date, location, _, _, _, _, _, _, _) =
 			Database.get_game_data game_id in
 		let game_dstr = match date with

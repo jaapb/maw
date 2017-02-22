@@ -131,7 +131,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 		match users with
 		| (uid, (role, note))::tl -> 
 				Database.get_user_data uid >>=
-				fun (fname, lname, email) ->
+				fun (fname, lname, email, _) ->
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
@@ -233,13 +233,17 @@ let%client initialise_signup me_inscr users e =
 let udl = Dom_html.getElementById "users_list" in
 	nr_ids := List.length me_inscr - 1;
 	List.iter (fun (uid, fname, lname, _, s) ->
-		let status = match s with
-		| Some "P" -> " (provisional)"
-		| Some "U" -> " (unconfirmed)"
-		| _ -> "" in
-		let thing = Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
-			(pcdata (Printf.sprintf "%s %s%s" fname lname status)) in
-		Dom.appendChild udl (Html.To_dom.of_element thing)
+		match s with	
+		| Some "P" -> Dom.appendChild udl (Html.To_dom.of_element 
+			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(pcdata (Printf.sprintf "%s %s (provisional)" fname lname))))
+		| Some "U" -> Dom.appendChild udl (Html.To_dom.of_element
+			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(pcdata (Printf.sprintf "%s %s (unconfirmed)" fname lname))))
+		| Some "H" -> ()
+		| _ -> Dom.appendChild udl (Html.To_dom.of_element
+			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(pcdata (Printf.sprintf "%s %s" fname lname))))
 	) users
 ;;
 
