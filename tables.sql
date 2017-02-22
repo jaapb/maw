@@ -79,6 +79,10 @@ CREATE SEQUENCE users_id_seq
     NO MAXVALUE
     CACHE 1;
 
+COPY users (id, name, username, is_admin, email, password, confirmation, password_salt) FROM stdin;
+1      Administrator   admin   t       root@kerguelen.org      tdfBqVvihMVZzMwYXZ03CAatorP7Ef7Uj7Id3C4OUV3pQ0Lnts5F8+OeNvNktq3UBakUCrVh2HPNc2KQQNihvA  \N      xxxxxxxx
+\.
+
 ALTER SEQUENCE users_id_seq OWNED BY users.id;
 
 CREATE TABLE user_ids (
