@@ -255,7 +255,7 @@ let get_group_name game_id uid_list =
 
 let get_user_data uid =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT first_name, last_name, email \
+	PGSQL(dbh) "SELECT first_name, last_name, email, hidden \
 		FROM users \
 		WHERE id = $uid" >>=
 	function
@@ -417,10 +417,18 @@ let get_users ?(confirmed = true) ?(unconfirmed = false) ?(provisional = false) 
 		if confirmed then
 			PGSQL(dbh) "SELECT id, first_name, last_name, email, 'C'::char(1) \
 			FROM users \
-			WHERE confirmation IS NULL"
+			WHERE confirmation IS NULL AND hidden = false \
+			UNION \
+			SELECT id, first_name, last_name, email, 'H'::char(1) \
+			FROM users \
+			WHERE confirmation IS NULL AND hidden = true"
 		else
 			Lwt.return []
 	end >>=
+	fun x -> Lwt_list.map_p (function
+	| (Some id, Some fn, Some ln, Some e, s) -> Lwt.return (id, fn, ln, e, s)
+	| _ -> Lwt.fail_with "Inconsistent database"
+	) x >>=
 	fun c_users -> Lwt.return (p_users @ uc_users @ c_users)
 ;;
 
