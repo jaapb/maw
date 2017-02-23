@@ -91,6 +91,7 @@ let design_page game_id () =
 		let%lwt teams = Database.get_game_teams game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		let%lwt fn = Database.get_picture_filename game_id in
+		let nr_roles = List.fold_left (fun acc (_, r) -> acc + List.length r) 0 roles in
 			container (standard_menu (design_menu game_id))
 			[
 				h1 [pcdata title];
@@ -110,7 +111,7 @@ let design_page game_id () =
 							th ~a:[a_colspan 4] [pcdata "Numbers"]
 						];
 						tr [
-							td ~a:[a_colspan 4] [pcdata (Printf.sprintf "(there are %d roles currently set up for this game)" (List.length roles))]
+							td ~a:[a_colspan 4] [pcdata (Printf.sprintf "(there are %d roles currently set up for this game)" nr_roles)]
 						];
 						tr [
 							td [pcdata "Minimum:"];
