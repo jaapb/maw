@@ -63,8 +63,9 @@ div#teams
 	position: absolute;
 	right: 1%;
 	top: 1%;
-	height: 98%;
+	height: 86%;
 	width: 75%;
+	overflow-y: scroll;
 }
 
 div#general
