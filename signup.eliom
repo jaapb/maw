@@ -136,7 +136,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-						fun () -> Ocsigen_messages.console (fun () -> Printf.sprintf "Sending SIM to %ld (%s %s)" uid fname lname);
+						fun () -> 
 							if not edit then
 							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
 						Lwt.return ())
@@ -146,7 +146,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
-						fun () -> Ocsigen_messages.console (fun () -> Printf.sprintf "Sending PIM to %ld (%s %s)" uid fname lname);
+						fun () -> 
 							if not edit then
 							begin
 								let uri = Eliom_uri.make_string_uri ~absolute:true
