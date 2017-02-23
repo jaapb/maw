@@ -329,7 +329,7 @@ let get_casting game_id =
 		FROM game_casting c LEFT JOIN users ON c.user_id = users.id \
 		LEFT JOIN game_inscriptions i ON i.user_id = c.user_id \
 		  AND i.game_id = c.game_id \
-		WHERE c.game_id = $game_id AND NOT cancelled \
+		WHERE c.game_id = $game_id AND (NOT cancelled OR cancelled IS NULL) \
 		ORDER BY team_name, role_name DESC" >>=
 	fun l -> Lwt_list.map_p (fun (ht, hr, hf, hl, hu, hn, hg) ->
 		match ht, hr with
