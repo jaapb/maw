@@ -141,10 +141,8 @@ let do_cast_page game_id () (teams, publish) =
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
 		Database.update_casting game_id teams >>=
-		fun () -> Ocsigen_messages.console (fun () -> "Updated casting.");
-			Database.set_published game_id publish >>=
-		fun () -> Ocsigen_messages.console (fun () -> "Updated publishedness.");
-			container (standard_menu [])
+		fun () -> Database.set_published game_id publish >>=
+		fun () -> container (standard_menu [])
 		[
 			h1 [pcdata "Casting"];
 			p [pcdata
