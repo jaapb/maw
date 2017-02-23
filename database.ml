@@ -297,7 +297,7 @@ let update_casting game_id teams =
 			PGSQL(dbh) "INSERT INTO game_casting \
 				(game_id, team_name, role_name, user_id) \
 				VALUES \
-				($game_id, $t_name, $r_name, $user_id)"
+				($game_id, $t_name, $r_name, $?user_id)"
 			) roles
 		) teams
 	)

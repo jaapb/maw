@@ -108,14 +108,17 @@ let%client before_submit ev =
 			let player_nr = ref 0 in
 			List.iter (fun e -> Js.Opt.iter (Dom_html.CoerceTo.element e) (fun td_tr ->
 				if Js.to_bool (td_tr##.classList##contains (Js.string "player_row")) then
-				let td_role::td_pid::_ = Dom.list_of_nodeList td_tr##.childNodes in
-				let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in
-				let input_pid::_ = Dom.list_of_nodeList td_pid##.childNodes in	
-				begin
-					Js.Unsafe.set input_role "name" (Printf.sprintf "team.member[%d].role[%d]" !team_nr !player_nr);
-					Js.Unsafe.set input_pid "name" (Printf.sprintf "team.member[%d].id[%d]" !team_nr !player_nr);
+				try
+					let td_role::td_pid::_ = Dom.list_of_nodeList td_tr##.childNodes in
+					let input_role::_ = Dom.list_of_nodeList td_role##.childNodes in
+					let input_pid::_ = Dom.list_of_nodeList td_pid##.childNodes in	
+					begin
+						Js.Unsafe.set input_role "name" (Printf.sprintf "__co_eliom_team.member[%d].role[%d]" !team_nr !player_nr);
+						Js.Unsafe.set input_pid "name" (Printf.sprintf "__co_eliom_team.member[%d].id[%d]" !team_nr !player_nr);
+						incr player_nr
+					end
+				with Match_failure _ ->
 					incr player_nr
-				end
 			)) (Dom.list_of_nodeList td_table##.childNodes);
 			incr team_nr
 		end
@@ -132,27 +135,31 @@ let%client cast_init ev =
 	selected_player := None;
 ;;
 
-let do_cast_page game_id (teams, publish) =
+let do_cast_page game_id () (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
-	| None -> Lwt.return ()
+	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
-		Database.update_casting game_id teams) >>=
-	fun () -> Database.set_published game_id publish >>=
-	fun () -> container (standard_menu [])
-	[
-		h1 [pcdata "Casting"];
-		p [pcdata
-			(if publish
-			then "Casting saved and published."
-			else "Casting saved.")]
-	]
+		Database.update_casting game_id teams >>=
+		fun () -> Ocsigen_messages.console (fun () -> "Updated casting.");
+			Database.set_published game_id publish >>=
+		fun () -> Ocsigen_messages.console (fun () -> "Updated publishedness.");
+			container (standard_menu [])
+		[
+			h1 [pcdata "Casting"];
+			p [pcdata
+				(if publish
+				then "Casting saved and published."
+				else "Casting saved.")]
+		])
 ;;
 
 let cast_page game_id () =
-	let do_cast_service = create ~path:(Path ["cast"]) ~meth:(Post (suffix (int32 "game_id"), list "team" (string "name" ** list "member" (string "role" ** int32 "id")) ** bool "publish")) () in
+	let do_cast_service = create_attached_post
+		~fallback:(preapply cast_service game_id)
+		~post_params:(list "team" (string "name" ** list "member" (string "role" ** opt (int32 "id"))) ** bool "publish") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
-		~service:do_cast_service do_cast_page;
+		~service:do_cast_service (do_cast_page game_id);
 	let partition_groups l =
 		let rec pg_aux l g (rhd: 'a list) (res: (string option * _) list): (string option * _) list = 
 			match l with
@@ -269,7 +276,7 @@ let cast_page game_id () =
 						]
 					]
         ]
-			 ]) game_id
+			 ]) ()
     ]
 	)
 	(function
