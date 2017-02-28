@@ -40,10 +40,11 @@ and show_inscriptions_page game_id () =
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) ->
-		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
+		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
+		let%lwt dsgs = Database.get_game_designers game_id in
 		let%lwt inscr = Database.get_inscription_list game_id in
-		if uid = dsg_id then
+		if is_designer uid dsgs then
 			container (standard_menu [])
 			(
 				(h1 [pcdata	title])::

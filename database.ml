@@ -82,8 +82,8 @@ let get_user_games uid =
 let get_designer_games uid =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "SELECT id, title, date, location \
-		FROM games \
-		WHERE designer = $uid \
+		FROM games g JOIN game_designers gd ON g.id = gd.game_id \
+		WHERE gd.designer = $uid \
 		ORDER BY date ASC";;
 
 let get_all_games () =
@@ -95,10 +95,10 @@ let get_all_games () =
 
 let get_game_data game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT title, date, location, first_name, last_name, designer,
-		description, min_players, max_players, casting_published \
-		FROM games JOIN users ON designer = users.id \
-		WHERE games.id = $game_id" >>=
+	PGSQL(dbh) "SELECT title, date, location, description, min_players, \
+		max_players, casting_published \
+		FROM games \
+		WHERE id = $game_id" >>=
 	function
 	| [] -> fail Not_found
 	| [x] -> return x
@@ -385,9 +385,19 @@ let confirm_user user_id random =
 ;;
 
 let add_game title designer =
-	get_db () >>= fun dbh -> PGSQL(dbh) "INSERT INTO games \
-		(title, designer) VALUES \
-		($title, $designer)"
+	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
+	fun () -> PGSQL(dbh) "INSERT INTO games \
+		(title) VALUES \
+		($title) RETURNING id" >>=
+	(function
+	| [id] -> PGSQL(dbh) "INSERT INTO game_designers (game_id, designer) \
+		VALUES \
+		($id, $designer)"
+	| _ -> begin
+			PGOCaml.rollback dbh >>=
+			fun () -> Lwt.fail_with "Insertion not succeeded"
+		end) >>=
+	fun () -> PGOCaml.commit dbh
 ;;
 
 let set_game_data game_id date location visible bookable =
@@ -594,4 +604,12 @@ let get_picture_filename game_id =
 	| [] -> fail Not_found
 	| [x] -> Lwt.return x
 	| _ -> fail_with "Inconsistent database"
+;;
+
+let get_game_designers game_id =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT u.id, first_name, last_name \
+		FROM games g JOIN game_designers gd ON g.id = gd.game_id \
+		JOIN users u ON u.id = gd.designer \
+		WHERE g.id = $game_id"
 ;;

@@ -97,10 +97,13 @@ let role_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
-  | Some (uid, _, _, _) -> let%lwt (title, _, _, _, _, dsg_id, _, _, _, _) =
-      Database.get_game_data game_id in
-    if uid <> dsg_id then error_page "You are not the designer of this game."
+  | Some (uid, _, _, _) ->
+		let%lwt dsgs = Database.get_game_designers game_id in
+		if not (is_designer uid dsgs)
+		then error_page "You are not the designer of this game."
     else
+		let%lwt (title, _, _, _, _, _, _) =
+      Database.get_game_data game_id in
 			let%lwt roles = Database.get_game_roles game_id in
 			let nr = ref 0 in
 			container (standard_menu [])

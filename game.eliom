@@ -28,10 +28,10 @@ let game_menu game_id isu is_dsg =
 ;;
 
 let game_page game_id () =
-  let standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn =
+  let standard_game_data title loc date dsg_str d nr_inscr max_pl fn =
 		h1 [pcdata title]::
 		p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
-		p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
+		p [i [pcdata (Printf.sprintf "Designed by %s" dsg_str)]]::
 		(match fn with
 		| None -> p [pcdata "[no image]"]
 		| Some f -> img ~a:[a_height 200; a_width 320] ~alt:"[Image]" ~src:(make_uri ~service:(Eliom_service.static_dir ()) [f]) ()
@@ -44,23 +44,26 @@ let game_page game_id () =
 		in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () ->
-		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg, d, _, max_pl, _) =
-		Database.get_game_data game_id in
+		let%lwt (title, date, loc, d, _, max_pl, _) =
+			Database.get_game_data game_id in
+		let%lwt dsgs = Database.get_game_designers game_id in
     let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
 		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		let%lwt fn = Database.get_picture_filename game_id in
+		let dsg_str = designer_string dsgs in
 		match u with
 	  | None -> container (standard_menu (game_menu game_id false false)) 
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn)
+			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn)
 	  | Some (uid, _, _, _) ->
+			let is_dsg = is_designer uid dsgs in
 			let%lwt sus = Database.sign_up_status uid game_id in
-			if not visible && uid <> dsg 	
+			if not (visible || is_dsg)
 			then unknown_game ()
-			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) (uid = dsg)))
-			(standard_game_data title loc date dsg_fname dsg_lname d nr_inscr max_pl fn @
-				if uid <> dsg then 
+			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) is_dsg))
+			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn @
+				if not is_dsg then
 				begin
 					h2 [pcdata "Available teams and roles"]::
 					(List.flatten (List.map (fun (team_name, role_names) ->

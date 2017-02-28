@@ -127,7 +127,7 @@ let%client group_inscription_handler game_id roles gname ev =
 ;;
 
 let do_signup_page game_id () (edit, (group_name, (team, users))) =
-	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname status =
+	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_str status =
 		match users with
 		| (uid, (role, note))::tl -> 
 			Lwt.catch (fun () ->
@@ -138,7 +138,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
 						fun () -> 
 							if not edit then
-							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_fname dsg_lname;
+							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_str;
 						Lwt.return ())
 				(function
 				| Not_found -> Database.get_provisional_user_data uid >>=
@@ -151,24 +151,26 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 							begin
 								let uri = Eliom_uri.make_string_uri ~absolute:true
 									~service:confirm_provisional_user_service uid in
-								Mail.send_provisional_inscription_mail uri fname lname email game_title game_loc game_dstr dsg_fname dsg_lname
+								Mail.send_provisional_inscription_mail uri fname lname email game_title game_loc game_dstr dsg_str
 							end;
 						Lwt.return ()
 				| e -> Lwt.fail e) >>=
-				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_fname dsg_lname status
+				fun () -> handle_inscriptions edit group_name tl game_title game_loc game_dstr dsg_str status
 		| _ -> Lwt.return ()
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
-		let%lwt (game_title, game_date, game_loc, dsg_fname, dsg_lname, _, _, _, max_pl, _) =
+		let%lwt (game_title, game_date, game_loc, _, _, max_pl, _) =
 			Database.get_game_data game_id  in
+		let%lwt dsgs = Database.get_game_designers game_id in
+		let dsg_str = designer_string dsgs in
 		let game_dstr = match game_date with
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_fname dsg_lname (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
+		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_str (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> let%lwt users_ex = Lwt_list.map_s (fun (uid, (role, note)) ->
 			let%lwt (fn, ln, _, _) = Database.get_user_data uid in
 			Lwt.return (uid, fn, ln, role, note)) users in 
@@ -315,8 +317,10 @@ let signup_page game_id () =
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
 	| Some (my_uid, fname, lname, _) -> 
-		let%lwt (title, date, loc, dsg_fname, dsg_lname, dsg_id, d, _, max_pl, _)  =
+		let%lwt (title, date, loc, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
+		let%lwt dsgs = Database.get_game_designers game_id in
+		let dsg_str = designer_string dsgs in
     let%lwt roles = Database.get_game_roles game_id in
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		let%lwt inscr = Database.get_inscription_data my_uid game_id in
@@ -332,7 +336,7 @@ let signup_page game_id () =
 			(List.sort_uniq (fun (u1, _, _, _, _, _, _, _) (u2, _, _, _, _, _, _, _) ->
 				compare u1 u2) inscr))
 			else None in
-		if my_uid = dsg_id then
+		if is_designer my_uid dsgs then
 			container (standard_menu [])
 			[
 				h1 [pcdata title];
@@ -346,7 +350,7 @@ let signup_page game_id () =
 				datalist ~a:[a_id "users_list"] ()::
 				h1 [pcdata title]::
 				p [pcdata (Printf.sprintf "%s, %s" loc (date_or_tbd date))]::
-				p [i [pcdata (Printf.sprintf "Designed by %s %s" dsg_fname dsg_lname)]]::
+				p [i [pcdata (Printf.sprintf "Designed by %s" dsg_str)]]::
 				p [pcdata d]::
 				(match id with
 				| Some ddl when Date.compare ddl (Date.today ()) < 0 ->

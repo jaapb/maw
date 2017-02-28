@@ -74,7 +74,11 @@ let design_page game_id () =
 	match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
-		let%lwt (title, date, loc, _, _, dsg_id, d, min_nr, max_nr, _) =
+		let%lwt dsgs = Database.get_game_designers game_id in
+		if not (is_designer uid dsgs)
+		then error_page "You are not the designer of this game."
+		else
+		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
 		let idate = match id with
@@ -86,8 +90,6 @@ let design_page game_id () =
 		let pdate = match pd with
 		| None -> ""
 		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
-		if uid <> dsg_id then error_page "You are not the designer of this game."
-    else
 		let%lwt teams = Database.get_game_teams game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		let%lwt fn = Database.get_picture_filename game_id in

@@ -14,7 +14,7 @@
 ]
 
 let show_casting_page game_id () =
-	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, _, _, _, cp) =
+	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, cp) =
 			Database.get_game_data game_id in
 		if cp then
 		begin

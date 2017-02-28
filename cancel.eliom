@@ -20,7 +20,7 @@ let do_cancel_page game_id () user_id =
 	| Some (my_uid, _, _, _) -> 
 		let%lwt () = Database.cancel_inscription game_id user_id in
 		let%lwt (fn, ln, email, _) = Database.get_user_data user_id in
-		let%lwt (title, date, location, _, _, _, _, _, _, _) =
+		let%lwt (title, date, location, _, _, _, _) =
 			Database.get_game_data game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
@@ -46,7 +46,7 @@ let cancel_page game_id () =
 	| None -> not_logged_in ()
 	| Some (my_uid, _, _, _) ->
 		let%lwt isu = Database.sign_up_status my_uid game_id in
-		let%lwt (title, date, location, _, _, _, _, _, _, _) = Database.get_game_data game_id in
+		let%lwt (title, date, location, _, _, _, _) = Database.get_game_data game_id in
 		let%lwt (_, cd, _) = Database.get_game_deadlines game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d

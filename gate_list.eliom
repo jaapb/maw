@@ -50,8 +50,10 @@ let gate_list_page game_id () =
 		~service:close_gate_list_service (do_close_gate_list game_id);
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
-		let%lwt (title, date, loc, dsg_fn, dsg_ln, dsg_uid, _, _, _, _) =
+		let%lwt (title, date, loc, _, _, _, _) =
 			Database.get_game_data game_id in
+		let%lwt dsgs = Database.get_game_designers game_id in
+		let dsg_str = designer_string dsgs in 
 		let%lwt cast = Database.get_casting game_id in
 		let%lwt cast_status = Lwt_list.map_s (fun (t, roles) ->
 			let%lwt new_roles = Lwt_list.map_s (fun (rn, fn, ln, x, _, _) ->
@@ -70,7 +72,7 @@ let gate_list_page game_id () =
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, is_admin) ->
-			if uid <> dsg_uid && not is_admin
+			if not (is_admin || is_designer uid dsgs)
 			then error_page "You are not the designer of this game (or an admin)."
 			else if is_closed
 			then error_page "The gate list is already closed."
@@ -78,7 +80,7 @@ let gate_list_page game_id () =
 				container (standard_menu [])
 				(
 					h1 [pcdata (Printf.sprintf "Gate list for %s" title)]::
-					p [pcdata (Printf.sprintf "By %s %s; %s, %s" dsg_fn dsg_ln loc date_str)]::
+					p [pcdata (Printf.sprintf "By %s; %s, %s" dsg_str loc date_str)]::
 					p [a ~service:print_gate_list_service [pcdata "Printable version"] game_id]::
 					Form.post_form ~service:close_gate_list_service
 					(fun () ->
@@ -133,8 +135,10 @@ let gate_list_page game_id () =
 let print_gate_list_page game_id () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
-		let%lwt (title, date, loc, dsg_fn, dsg_ln, dsg_uid, _, _, _, _) =
+		let%lwt (title, date, loc, _, _, _, _) =
 			Database.get_game_data game_id in
+		let%lwt dsgs = Database.get_game_designers game_id in
+		let dsg_str = designer_string dsgs in
 		let%lwt cast = Database.get_casting game_id in
 		let%lwt cast_status = Lwt_list.map_s (fun (t, roles) ->
 			let%lwt new_roles = Lwt_list.map_s (fun (rn, fn, ln, uid, _, _) ->
@@ -153,7 +157,7 @@ let print_gate_list_page game_id () =
 		match u with
 		| None -> not_logged_in ()
 		| Some (uid, _, _, is_admin) ->
-			if uid <> dsg_uid && not is_admin
+			if not (is_admin || is_designer uid dsgs)
 			then error_page "You are not the designer of this game (or an admin)."
 			else if is_closed
 			then error_page "The gate list is already closed."
@@ -161,7 +165,7 @@ let print_gate_list_page game_id () =
 				container (standard_menu [])
 				(
 					h1 [pcdata (Printf.sprintf "Gate list for %s" title)]::
-					p [pcdata (Printf.sprintf "By %s %s; %s, %s" dsg_fn dsg_ln loc date_str)]::
+					p [pcdata (Printf.sprintf "By %s; %s, %s" dsg_str loc date_str)]::
 					List.flatten (List.map (fun (t, roles) ->
 					[
 						h2 [pcdata t];
