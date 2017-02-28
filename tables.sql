@@ -132,7 +132,7 @@ ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
 ALTER TABLE ONLY games
-    ADD CONSTRAINT games_designer_fkey FOREIGN KEY (designer) REFERENCES users(id);
+    ADD CONSTRAINT games_designer_fkey FOREIGN KEY (designer) REFERENCES user_ids(id);
 
 ALTER TABLE ONLY provisional_users
     ADD CONSTRAINT provisional_users_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
