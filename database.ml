@@ -365,12 +365,15 @@ let add_user ?id ?(confirm=true) fname lname email password address postcode tow
 				fun () -> Lwt.return uid
 			end
 	end >>=
-	fun uid ->	PGSQL(dbh) "INSERT INTO users \
+	fun uid -> Lwt.catch (fun () ->
+		PGSQL(dbh) "INSERT INTO users \
 		(id, first_name, last_name, email, password, password_salt, confirmation, \
 		address, postcode, town, country, phone_number) \
 		VALUES \
 		($uid, $fname, $lname, $email, $c_password, $salt, $?c_random, $address, \
-		$postcode, $town, $country, $phone)" >>=
+		$postcode, $town, $country, $phone)")
+	(fun e -> PGOCaml.rollback dbh >>=
+		fun () -> Lwt.fail_with "User insertion did not succeed") >>=
 	fun () -> PGOCaml.commit dbh >>=
 	fun () -> Lwt.return (uid, c_random)
 ;;
