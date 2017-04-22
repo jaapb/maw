@@ -103,6 +103,31 @@ Kind regards,\n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title game_loc game_date)
 ;;
+
+let send_reset_mail fname lname email uri =
+	send_mail [(Printf.sprintf "%s %s" fname lname), email] "Reset password"
+	(Printf.sprintf "Hello %s,\n
+\n
+Someone (possibly you) has asked for the password of your Megagame Makers\n
+account to be reset.\n
+\n
+If this was you, please click on the following link to reset your password:\n
+%s\n
+\n
+If this was not you, you can ignore this request; your password will not be\n
+changed if you do not click the link.\n
+\n
+This request will remain active for six hours after creation. After that you\n
+will have to send a new request.\n
+\n
+Kind regards,\n
+\n
+  Maw.\n
+	\n
+P.S. This account is not monitored, so please don't reply to this e-mail."
+fname uri)	
+;;
+
 let _ =
 	Nettls_gnutls.init ()
 ;;

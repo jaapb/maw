@@ -14,9 +14,13 @@
 	open Database
 ]
 
-let reset_password_page () (email) =
+let reset_password_mail_page () (email) =
 	Lwt.catch (fun () ->
-		let%lwt id = Database.find_user_by_email email in
+		let%lwt (uid, fname, lname) = Database.find_user_by_email email in
+		let rstr = Database.random_string 32 in
+		let%lwt () = Database.save_reset_request uid rstr in
+		let uri = Eliom_uri.make_string_uri ~absolute:true ~service:reset_password_service (uid, rstr) in
+		Mail.send_reset_mail fname lname email uri;
 		container (standard_menu [])
 		[
 			h1 [pcdata "Reset password"];
@@ -31,16 +35,16 @@ let reset_password_page () (email) =
 ;;
 
 let forgot_password_page () () =
-	let reset_password_service = create_attached_post
+	let reset_password_mail_service = create_attached_post
 		~fallback:forgot_password_service ~post_params:(string "email") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope 
-		~service:reset_password_service reset_password_page;
+		~service:reset_password_mail_service reset_password_mail_page;
 	Lwt.catch (fun () ->
 		container (standard_menu [])
 		[
 			h1 [pcdata "Forgot password"];
 			p [pcdata "Please enter your e-mail adress; you will be sent a link to a page where you can enter a new password."];
-			Form.post_form ~service:reset_password_service
+			Form.post_form ~service:reset_password_mail_service
 			(fun (email) -> [
 				table
 				[

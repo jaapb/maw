@@ -619,11 +619,31 @@ let get_game_designers game_id =
 
 let find_user_by_email email =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id \
+	PGSQL(dbh) "SELECT id, first_name, last_name \
 		FROM users \
 		WHERE email = $email" >>=
 	function
 	| [] -> fail Not_found
 	| [x] -> Lwt.return x
+	| _ -> fail_with "Inconsistent database"
+;;
+
+let save_reset_request uid code =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "INSERT INTO reset_requests \
+		(user_id, code) VALUES \
+		($uid, $code)"
+;;
+
+let check_reset_request uid code =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT user_id \
+		FROM reset_requests \
+		WHERE user_id = $uid AND code = $code \
+		AND creation_time >= current_timestamp - interval '6 hours'" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> PGSQL(dbh) "DELETE FROM reset_requests \
+			WHERE user_id = $uid AND code = $code"
 	| _ -> fail_with "Inconsistent database"
 ;;
