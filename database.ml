@@ -616,3 +616,14 @@ let get_game_designers game_id =
 		JOIN users u ON u.id = gd.designer \
 		WHERE g.id = $game_id"
 ;;
+
+let find_user_by_email email =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT id \
+		FROM users \
+		WHERE email = $email" >>=
+	function
+	| [] -> fail Not_found
+	| [x] -> Lwt.return x
+	| _ -> fail_with "Inconsistent database"
+;;
