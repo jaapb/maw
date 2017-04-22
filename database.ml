@@ -286,6 +286,14 @@ let update_user_data uid fname lname email password address postcode town countr
 		WHERE id = $uid"
 ;;
 
+let update_user_password uid password =
+	let salt = random_string 8 in
+	let c_password = crypt_password password salt in
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE users \
+		SET password = $c_password, password_salt = $salt \
+		WHERE id = $uid";;
+
 (* CLears and re-adds, not ideal *)
 let update_casting game_id teams =
 	get_db () >>= fun dbh ->

@@ -5,10 +5,15 @@ CREATE TABLE game_casting (
     role_name text NOT NULL
 );
 
+CREATE TABLE game_designers (
+    game_id integer NOT NULL,
+    designer integer NOT NULL
+);
+
 CREATE TABLE game_inscriptions (
     game_id integer NOT NULL,
     user_id integer NOT NULL,
-    inscription_time timestamp without time zone DEFAULT now() NOT NULL,
+    inscription_time timestamp without time zone DEFAULT now(),
     note text NOT NULL,
     group_name text,
     status integer DEFAULT 3 NOT NULL,
@@ -23,7 +28,6 @@ CREATE TABLE games (
     date date,
     description text DEFAULT 'No description yet.'::text NOT NULL,
     location text DEFAULT 'Location TBD'::text NOT NULL,
-    designer integer NOT NULL,
     min_players integer DEFAULT 0 NOT NULL,
     max_players integer DEFAULT 0 NOT NULL,
     casting_published boolean DEFAULT false NOT NULL,
@@ -33,6 +37,8 @@ CREATE TABLE games (
     bookable boolean DEFAULT false NOT NULL,
     visible boolean DEFAULT false NOT NULL,
     gate_list_closed boolean DEFAULT false NOT NULL,
+    picture_filename text,
+    abbreviation character varying(50) NOT NULL,
     CONSTRAINT games_check CHECK ((inscription_deadline <= date)),
     CONSTRAINT games_check1 CHECK ((cancellation_deadline <= date)),
     CONSTRAINT games_check2 CHECK ((payment_deadline <= date))
@@ -53,6 +59,12 @@ CREATE TABLE provisional_users (
     game_id integer,
     first_name text NOT NULL,
     last_name text NOT NULL
+);
+
+CREATE TABLE reset_requests (
+    user_id integer NOT NULL,
+    code character(32) NOT NULL,
+    creation_time timestamp without time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE users (
@@ -79,15 +91,11 @@ CREATE SEQUENCE users_id_seq
     NO MAXVALUE
     CACHE 1;
 
-COPY users (id, name, username, is_admin, email, password, confirmation, password_salt) FROM stdin;
-1      Administrator   admin   t       root@kerguelen.org      tdfBqVvihMVZzMwYXZ03CAatorP7Ef7Uj7Id3C4OUV3pQ0Lnts5F8+OeNvNktq3UBakUCrVh2HPNc2KQQNihvA  \N      xxxxxxxx
-\.
-
 ALTER SEQUENCE users_id_seq OWNED BY users.id;
 
 CREATE TABLE user_ids (
     id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL,
-    creation_time timestamp without time zone DEFAULT now() NOT NULL
+    creation_time timestamp without time zone DEFAULT now()
 );
 
 ALTER TABLE ONLY games ALTER COLUMN id SET DEFAULT nextval('games_id_seq'::regclass);
@@ -98,6 +106,9 @@ ALTER TABLE ONLY game_casting
 ALTER TABLE ONLY game_casting
     ADD CONSTRAINT game_casting_game_id_user_id_key UNIQUE (game_id, user_id);
 
+ALTER TABLE ONLY game_designers
+    ADD CONSTRAINT game_designer_game_id_designer_key UNIQUE (game_id, designer);
+
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_game_id_user_id_key UNIQUE (game_id, user_id);
 
@@ -105,10 +116,16 @@ ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_user_id_game_id_key UNIQUE (user_id, game_id);
 
 ALTER TABLE ONLY games
+    ADD CONSTRAINT games_abbreviation_key UNIQUE (abbreviation);
+
+ALTER TABLE ONLY games
     ADD CONSTRAINT megagames_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY provisional_users
     ADD CONSTRAINT provisional_users_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY reset_requests
+    ADD CONSTRAINT reset_requests_user_id_code_key UNIQUE (user_id, code);
 
 ALTER TABLE ONLY user_ids
     ADD CONSTRAINT user_ids_pkey PRIMARY KEY (id);
@@ -125,20 +142,26 @@ ALTER TABLE ONLY game_casting
 ALTER TABLE ONLY game_casting
     ADD CONSTRAINT game_casting_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
+ALTER TABLE ONLY game_designers
+    ADD CONSTRAINT game_designer_designer_fkey FOREIGN KEY (designer) REFERENCES user_ids(id);
+
+ALTER TABLE ONLY game_designers
+    ADD CONSTRAINT game_designer_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
+
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
 
 ALTER TABLE ONLY game_inscriptions
     ADD CONSTRAINT game_inscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
-ALTER TABLE ONLY games
-    ADD CONSTRAINT games_designer_fkey FOREIGN KEY (designer) REFERENCES user_ids(id);
-
 ALTER TABLE ONLY provisional_users
     ADD CONSTRAINT provisional_users_game_id_fkey FOREIGN KEY (game_id) REFERENCES games(id);
 
 ALTER TABLE ONLY provisional_users
     ADD CONSTRAINT provisional_users_id_fkey FOREIGN KEY (id) REFERENCES user_ids(id);
+
+ALTER TABLE ONLY reset_requests
+    ADD CONSTRAINT reset_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_ids(id);
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES user_ids(id);
