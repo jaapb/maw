@@ -82,7 +82,9 @@ let login_box () =
 			]::
 			tr [
 				td ~a:[a_colspan 3]
-					[a ~service:register_service [pcdata "Create a new account"] ()]
+					[a ~service:register_service [pcdata "Create a new account"] ();
+					pcdata " ";
+					a ~service:forgot_password_service [pcdata "Forgot password"] ()]
 			]::
 			(match err with
 			| None -> []

@@ -15,6 +15,7 @@ ELIOM_FILES=	\
 	confirm_user.eliom \
 	design.eliom \
 	designer_message.eliom \
+	forgot_password.eliom \
 	game.eliom \
 	gate_list.eliom \
 	hide_account.eliom \

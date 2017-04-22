@@ -14,6 +14,7 @@ let confirm_provisional_user_service = create ~path:(Path ["confirm_provisional"
 let dashboard_service = create ~path:(Path []) ~meth:(Get unit) ();;
 let design_service = create ~path:(Path ["design"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let designer_message_service = create ~path:(Path ["designer_message"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let forgot_password_service = create ~path:(Path ["forgot_password"]) ~meth:(Get unit) ();;
 let game_service = create ~path:(Path ["game"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let hide_account_service = create ~path:(Path ["hide_account"]) ~meth:(Get unit) ();;
 let login_service = create ~path:No_path
