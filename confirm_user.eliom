@@ -22,6 +22,7 @@ let confirm_user_page (user_id, random) () =
 		p [pcdata "You can now login normally."]
 	])
 	(function
+	| Not_found -> error_page ("Sorry, this is not a valid confirmation request.")
 	| e -> error_page (Printexc.to_string e)
 	)
 ;;
