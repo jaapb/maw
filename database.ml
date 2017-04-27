@@ -356,23 +356,30 @@ let add_user ?id ?(confirm=true) fname lname email password address postcode tow
 	let salt = random_string 8 in
 	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
-	fun () -> begin
-		match id with
-		| None -> begin
-				PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
-				fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
-				function 
-				| [Some uid] -> Lwt.return uid
-      	| _ -> begin
+	fun () -> PGSQL(dbh) "SELECT id FROM users \
+		WHERE email = $email" >>=
+		function
+		| _ -> begin
+				PGOCaml.rollback dbh >>=
+				fun () -> Lwt.fail_with "A user with this e-mail address already exists"
+			end
+		| [] -> begin
+			match id with
+			| None -> begin
+					PGSQL(dbh) "INSERT INTO user_ids DEFAULT VALUES" >>=
+					fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
+					function 
+					| [Some uid] -> Lwt.return uid
+ 		     	| _ -> begin
 						PGOCaml.rollback dbh >>=
 						fun () -> Lwt.fail_with "User creation did not succeed"
 					end
-			end
-		| Some uid -> begin
-				PGSQL(dbh) "DELETE FROM provisional_users WHERE id = $uid" >>=
-				fun () -> Lwt.return uid
-			end
-	end >>=
+				end
+			| Some uid -> begin
+					PGSQL(dbh) "DELETE FROM provisional_users WHERE id = $uid" >>=
+					fun () -> Lwt.return uid
+				end
+		end >>=
 	fun uid -> Lwt.catch (fun () ->
 		PGSQL(dbh) "INSERT INTO users \
 		(id, first_name, last_name, email, password, password_salt, confirmation, \
