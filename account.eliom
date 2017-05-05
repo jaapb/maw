@@ -16,6 +16,7 @@
 
 let account_menu hidden =
 	[
+		tr [td [a ~service:notifications_service [pcdata "Notifications"] ()]];
 		if hidden then
 			tr [td [a ~service:hide_account_service [pcdata "Unhide account"] ()]]
 		else

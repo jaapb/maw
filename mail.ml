@@ -128,6 +128,22 @@ P.S. This account is not monitored, so please don't reply to this e-mail."
 fname uri)	
 ;;
 
+let send_casting_notification fname lname email game_title uri =
+	send_mail [(Printf.sprintf "%s %s" fname lname), email] 
+		(Printf.sprintf "Casting published for %s" game_title)
+	(Printf.sprintf "Hello %s,\n
+\n
+The casting for %s has now been published. You can find all role assignments\n
+here: %s\n
+\n
+Kind regards,\n
+\n
+  Maw.\n
+	\n
+P.S. This account is not monitored, so please don't reply to this e-mail."
+fname game_title uri)	
+;;
+
 let _ =
 	Nettls_gnutls.init ()
 ;;

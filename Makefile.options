@@ -22,6 +22,7 @@ ELIOM_FILES=	\
 	maw.eliom \
 	new_game.eliom \
 	new_provisional_user.eliom \
+	notifications.eliom \
 	reset_password.eliom \
 	register.eliom \
 	role.eliom \

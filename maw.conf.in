@@ -9,6 +9,9 @@
     %%USERGROUP%%
     <logdir>%%LOGDIR%%</logdir>
     <datadir>%%DATADIR%%</datadir>
+		<uploaddir>%%DATADIR%%</uploaddir>
+		<maxuploadfilesize>2MB</maxuploadfilesize>
+		<maxrequestbodysize>100MB</maxrequestbodysize>
     <charset>utf-8</charset>
     %%% Only set when debugging
     %%DEBUGMODE%%
@@ -27,17 +30,15 @@
       <static dir="%%ELIOMSTATICDIR%%" />
       <eliommodule module="%%LIBDIR%%/%%PROJECT_NAME%%.cma">
 				<mail>
-					<server></server>
-					<port></port>
-					<user></user>
-					<password></password>
+					<server>smtp.kerguelen.org</server>
+					<port>587</port>
+					<user>megagames</user>
+					<password>r@mpj4ar</password>
 				</mail>
 				<database>
-					<server></server>
-					<port></port> <!-- optional -->
-					<name></name>
-					<user></user>
-					<password></password> <!-- optional -->
+					<server>localhost</server>
+					<name>maw</name>
+					<user>jaapb</user>
 				</database>
 	</eliommodule>
       <eliom/>

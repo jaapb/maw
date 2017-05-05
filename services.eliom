@@ -24,6 +24,7 @@ let logout_service = create_attached_post
 	~post_params:unit ();;
 let new_game_service = create ~path:(Path ["new_game"]) ~meth:(Get unit) ();;
 let new_provisional_user_service = create ~path:(Path ["new_provisional_user"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
+let notifications_service = create ~path:(Path ["notifications"]) ~meth:(Get unit) ();;
 let register_service = create ~path:(Path ["register"]) ~meth:(Get unit) ();;
 let reset_password_service = create ~path:(Path ["reset_password"]) ~meth:(Get (suffix (int32 "user_id" ** string "code"))) ();;
 let role_service = create ~path:(Path ["role"]) ~meth:(Get (suffix (int32 "game_id"))) ();;

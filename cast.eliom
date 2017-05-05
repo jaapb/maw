@@ -135,18 +135,41 @@ let%client cast_init ev =
 	selected_player := None;
 ;;
 
+let send_casting_notification game_id teams =
+	let%lwt (game_title, _, _, _, _, _, _) = Database.get_game_data game_id in
+	Lwt_list.iter_s (fun (t_name, roles) ->
+		Lwt_list.iter_s (fun (r_name, user_id) ->
+			match user_id with
+			| None -> Lwt.return ()
+			| Some u ->
+				let%lwt (c, _) = Database.get_notifications u in
+				let%lwt (fname, lname, email, _) = Database.get_user_data u in
+				let uri = Eliom_uri.make_string_uri ~absolute:true
+					~service:show_casting_service game_id in
+					Mail.send_casting_notification fname lname email game_title uri;
+					Lwt.return ()
+		) roles
+	) teams
+;;
+
 let do_cast_page game_id () (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
 	| None -> not_logged_in ()
 	| Some (uid, _, _, _) -> 
+		let%lwt was_published = Database.is_published game_id in
 		Database.update_casting game_id teams >>=
 		fun () -> Database.set_published game_id publish >>=
+		fun () -> begin
+			if (not was_published) && publish then
+				send_casting_notification game_id teams
+			else Lwt.return ()
+		end	>>=
 		fun () -> container (standard_menu [])
 		[
 			h1 [pcdata "Casting"];
 			p [pcdata
-				(if publish
+				(if (not was_published) && publish
 				then "Casting saved and published."
 				else "Casting saved.")]
 		])
