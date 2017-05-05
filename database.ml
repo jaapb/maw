@@ -1,6 +1,6 @@
 open Lwt
 
-module PGOCaml = PGOCaml_generic.Make(struct include Lwt include Lwt_chan end)
+module PGOCaml = PGOCaml_generic.Make(struct include Lwt include Lwt_io end)
 
 let db_handler = ref None;;
 
