@@ -359,7 +359,7 @@ let add_user ?id ?(confirm=true) fname lname email password address postcode tow
 	fun () -> PGSQL(dbh) "SELECT id FROM users \
 		WHERE email = $email" >>=
 		function
-		| _ -> begin
+		| [_] -> begin
 				PGOCaml.rollback dbh >>=
 				fun () -> Lwt.fail_with "A user with this e-mail address already exists"
 			end
