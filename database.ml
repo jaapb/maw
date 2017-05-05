@@ -1,26 +1,6 @@
 open Lwt
 
-module Thread = struct
-	open Lwt_io
-	type 'a t = 'a Lwt.t
-	let (>>=) = (>>=)
-	let return = return
-	let fail = fail
-	type in_channel = input_channel
-	type out_channel = output_channel
-	let open_connection addr = open_connection addr
-	let output_char = write_char
-	let output_binary_int = write_int
-	let output_string = write
-	let flush = flush
-	let input_char = read_char
-	let input_binary_int = read_int
-	let really_input = read_into_exactly
-	let close_in = close
-	let catch = catch
-end
-
-module PGOCaml = PGOCaml_generic.Make(Thread)
+module PGOCaml = PGOCaml_generic.Make(struct include Lwt include Lwt_chan end)
 
 let db_handler = ref None;;
 
