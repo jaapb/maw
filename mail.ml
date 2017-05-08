@@ -139,9 +139,53 @@ here: %s\n
 Kind regards,\n
 \n
   Maw.\n
-	\n
+\n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title uri)	
+;;
+
+let send_signup_notification fname lname email game_title group_name users =
+	let users_str = String.concat "" (List.map
+		(fun (_, f, l, r, n) ->
+			Printf.sprintf "%s %s\t%s\t%s\n" f l r n
+		) users) in
+	let gname_str = match group_name with
+	| None -> ""
+	| Some g -> Printf.sprintf "Group name: %s\n" g in
+	send_mail [(Printf.sprintf "%s %s" fname lname), email]
+		(Printf.sprintf "Inscription for %s" game_title)
+	(Printf.sprintf "Hello %s,\n
+\n
+There has been a new inscription for your game %s\n
+(or an existing inscription has been changed).\n
+\n
+Here are the details:\n
+\n
+%s
+Name\tRole\tNote\n
+%s\n
+\n
+Kind regards,\n
+\n
+  Maw.\n
+\n
+P.S. This account is not monitored, so please don't reply to this e-mail."
+fname game_title gname_str users_str)
+;;
+
+let send_cancel_notification fname lname email game_title user_fn user_ln =
+	send_mail [(Printf.sprintf "%s %s" fname lname), email]
+		(Printf.sprintf "Cancellation for %s" game_title)
+	(Printf.sprintf "Hello %s,\n
+\n
+Unfortunately, %s %s has cancelled their inscription for your game %s.\n
+\n
+Kind regards,\n
+\n
+  Maw.\n
+\n
+P.S. This account is not monitored, so please don't reply to this e-mail."
+fname user_fn user_ln game_title)
 ;;
 
 let _ =

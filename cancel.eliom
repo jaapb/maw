@@ -13,6 +13,12 @@
 	open Maw
 ]
 
+let send_cancel_notification dsg game_title ufn uln =
+	List.iter (fun (_, dfn, dln, demail) ->
+		Mail.send_cancel_notification dfn dln demail game_title ufn uln
+	) dsg
+;;
+
 let do_cancel_page game_id () user_id =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
@@ -20,12 +26,14 @@ let do_cancel_page game_id () user_id =
 	| Some (my_uid, _, _, _) -> 
 		let%lwt () = Database.cancel_inscription game_id user_id in
 		let%lwt (fn, ln, email, _) = Database.get_user_data user_id in
+		let%lwt dsg = Database.get_game_designers game_id in
 		let%lwt (title, date, location, _, _, _, _) =
 			Database.get_game_data game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
 		Mail.send_cancellation_mail fn ln email title game_dstr location;
+		send_cancel_notification dsg title fn ln;
 		container (standard_menu [])
 			[
 				h1 [pcdata "Cancellation complete"];

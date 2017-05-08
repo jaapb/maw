@@ -626,7 +626,7 @@ let get_picture_filename game_id =
 
 let get_game_designers game_id =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT u.id, first_name, last_name \
+	PGSQL(dbh) "SELECT u.id, first_name, last_name, email \
 		FROM games g JOIN game_designers gd ON g.id = gd.game_id \
 		JOIN users u ON u.id = gd.designer \
 		WHERE g.id = $game_id"

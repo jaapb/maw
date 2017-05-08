@@ -17,12 +17,12 @@ let cond_list c h t =
 ;;
 
 let is_designer uid dsg_ids =
-	List.exists (fun (x, _, _) -> uid = x) dsg_ids
+	List.exists (fun (x, _, _, _) -> uid = x) dsg_ids
 ;;
 
 let designer_string dsg_ids =
 	match dsg_ids with
 	| [] -> "nobody"
-	| [(_, fn, ln)] -> Printf.sprintf "%s %s" fn ln
-	| (_, ffn, lfn)::ds -> Printf.sprintf "%s and %s %s" (String.concat ", " (List.map (fun (_, f, l) -> Printf.sprintf "%s %s" f l) ds)) ffn lfn
+	| [(_, fn, ln, _)] -> Printf.sprintf "%s %s" fn ln
+	| (_, ffn, lfn, _)::ds -> Printf.sprintf "%s and %s %s" (String.concat ", " (List.map (fun (_, f, l, _) -> Printf.sprintf "%s %s" f l) ds)) ffn lfn
 ;;

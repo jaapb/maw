@@ -126,6 +126,12 @@ let%client group_inscription_handler game_id roles gname ev =
 	)
 ;;
 
+let send_signup_notification dsgs game_title group_name users =
+	List.iter (fun (_, fname, lname, email) ->
+		Mail.send_signup_notification fname lname email game_title group_name users
+	) dsgs
+;;
+
 let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	let rec handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_str status =
 		match users with
@@ -174,6 +180,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 		fun () -> let%lwt users_ex = Lwt_list.map_s (fun (uid, (role, note)) ->
 			let%lwt (fn, ln, _, _) = Database.get_user_data uid in
 			Lwt.return (uid, fn, ln, role, note)) users in 
+		send_signup_notification dsgs game_title group_name users_ex;
 		container (standard_menu [])
 		[
 			h1 [pcdata "Summary"];
