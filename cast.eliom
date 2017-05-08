@@ -142,7 +142,7 @@ let send_casting_notification game_id teams =
 			match user_id with
 			| None -> Lwt.return ()
 			| Some u ->
-				let%lwt (c, _) = Database.get_notifications u in
+				let%lwt (c, _, _, _) = Database.get_notifications u in
 				let%lwt (fname, lname, email, _) = Database.get_user_data u in
 				let uri = Eliom_uri.make_string_uri ~absolute:true
 					~service:show_casting_service game_id in

@@ -665,7 +665,7 @@ let check_reset_request uid code =
 
 let get_notifications uid =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT notification_casting_published, notification_before_game \
+	PGSQL(dbh) "SELECT notification_casting_published, notification_before_game, notification_sign_up, notification_cancel \
 		FROM users \
 		WHERE id = $uid" >>=
 	function
@@ -674,10 +674,11 @@ let get_notifications uid =
 	| _ -> fail_with "Inconsistent database"
 ;;
 
-let set_notifications uid c b =
+let set_notifications uid c b sgn cnc =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET notification_casting_published = $c, notification_before_game = $b \
+		SET notification_casting_published = $c, notification_before_game = $b, \
+		notification_sign_up = $sgn, notification_cancel = $cnc \ 
 		WHERE id = $uid"
 ;;
 

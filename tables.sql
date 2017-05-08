@@ -2,7 +2,8 @@ CREATE TABLE game_casting (
     game_id integer NOT NULL,
     user_id integer,
     team_name text NOT NULL,
-    role_name text NOT NULL
+    role_name text NOT NULL,
+    notification_sent boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE game_designers (
@@ -81,7 +82,11 @@ CREATE TABLE users (
     town text NOT NULL,
     postcode text NOT NULL,
     country text NOT NULL,
-    hidden boolean DEFAULT false NOT NULL
+    hidden boolean DEFAULT false NOT NULL,
+    notification_casting_published boolean DEFAULT true NOT NULL,
+    notification_before_game interval,
+    notification_sign_up boolean DEFAULT true NOT NULL,
+    notification_cancel boolean DEFAULT true NOT NULL
 );
 
 CREATE SEQUENCE users_id_seq
