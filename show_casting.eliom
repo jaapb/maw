@@ -16,7 +16,9 @@
 let show_casting_page game_id () =
 	Lwt.catch (fun () -> let%lwt (title, _, _, _, _, _, cp) =
 			Database.get_game_data game_id in
-		if cp then
+		let%lwt (visible, _) = Database.get_game_visibility game_id in
+		if not visible then unknown_game ()
+		else if cp then
 		begin
 			let%lwt casting = Database.get_casting game_id in
 			(*let teams = List.sort_uniq (fun (t1, _, _, _, _, _, _) (t2, _, _, _, _, _, _) ->

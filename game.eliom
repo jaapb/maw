@@ -53,6 +53,9 @@ let game_page game_id () =
 		let%lwt roles = Database.get_game_roles game_id in
 		let%lwt fn = Database.get_picture_filename game_id in
 		let dsg_str = designer_string dsgs in
+		if not visible then
+			unknown_game ()
+		else
 		match u with
 	  | None -> container (standard_menu (game_menu game_id false false)) 
 			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn)
