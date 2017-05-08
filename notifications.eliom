@@ -21,7 +21,8 @@ let update_notifications_page () (casting, before) =
 		| None -> not_logged_in ()
 		| Some (uid, _, _, _) -> 
 			let%lwt (_, _, _, hidden) = Database.get_user_data uid in
-			Database.set_notifications uid casting before >>=
+			let not_period = Calendar.Period.day (int_of_string before) in 
+			Database.set_notifications uid casting not_period >>=
 			fun () -> container (standard_menu (Account.account_menu hidden))
 			[
 				h1 [pcdata "Notifications"];
@@ -36,7 +37,7 @@ let update_notifications_page () (casting, before) =
 let notifications_page () () =
 	let update_notifications_service = create_attached_post
 		~fallback:notifications_service
-		~post_params:(bool "casting" ** bool "before") () in
+		~post_params:(bool "casting" ** string "before") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:update_notifications_service update_notifications_page;
 	Lwt.catch (fun () ->
@@ -46,6 +47,9 @@ let notifications_page () () =
 		| Some (uid, _, _, _) -> 
 			let%lwt (_, _, _, hidden) = Database.get_user_data uid in
 			let%lwt (n_c, n_b) = Database.get_notifications uid in
+			let nr_days = match n_b with
+			| None -> ""
+			| Some d -> string_of_int (Date.Period.nb_days (Calendar.Period.to_date d)) in
 			container (standard_menu (Account.account_menu hidden))
 			[
 				h1 [pcdata "Notifications"];
@@ -58,8 +62,8 @@ let notifications_page () () =
 							td [pcdata " Casting is published"]
 						];
 						tr [
-							td [bool_checkbox b n_b];
-							td [pcdata " One week before the game"]
+							td [Form.input ~input_type:`Text ~name:b ~value:nr_days Form.string];
+							td [pcdata " days before the game (only if you are cast)"]
 						];
 						tr [
 							td ~a:[a_colspan 2] [Form.input ~input_type:`Submit
