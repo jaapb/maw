@@ -17,7 +17,7 @@ let send_mail to_addrs subject contents =
 		~tls_config
 		smtp;
 	let msg = Netsendmail.compose
-		~from_addr:("MAW", "maw@kerguelen.org")
+		~from_addr:("Megagames Admin Website", "maw@kerguelen.org")
 		~to_addrs
 		~subject:(Printf.sprintf "[MM] %s" subject)
 		contents in
@@ -34,7 +34,7 @@ To confirm your account, please click on the following link:\n
 \n
 Kind regards,\n
 \n
-	Maw.\n
+	Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail." first_name uri) 
 ;;
@@ -55,7 +55,7 @@ You can review your inscription on the Megagame Makers website.\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title dsg_str game_loc game_date)
@@ -79,7 +79,7 @@ This link will stay active for 48 hours.\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title dsg_str game_loc game_date uri)
@@ -98,7 +98,7 @@ was made in error, please contact Megagame Makers as soon as possible.\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title game_loc game_date)
@@ -122,7 +122,7 @@ will have to send a new request.\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 	\n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname uri)	
@@ -138,7 +138,7 @@ here: %s\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title uri)	
@@ -167,7 +167,7 @@ Name\tRole\tNote\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname game_title gname_str users_str)
@@ -182,7 +182,7 @@ Unfortunately, %s %s has cancelled their inscription for your game %s.\n
 \n
 Kind regards,\n
 \n
-  Maw.\n
+  Megagame Makers.\n
 \n
 P.S. This account is not monitored, so please don't reply to this e-mail."
 fname user_fn user_ln game_title)
