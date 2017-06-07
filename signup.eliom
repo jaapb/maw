@@ -313,13 +313,41 @@ let%client change_team roles ev =
 	) (Dom.list_of_nodeList git##.childNodes)
 ;;
 
+let do_switch_page game_id () (new_group) =
+	let%lwt u = Eliom_reference.get Maw.user in
+	Lwt.catch (fun () -> match u with
+	| None -> not_logged_in ()
+	| Some (uid, _, _, _) -> Lwt.catch (
+		fun () -> Database.find_group game_id new_group >>=
+		fun ids -> if not (List.mem uid ids) then
+			Database.move_group game_id uid new_group >>=
+			fun () -> container (standard_menu [])
+			[
+				h1 [pcdata "Request successful"];
+				p [pcdata 
+					(Printf.sprintf "Your inscription has now been moved to the group %s." new_group)]
+			]
+		else
+			error_page "You are already a member of this group."
+		)
+		(function
+		| Not_found -> error_page "That group does not exist."
+		| e -> error_page (Printexc.to_string e))
+	)
+	(fun e -> error_page (Printexc.to_string e))
+;;
+
 let signup_page game_id () =
 	let do_signup_service = create_attached_post
 		~fallback:(preapply signup_service game_id)
 		~post_params:(bool "edit" ** opt (string "group_name") **
 			string "team" ** list "person" (int32 "uid" ** string "role" **
 			string "note")) () in 
+	let do_switch_service = create_attached_post
+		~fallback:(preapply signup_service game_id)
+		~post_params:(string "new_team") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_signup_service (do_signup_page game_id);
+	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_switch_service (do_switch_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
 	| None -> not_logged_in ()
@@ -366,7 +394,25 @@ let signup_page game_id () =
 				begin
 					cond_list (nr_inscr >= max_pl)
 					(p [i [pcdata "This game has reached its maximum number of participants. Any new inscriptions will be placed on the waiting list."]])
-					(h2 [pcdata (if signed_up then "Edit inscription" else "Sign up")]::
+					(h2 [pcdata (if signed_up then "[dit inscription" else "Sign up")]::
+					(cond_list signed_up
+						(Form.post_form ~service:do_switch_service
+						(fun (new_group) ->
+						[
+							p [pcdata "If you wish to switch your inscription to another group, please enter its name below:"];
+							table
+							[
+								tr [
+									td [pcdata "New group: "];
+									td [Form.input ~input_type:`Text ~name:new_group Form.string]
+								];
+								tr
+								[
+									td ~a:[a_colspan 2]
+									[Form.input ~input_type:`Submit ~value:"Switch" Form.string]
+								]
+							]
+						]) ())
 					[Form.post_form ~service:do_signup_service
 					(fun (edit, (group_name, (team, person))) ->
 					[
@@ -436,7 +482,7 @@ let signup_page game_id () =
 							])
 						)
 					]) ()
-				])
+				]))
 			end)
 		)
 	)

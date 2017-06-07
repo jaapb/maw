@@ -682,3 +682,19 @@ let set_notifications uid c b sgn cnc =
 		WHERE id = $uid"
 ;;
 
+let find_group game_id name =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT user_id \
+		FROM game_inscriptions \
+		WHERE game_id = $game_id AND group_name = $name" >>=
+	function
+	| [] -> fail Not_found
+	| l -> Lwt.return l
+;;
+
+let move_group game_id uid group_name =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "UPDATE game_inscriptions \
+		SET group_name = $group_name \
+		WHERE user_id = $uid AND game_id = $game_id"
+;;
