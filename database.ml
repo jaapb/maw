@@ -403,15 +403,18 @@ let confirm_user user_id random =
 	| _ -> Lwt.fail_with "Inconsistency in database"
 ;;
 
-let add_game title designer =
+let add_game title abbr designers =
 	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
 	fun () -> PGSQL(dbh) "INSERT INTO games \
-		(title) VALUES \
-		($title) RETURNING id" >>=
+		(title, abbreviation) VALUES \
+		($title, $abbr) RETURNING id" >>=
 	(function
-	| [id] -> PGSQL(dbh) "INSERT INTO game_designers (game_id, designer) \
-		VALUES \
-		($id, $designer)"
+	| [id] -> Lwt_list.iter_s
+		(fun dsg ->
+			PGSQL(dbh) "INSERT INTO game_designers (game_id, designer) \
+			VALUES \
+			($id, $dsg)"
+		) designers
 	| _ -> begin
 			PGOCaml.rollback dbh >>=
 			fun () -> Lwt.fail_with "Insertion not succeeded"

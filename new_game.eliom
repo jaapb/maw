@@ -12,13 +12,30 @@
 	open Maw
 ]
 
-let do_new_game () (title, designer) =
-	Database.add_game title designer
+let do_new_game () (title, (abbr, designers)) =
+	Database.add_game title abbr designers
+;;
+
+let%client add_designer users ev =
+	let designer_table = Dom_html.getElementById "designer_table" in
+	let m = ref 0 in
+	List.iter (fun designer_tr ->
+		incr m
+	) (Dom.list_of_nodeList designer_table##.childNodes);
+	let new_select = Html.To_dom.of_element (tr [td [
+                  			Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_designer.id[%d]" !m)]
+                  			(List.map (fun (id, fname, lname, _, s) ->
+													match s with
+													| Some "H" -> option ~a:[a_value (Int32.to_string id)] (pcdata (Printf.sprintf "%s %s (HIDDEN)" fname lname))
+													| _ -> option ~a:[a_value (Int32.to_string id)] (pcdata (Printf.sprintf "%s %s" fname lname))
+                  			) (users))
+											]]) in
+	Dom.appendChild designer_table new_select
 ;;
 
 let rec new_game_page () () =
 	let add_game_service = create_attached_post ~fallback:dashboard_service
-		~post_params:(string "title" ** int32 "designer") () in
+		~post_params:(string "title" ** string "abbreviation" ** list "designer" (int32 "id")) () in
 	Eliom_registration.Action.register ~scope:Eliom_common.default_session_scope
 		~service:add_game_service do_new_game;
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
@@ -33,29 +50,31 @@ let rec new_game_page () () =
         container (standard_menu [])
         [
           h1 [pcdata "Create new game"];
-          Form.post_form ~service:add_game_service (fun (title, designer) -> [
+          Form.post_form ~service:add_game_service (fun (title, (abbr, designers)) -> [
             table [
               tr
               [
                 th [pcdata "Title:"];
-                td [Form.input ~input_type:`Text ~name:title Form.string]
-              ];
-              tr
-              [
-                th [pcdata "Designer:"];
-                td [
-                  Form.select ~name:designer Form.int32
-                  (Form.Option ([], uhid, Some (pcdata (Printf.sprintf "%s %s" uhfname uhlname)), false))
-                  (List.map (fun (id, fname, lname, _, s) ->
-										match s with
-										| Some "H" -> Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s (HIDDEN)" fname lname)), false)
-										| _ -> Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fname lname)), false)
-                  ) (List.tl users))
-                ]
-              ];
-              tr
-              [
                 td ~a:[a_colspan 2]
+									[Form.input ~input_type:`Text ~name:title Form.string]
+              ];
+							tr
+							[
+								th [pcdata "Abbreviation:"];
+								td ~a:[a_colspan 2]
+									[Form.input ~input_type:`Text ~name:abbr Form.string]
+							];
+              tr
+              [
+                th [pcdata "Designer(s):"];
+                td [
+									table ~a:[a_id "designer_table"] []
+								];
+								td [Raw.input ~a:[a_input_type `Button; a_value "Add designer"; a_onclick [%client add_designer ~%users]] ()]
+              ];
+              tr
+              [
+                td ~a:[a_colspan 3]
                 [Form.input ~input_type:`Submit ~value:"Save changes" Form.string]
               ]
             ]
