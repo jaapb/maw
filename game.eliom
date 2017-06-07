@@ -13,7 +13,7 @@
 	open Maw
 ]
 
-let game_menu game_id isu is_dsg =
+let game_menu game_id isu is_dsg is_bk =
 	if is_dsg then
 	[
 		tr [td [a ~service:design_service [pcdata "Edit design"] game_id]];
@@ -21,10 +21,16 @@ let game_menu game_id isu is_dsg =
 		tr [td [a ~service:designer_message_service [pcdata "Message players"] game_id]]
 	]
 	else
-	[
-		tr [td [a ~service:signup_service [pcdata (if isu then "Edit inscription" else "Sign up")] game_id]];
-		tr [td [a ~service:cancel_service [pcdata "Cancel inscription"] game_id]]
-	]
+	(
+		if not is_bk then []
+		else if isu then [
+			tr [td [a ~service:signup_service [pcdata "Edit inscription"] game_id]];
+			tr [td [a ~service:cancel_service [pcdata "Cancel inscription"] game_id]]
+		]
+		else [
+			tr [td [a ~service:signup_service [pcdata "Sign up"] game_id]]
+		]
+	)
 ;;
 
 let game_page game_id () =
@@ -57,14 +63,14 @@ let game_page game_id () =
 			unknown_game ()
 		else
 		match u with
-	  | None -> container (standard_menu (game_menu game_id false false)) 
+	  | None -> container (standard_menu (game_menu game_id false false false)) 
 			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn)
 	  | Some (uid, _, _, _) ->
 			let is_dsg = is_designer uid dsgs in
 			let%lwt sus = Database.sign_up_status uid game_id in
 			if not (visible || is_dsg)
 			then unknown_game ()
-			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) is_dsg))
+			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) is_dsg bookable))
 			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn @
 				if not is_dsg then
 				begin
