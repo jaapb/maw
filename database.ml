@@ -153,11 +153,12 @@ let get_game_teams game_id =
 
 let get_game_roles game_id =
 	get_db () >>=
-	fun dbh -> PGSQL(dbh) "SELECT team_name, role_name \
+	fun dbh -> PGSQL(dbh) "SELECT team_name, role_name, role_class \
 		FROM game_casting \
 		WHERE game_id = $game_id \
 		ORDER BY team_name" >>=
-	fun l -> match l with
+	fun l -> Lwt_list.map_p (fun (t, rn, rc) -> Lwt.return (t, (rn, rc))) l >>=
+	function
 	| [] -> Lwt.return []
 	| (ht, hr)::t -> Lwt.return (aux_assoc_list t ht [hr] [])
 ;;
@@ -491,11 +492,11 @@ let update_teams game_id teams =
 		PGSQL(dbh) "DELETE FROM game_casting \
 			WHERE game_id = $game_id" >>=
 		fun () -> Lwt_list.iter_s (fun (t_name, roles) ->
-			Lwt_list.iter_s (fun r_name ->
+			Lwt_list.iter_s (fun (r_name, r_class) ->
 			PGSQL(dbh) "INSERT INTO game_casting \
-				(game_id, team_name, role_name) \
+				(game_id, team_name, role_name, role_class) \
 				VALUES \
-				($game_id, $t_name, $r_name)"
+				($game_id, $t_name, $r_name, $?r_class)"
 			) roles
 		) teams
 	)

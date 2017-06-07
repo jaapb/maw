@@ -52,7 +52,7 @@ let%client remove_my_row ev =
 
 let%client new_row game_id id roles =
 	let tps = Dom_html.getElementById "team_preference_select" in
-	let r_names = Js.Opt.case (Dom_html.CoerceTo.select tps)
+	let r_cls = Js.Opt.case (Dom_html.CoerceTo.select tps)
 		(fun () -> [])
 		(fun x -> try List.assoc (Js.to_string x##.value) roles
 			with Not_found -> []
@@ -67,7 +67,7 @@ let%client new_row game_id id roles =
 				ignore (Eliom_client.window_open ~window_name:(Js.string "New user") ~service:~%new_provisional_user_service game_id));
 			a_input_type `Button; a_value "New user"] ()
 		];
-		td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] (option (pcdata "Any")::List.map (fun x -> option (pcdata x)) r_names)];
+		td [Raw.select ~a:[a_name (Printf.sprintf "__co_eliom_person.role[%d]" id)] (option (pcdata "Any")::List.map (fun x -> option (pcdata x)) (List.sort_uniq compare (remove_null (List.map snd r_cls))))];
 		td [Raw.input ~a:[a_name (Printf.sprintf "__co_eliom_person.note[%d]" id); a_input_type `Text; a_value ""] ()];
 		td [Raw.input ~a:[a_input_type `Button; a_value "Remove"; a_onclick remove_my_row] ()]
 	]
@@ -284,12 +284,12 @@ let%client change_team roles ev =
 		Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata "Any")));
 		Js.Opt.iter (ev##.target) (fun e ->
 			Js.Opt.iter (Dom_html.CoerceTo.select e) (fun t ->
-				let r_names = try
+				let rcl = try
 					List.assoc (Js.to_string t##.value) roles
 					with Not_found -> [] in
 				List.iter (fun r ->
 					Dom.appendChild sel (Html.To_dom.of_element (Raw.option (pcdata r)))
-				) r_names
+				) (List.sort_uniq compare (remove_null (List.map snd rcl)))
 			)
 		) in
 	let git = Dom_html.getElementById "inscription_table" in

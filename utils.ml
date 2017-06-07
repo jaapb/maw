@@ -26,3 +26,12 @@ let designer_string dsg_ids =
 	| [(_, fn, ln, _)] -> Printf.sprintf "%s %s" fn ln
 	| (_, ffn, lfn, _)::ds -> Printf.sprintf "%s and %s %s" (String.concat ", " (List.map (fun (_, f, l, _) -> Printf.sprintf "%s %s" f l) ds)) ffn lfn
 ;;
+
+let remove_null l =
+	let rec remove_null_aux res l =
+		match l with
+		| [] -> res
+		| None::t -> remove_null_aux res t
+		| Some x::t -> remove_null_aux (x::res) t in
+	remove_null_aux [] l
+;;

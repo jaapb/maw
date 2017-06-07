@@ -74,15 +74,19 @@ let%client do_role_save ev =
 ;;
 
 let do_role_page game_id () teams =
-	Database.update_teams game_id teams >>=
+	let reblerp_teams = List.map (fun (n, r) ->
+		(n, List.map (fun (rn, rc) ->
+			(rn, if rc = "" then None else Some rc)
+		) r)) teams in
+	Database.update_teams game_id reblerp_teams >>=
 	fun () -> container (standard_menu [])
 	(
 		h1 [pcdata "Your teams"]::
 		(List.flatten (List.map (fun (name, roles) ->
 			[
 				h2 [pcdata name];
-				ul (List.map (fun role ->
-						li [pcdata role]
+				ul (List.map (fun (name, rclass) ->
+					li [pcdata (Printf.sprintf "%s (%s)" name rclass)]
 				) roles) 
 			]
 		) teams))
@@ -91,7 +95,7 @@ let do_role_page game_id () teams =
 
 let role_page game_id () =
 	let do_role_service = create_attached_post ~fallback:(preapply role_service game_id)
-		~post_params:(list "team" (string "name" ** list "role" (string "name"))) () in
+		~post_params:(list "team" (string "name" ** list "role" (string "name" ** string "class"))) () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:do_role_service (do_role_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
@@ -120,13 +124,24 @@ let role_page game_id () =
 								td [
 									Form.input ~input_type:`Text ~name:t_name ~value:t Form.string
 								];
-								td (
-									role.it (fun r_name r init' ->
-										Form.input ~a:[a_class ["role"]] ~input_type:`Text
-											~name:r_name ~value:r Form.string::init'
-									) rs
-									[Raw.input ~a:[a_input_type `Button; a_value "Add role"; a_onclick [%client add_role ~%(!nr)]] ()] 
-								)
+								td [
+									table (
+										tr [
+											th [pcdata "Name"];
+											th [pcdata "Class"]
+										]::
+										role.it (fun (r_name, r_class) (rn, rc) init' ->
+											tr [
+												td [Form.input ~a:[a_class ["role"]] ~input_type:`Text
+													~name:r_name ~value:rn Form.string];
+												td [Form.input ~a:[a_class ["role_class"]]
+													~input_type:`Text ~name:r_class ~value:(default "" rc)
+													Form.string]
+											]::init'
+										) rs
+										[tr [td [ 
+										Raw.input ~a:[a_input_type `Button; a_value "Add role"; a_onclick [%client add_role ~%(!nr)]] ()]]])
+								]
 							]::init
 						) roles
 						[tr ~a:[a_id "add_button_row"] [td [Raw.input ~a:[a_input_type `Button; a_value "Add group"; a_onclick [%client add_team ~%(List.length roles)]] ()]];

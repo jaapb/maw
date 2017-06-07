@@ -75,12 +75,12 @@ let game_page game_id () =
 				if not is_dsg then
 				begin
 					h2 [pcdata "Available teams and roles"]::
-					(List.flatten (List.map (fun (team_name, role_names) ->
+					(List.flatten (List.map (fun (team_name, roles) ->
 						[
 							h3 [pcdata team_name];
-							ul (List.map (fun rn ->
-								li [pcdata rn] 
-							) role_names)
+							ul (List.map (fun rc ->
+								li [pcdata rc] 
+							) (List.sort_uniq compare (remove_null (List.map snd roles))))
 						]
 					) roles) @
 					(match sus with
