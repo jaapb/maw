@@ -127,7 +127,7 @@ let standard_menu extra_rows =
 					tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]]::
 					tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]]::
 					tr ~a:[a_class ["separator"]] []::
-					extra_rows
+					(List.rev extra_rows)
 				)
 			else extra_rows)
 		)]
