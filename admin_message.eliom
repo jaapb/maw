@@ -33,6 +33,12 @@ let do_message_page () (dest_type, (dest, (subject, contents))) =
 						(email, fn, ln)
 					) l)
 				end
+			| Some "user" -> begin
+				match dest with
+				| None -> Lwt.return []
+				| Some d -> Database.get_user_data (Int32.of_string d) >>=
+					fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
+			  end
 			| _ -> Lwt.return []
 			in
 		if not is_admin then error_page "You must be an administrator to access this page."
@@ -80,6 +86,7 @@ let admin_message_page () () =
 		if not is_admin then error_page "You must be an administrator to access this page."
     else
 			let%lwt games = Database.get_all_games () in
+			let%lwt users = Database.get_users () in
 		container (standard_menu [])
 		[
 			h1 [pcdata "Send message"];
@@ -103,6 +110,19 @@ let admin_message_page () () =
 								(Form.Option ([], hd, Some (pcdata hd), false))
 								(List.map (fun t ->
 									Form.Option ([], t, Some (pcdata t), false)
+								) tl)
+						]
+					];
+					tr [
+						td [
+							Form.radio ~name:dest_type ~value:"user" Form.string;
+							pcdata " User: ";
+							match users with
+							| [] -> p [b [pcdata "no users yet"]]
+							| (id, fn, ln, _, _)::tl -> Form.select ~name:dest Form.string
+								(Form.Option ([], Int32.to_string id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
+								(List.map (fun (tid, tfn, tln, _, _) ->
+									Form.Option ([], Int32.to_string tid, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false)
 								) tl)
 						]
 					];

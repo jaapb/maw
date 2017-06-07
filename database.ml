@@ -702,3 +702,11 @@ let move_group game_id uid group_name =
 		SET group_name = $group_name \
 		WHERE user_id = $uid AND game_id = $game_id"
 ;;
+
+let get_role_class_members game_id role_class =
+	get_db () >>= fun dbh ->
+	PGSQL(dbh) "SELECT email, first_name, last_name \
+		FROM users JOIN game_casting \
+		ON id = user_id \
+		WHERE game_id = $game_id and role_class = $role_class"
+;;
