@@ -264,14 +264,14 @@ let udl = Dom_html.getElementById "users_list" in
 	List.iter (fun (uid, fname, lname, _, s) ->
 		match s with	
 		| Some "P" -> Dom.appendChild udl (Html.To_dom.of_element 
-			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(Raw.option ~a:[a_value (Int32.to_string uid)]
 			(pcdata (Printf.sprintf "%s %s (provisional)" fname lname))))
 		| Some "U" -> Dom.appendChild udl (Html.To_dom.of_element
-			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(Raw.option ~a:[a_value (Int32.to_string uid)]
 			(pcdata (Printf.sprintf "%s %s (unconfirmed)" fname lname))))
 		| Some "H" -> ()
 		| _ -> Dom.appendChild udl (Html.To_dom.of_element
-			(Raw.option ~a:[a_value (Printf.sprintf "%ld" uid)]
+			(Raw.option ~a:[a_value (Int32.to_string uid)]
 			(pcdata (Printf.sprintf "%s %s" fname lname))))
 	) users
 ;;
