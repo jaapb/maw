@@ -13,7 +13,7 @@
 	open Maw
 ]
 
-let do_message_page game_id () (dest_type, (dest, (subject, contents))) =
+let do_message_page game_id () (dest_type, (dest_team, (dest_role_class, (dest_player, (subject, contents))))) =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
@@ -30,19 +30,19 @@ let do_message_page game_id () (dest_type, (dest, (subject, contents))) =
 						(email, fn, ln)
 					) l)
 			| Some "team" -> begin
-				match dest with
+				match dest_team with
 				| None -> Lwt.return []
 				| Some d -> Database.get_team_members game_id d
 				end
 			| Some "role_class" -> begin	
-				match dest with
+				match dest_role_class with
 				| None -> Lwt.return []
 				| Some d -> Database.get_role_class_members game_id d
 				end		
 			| Some "player" -> begin
-				match dest with
+				match dest_player with
 				| None -> Lwt.return []
-				| Some d -> Database.get_user_data (Int32.of_string d) >>=
+				| Some d -> Database.get_user_data d >>=
 				  fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
 				end
 			| _ -> Lwt.return []
@@ -78,7 +78,7 @@ Maw." fname dsg_fn dsg_ln title contents in
 let designer_message_page game_id () =
 	let do_message_service = create_attached_post
 		~fallback:(preapply designer_message_service game_id)
-		~post_params:(radio string "type" ** opt (string "dest") ** string "subject" ** string "contents") () in
+		~post_params:(radio string "type" ** opt (string "dest_team") ** opt (string "dest_role_class") ** opt (int32 "dest_player") ** string "subject" ** string "contents") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:do_message_service (do_message_page game_id);
   let%lwt u = Eliom_reference.get Maw.user in
@@ -102,7 +102,7 @@ let designer_message_page game_id () =
 		container (standard_menu [])
 		[
 			h1 [pcdata "Send message"];
-			Form.post_form ~service:do_message_service (fun (dest_type, (dest, (subject, text))) ->
+			Form.post_form ~service:do_message_service (fun (dest_type, (dest_team, (dest_role_class, (dest_player, (subject, text))))) ->
 			[
 				table
 				[	
@@ -118,7 +118,7 @@ let designer_message_page game_id () =
 							pcdata " Team: ";
 							match teams with
 							| [] -> p [b [pcdata "no teams set up"]]
-							| hd::tl -> Form.select ~name:dest Form.string
+							| hd::tl -> Form.select ~name:dest_team Form.string
 								(Form.Option ([], hd, Some (pcdata hd), false))
 								(List.map (fun t ->
 									Form.Option ([], t, Some (pcdata t), false)
@@ -131,7 +131,7 @@ let designer_message_page game_id () =
 							pcdata " Role class: ";
 							match role_classes with
 							| [] -> p [b [pcdata "no role classes set up"]]
-							| hd::tl -> Form.select ~name:dest Form.string
+							| hd::tl -> Form.select ~name:dest_role_class Form.string
 								(Form.Option ([], hd, Some (pcdata hd), false))
 								(List.map (fun t ->
 									Form.Option ([], t, Some (pcdata t), false)
@@ -144,10 +144,10 @@ let designer_message_page game_id () =
 							pcdata " Player: ";
 							match players with
 							| [] -> p [b [pcdata "no players yet"]]
-							| (id, fn, ln)::tl -> Form.select ~name:dest Form.string
-								(Form.Option ([], Int32.to_string id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
+							| (id, fn, ln)::tl -> Form.select ~name:dest_player Form.int32
+								(Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
 								(List.map (fun (tid, tfn, tln) ->
-									Form.Option ([], Int32.to_string tid, Some (pcdata (Printf.sprintf "%s %s" tfn tln)), false)
+									Form.Option ([], tid, Some (pcdata (Printf.sprintf "%s %s" tfn tln)), false)
 								) tl)
 						]
 					];	

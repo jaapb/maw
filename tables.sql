@@ -3,7 +3,8 @@ CREATE TABLE game_casting (
     user_id integer,
     team_name text NOT NULL,
     role_name text NOT NULL,
-    notification_sent boolean DEFAULT false NOT NULL
+    notification_sent boolean DEFAULT false NOT NULL,
+    role_class text
 );
 
 CREATE TABLE game_designers (
