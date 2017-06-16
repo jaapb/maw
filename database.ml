@@ -89,7 +89,7 @@ let get_designer_games uid =
 let get_all_games () =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh)
-		"SELECT title \
+		"SELECT id, title \
 		FROM games \
 		ORDER BY date ASC";;
 

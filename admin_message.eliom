@@ -13,7 +13,7 @@
 	open Maw
 ]
 
-let do_message_page () (dest_type, (dest, (subject, contents))) =
+let do_message_page () (dest_type, (dest_game, (dest_user, (subject, contents)))) =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
   | None -> not_logged_in ()
@@ -25,20 +25,19 @@ let do_message_page () (dest_type, (dest, (subject, contents))) =
 						(email, fn, ln)
 					) l)
 			| Some "game" -> begin
-				match dest with
-				| None -> Lwt.return []
-				| Some d ->
-					let%lwt l = Database.get_inscription_list (Int32.of_string d) in
-					Lwt.return (List.map (fun (fn, ln, email, _, _, _, _, _, _) ->
-						(email, fn, ln)
-					) l)
+					match dest_game with
+					| None -> Lwt.return []
+					| Some g -> let%lwt l = Database.get_inscription_list g in
+						Lwt.return (List.map (fun (fn, ln, email, _, _, _, _, _, _) ->
+							(email, fn, ln)
+						) l)
 				end
 			| Some "user" -> begin
-				match dest with
-				| None -> Lwt.return []
-				| Some d -> Database.get_user_data (Int32.of_string d) >>=
-					fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
-			  end
+					match dest_user with
+					| None -> Lwt.return []
+					| Some u -> Database.get_user_data u >>=
+							fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
+			 	end
 			| _ -> Lwt.return []
 			in
 		if not is_admin then error_page "You must be an administrator to access this page."
@@ -76,7 +75,7 @@ Maw." fname contents in
 let admin_message_page () () =
 	let do_message_service = create_attached_post
 		~fallback:admin_message_service
-		~post_params:(radio string "type" ** opt (string "dest") ** string "subject" ** string "contents") () in
+		~post_params:(radio string "dest_type" ** opt (int32 "dest_game") ** opt (int32 "dest_user") ** string "subject" ** string "contents") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:do_message_service do_message_page;
   let%lwt u = Eliom_reference.get Maw.user in
@@ -90,7 +89,7 @@ let admin_message_page () () =
 		container (standard_menu [])
 		[
 			h1 [pcdata "Send message"];
-			Form.post_form ~service:do_message_service (fun (dest_type, (dest, (subject, text))) ->
+			Form.post_form ~service:do_message_service (fun (dest_type, (dest_game, (dest_user, (subject, contents)))) ->
 			[
 				table
 				[	
@@ -106,10 +105,10 @@ let admin_message_page () () =
 							pcdata " Players for game: ";
 							match games with
 							| [] -> p [b [pcdata "no games set up"]]
-							| hd::tl -> Form.select ~name:dest Form.string
-								(Form.Option ([], hd, Some (pcdata hd), false))
-								(List.map (fun t ->
-									Form.Option ([], t, Some (pcdata t), false)
+							| (id, name)::tl -> Form.select ~name:dest_game Form.int32
+								(Form.Option ([], id, Some (pcdata name), false))
+								(List.map (fun (tid, tname) ->
+									Form.Option ([], tid, Some (pcdata tname), false)
 								) tl)
 						]
 					];
@@ -119,10 +118,10 @@ let admin_message_page () () =
 							pcdata " User: ";
 							match users with
 							| [] -> p [b [pcdata "no users yet"]]
-							| (id, fn, ln, _, _)::tl -> Form.select ~name:dest Form.string
-								(Form.Option ([], Int32.to_string id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
+							| (id, fn, ln, _, _)::tl -> Form.select ~name:dest_user Form.int32
+								(Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
 								(List.map (fun (tid, tfn, tln, _, _) ->
-									Form.Option ([], Int32.to_string tid, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false)
+									Form.Option ([], tid, Some (pcdata (Printf.sprintf "%s %s" tfn tln)), false)
 								) tl)
 						]
 					];
@@ -134,7 +133,7 @@ let admin_message_page () () =
 					];
 					tr [
 						td [
-							Form.textarea ~a:[a_cols 60; a_rows 10] ~name:text ()
+							Form.textarea ~a:[a_cols 60; a_rows 10] ~name:contents ()
 						]
 					];
 					tr [
