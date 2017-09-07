@@ -176,10 +176,10 @@ ${ELIOM_SERVER_DIR}/%.cmi: %.eliomi
 
 ## Special rule for SQL files
 ${ELIOM_SERVER_DIR}/database.cmo: database.ml
-	ocamlfind ocamlc -package pgocaml.syntax,lwt,cryptokit \
+	ocamlfind ocamlc -package pgocaml.syntax,lwt.unix,cryptokit \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 ${ELIOM_SERVER_DIR}/database.cmx: database.ml
-	ocamlfind ocamlopt -package pgocaml.syntax,lwt,cryptokit \
+	ocamlfind ocamlopt -package pgocaml.syntax,lwt,lwt.unix,cryptokit \
     -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
 $(DEPSDIR)/database.ml.server: database.ml | $(DEPSDIR)
 	ocamlfind ocamldep -package pgocaml.syntax,cryptokit \
