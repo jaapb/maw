@@ -1,0 +1,33 @@
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+
+# ocamlbuild working directory
+_build/
+
+# ocamlbuild targets
+*.byte
+*.native
+
+# oasis generated files
+setup.data
+setup.log
+
+# Ocsigen stuff
+.depend
+_client/
+_deps/
+_server/
+local/
+static/
+
+tools/cronjob
+tools/fill_database_bookings
+tools/fill_database_games
+tools/fill_database_users
