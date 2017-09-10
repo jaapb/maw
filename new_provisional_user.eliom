@@ -29,8 +29,9 @@ let rec new_provisional_user_page ex_game_id () =
 		~service:add_user_service do_new_provisional_user;
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
     match u with
-    | None -> not_logged_in ()
-    | Some (uid, _, _, _) -> 
+    | Not_logged_in -> not_logged_in ()
+    | User (uid, _, _, _)
+    | Admin (_, (uid, _, _, _)) -> 
       begin
         container (standard_menu [])
         [

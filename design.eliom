@@ -32,8 +32,9 @@ let update_game_data game_id () (descr, (min, (max, (id, (cd, pd))))) =
 		else Some (Printer.Date.from_fstring "%Y-%m-%d" pd) in
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) -> 
+	| Not_logged_in -> Lwt.return ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) -> 
 		begin
 			Database.set_game_description game_id descr >>=
 			fun () -> Database.set_game_numbers game_id min max >>=
@@ -44,8 +45,9 @@ let update_game_data game_id () (descr, (min, (max, (id, (cd, pd))))) =
 let upload_picture game_id () picture =
 	let%lwt u = Eliom_reference.get Maw.user in
 	match u with
-	| None -> Lwt.return ()
-	| Some (uid, _, _, _) ->
+	| Not_logged_in -> Lwt.return ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) ->
 		begin
 			let new_name = Eliom_request_info.get_original_filename picture in
 			let new_path = Printf.sprintf "static/%s" new_name in
@@ -72,8 +74,9 @@ let design_page game_id () =
 		~service:upload_picture_service (upload_picture game_id);
 	Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
 	match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) -> 
 		let%lwt dsgs = Database.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."

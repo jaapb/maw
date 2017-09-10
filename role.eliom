@@ -100,8 +100,9 @@ let role_page game_id () =
 		~service:do_role_service (do_role_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-  | Some (uid, _, _, _) ->
+	| Not_logged_in -> not_logged_in ()
+  | User (uid, _, _, _)
+  | Admin (_, (uid, _, _, _)) ->
 		let%lwt dsgs = Database.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."

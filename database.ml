@@ -270,7 +270,7 @@ let get_group_name game_id uid_list =
 
 let get_user_data uid =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT first_name, last_name, email, hidden \
+	PGSQL(dbh) "SELECT first_name, last_name, email, hidden, is_admin \
 		FROM users \
 		WHERE id = $uid" >>=
 	function

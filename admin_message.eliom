@@ -16,8 +16,9 @@
 let do_message_page () (dest_type, (dest_game, (dest_user, (subject, contents)))) =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
-  | None -> not_logged_in ()
-  | Some (_, _, _, is_admin) -> 
+  | Not_logged_in -> not_logged_in ()
+  | User (_, _, _, is_admin) 
+  | Admin (_, (_, _, _, is_admin)) -> 
 	 	let%lwt addressees =
 			match dest_type with
 			| Some "all" -> let%lwt l = Database.get_users () in
@@ -36,7 +37,7 @@ let do_message_page () (dest_type, (dest_game, (dest_user, (subject, contents)))
 					match dest_user with
 					| None -> Lwt.return []
 					| Some u -> Database.get_user_data u >>=
-							fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
+							fun (fn, ln, email, _, _) -> Lwt.return [email, fn, ln]
 			 	end
 			| _ -> Lwt.return []
 			in
@@ -80,8 +81,9 @@ let admin_message_page () () =
 		~service:do_message_service do_message_page;
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
-  | None -> not_logged_in ()
-  | Some (_, _, _, is_admin) -> 
+  | Not_logged_in -> not_logged_in ()
+  | User (_, _, _, is_admin)
+  | Admin (_, (_, _, _, is_admin)) -> 
 		if not is_admin then error_page "You must be an administrator to access this page."
     else
 			let%lwt games = Database.get_all_games () in

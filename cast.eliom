@@ -143,7 +143,7 @@ let send_casting_notification game_id teams =
 			| None -> Lwt.return ()
 			| Some u ->
 				let%lwt (c, _, _, _) = Database.get_notifications u in
-				let%lwt (fname, lname, email, _) = Database.get_user_data u in
+				let%lwt (fname, lname, email, _, _) = Database.get_user_data u in
 				let uri = Eliom_uri.make_string_uri ~absolute:true
 					~service:show_casting_service game_id in
 					Mail.send_casting_notification fname lname email game_title uri;
@@ -155,8 +155,9 @@ let send_casting_notification game_id teams =
 let do_cast_page game_id () (teams, publish) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	(match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _) 
+	| Admin (_, (uid, _, _, _)) -> 
 		let%lwt was_published = Database.is_published game_id in
 		Database.update_casting game_id teams >>=
 		fun () -> Database.set_published game_id publish >>=
@@ -195,8 +196,9 @@ let cast_page game_id () =
 	in
   let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-  | None -> not_logged_in ()
-  | Some (uid, _, _, _) ->
+  | Not_logged_in -> not_logged_in ()
+  | User (uid, _, _, _)
+  | Admin (_, (uid, _, _, _)) ->
 		let%lwt dsg_ids = Database.get_game_designers game_id in
     if not (is_designer uid dsg_ids)
 		then error_page "You are not the designer of this game."

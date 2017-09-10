@@ -16,8 +16,9 @@
 let rec confirm_page game_id () user_id =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) -> 
 		Database.change_status game_id user_id `Confirmed >>=
 		fun () -> show_inscriptions_page game_id ())
 	(fun e -> error_page (Printexc.to_string e))
@@ -38,8 +39,9 @@ and show_inscriptions_page game_id () =
 		~service:confirm_service (confirm_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) ->
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) ->
 		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
 			Database.get_game_data game_id in
 		let%lwt dsgs = Database.get_game_designers game_id in

@@ -28,8 +28,9 @@ let update_user_page () (fname, (lname, (email, (password, (address, (postcode, 
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> Database.update_user_data uid fname lname email password address postcode town country phone>>=
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _) 
+		| Admin (_, (uid, _, _, _))-> Database.update_user_data uid fname lname email password address postcode town country phone>>=
 		fun () -> container (standard_menu [])
 		[
 			p [pcdata "Changes successfully saved."]
@@ -142,9 +143,10 @@ let account_page () () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> 
-			let%lwt (ex_fname, ex_lname, ex_email, hidden) = Database.get_user_data uid in
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> 
+			let%lwt (ex_fname, ex_lname, ex_email, hidden, _) = Database.get_user_data uid in
 			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Database.get_extra_user_data uid in
 			container (standard_menu (account_menu hidden))
 			[

@@ -8,6 +8,7 @@ PROJECT_NAME := maw
 ELIOM_FILES=	\
 	account.eliom \
 	admin_confirm_users.eliom \
+	admin_login.eliom \
 	admin_message.eliom \
 	cancel.eliom \
 	cast.eliom \

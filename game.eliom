@@ -63,9 +63,10 @@ let game_page game_id () =
 			unknown_game ()
 		else
 		match u with
-	  | None -> container (standard_menu (game_menu game_id false false false)) 
+	  | Not_logged_in -> container (standard_menu (game_menu game_id false false false)) 
 			(standard_game_data title loc date dsg_str d nr_inscr max_pl fn)
-	  | Some (uid, _, _, _) ->
+	  | User (uid, _, _, _)
+	  | Admin (_, (uid, _, _, _)) ->
 			let is_dsg = is_designer uid dsgs in
 			let%lwt sus = Database.sign_up_status uid game_id in
 			if not (visible || is_dsg)

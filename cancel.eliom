@@ -22,10 +22,11 @@ let send_cancel_notification dsg game_title ufn uln =
 let do_cancel_page game_id () user_id =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (my_uid, _, _, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (my_uid, _, _, _)
+	| Admin (_, (my_uid, _, _, _)) -> 
 		let%lwt () = Database.cancel_inscription game_id user_id in
-		let%lwt (fn, ln, email, _) = Database.get_user_data user_id in
+		let%lwt (fn, ln, email, _, _) = Database.get_user_data user_id in
 		let%lwt dsg = Database.get_game_designers game_id in
 		let%lwt (title, date, location, _, _, _, _) =
 			Database.get_game_data game_id in
@@ -51,8 +52,9 @@ let cancel_page game_id () =
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_cancel_service (do_cancel_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (my_uid, _, _, _) ->
+	| Not_logged_in -> not_logged_in ()
+	| User (my_uid, _, _, _)
+	| Admin (_, (my_uid, _, _, _)) ->
 		let%lwt isu = Database.sign_up_status my_uid game_id in
 		let%lwt (title, date, location, _, _, _, _) = Database.get_game_data game_id in
 		let%lwt (_, cd, _) = Database.get_game_deadlines game_id in

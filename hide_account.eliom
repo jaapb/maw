@@ -18,8 +18,9 @@ let do_hide_account_page () () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> 
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> 
 			let%lwt () = Database.hide_user uid in
 			container (standard_menu []) 
 			[
@@ -38,8 +39,9 @@ let hide_account_page () () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> 
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> 
 			container (standard_menu [])
 			[
 				h1 [pcdata "Hide account"];

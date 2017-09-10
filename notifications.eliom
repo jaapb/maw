@@ -18,9 +18,10 @@ let update_notifications_page () (casting, (before, (signup, cancel))) =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> 
-			let%lwt (_, _, _, hidden) = Database.get_user_data uid in
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> 
+			let%lwt (_, _, _, hidden, _) = Database.get_user_data uid in
 			let not_period = Calendar.Period.day (int_of_string before) in 
 			Database.set_notifications uid casting not_period signup cancel >>=
 			fun () -> container (standard_menu (Account.account_menu hidden))
@@ -43,9 +44,10 @@ let notifications_page () () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, _) -> 
-			let%lwt (_, _, _, hidden) = Database.get_user_data uid in
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> 
+			let%lwt (_, _, _, hidden, _) = Database.get_user_data uid in
 			let%lwt (n_c, n_b, n_sgn, n_cnc) = Database.get_notifications uid in
 			let nr_days = match n_b with
 			| None -> ""

@@ -7,6 +7,8 @@ open Eliom_parameter
 let account_service = create ~path:(Path ["account"]) ~meth:(Get unit) ();;
 let admin_confirm_users_service = create ~path:(Path ["admin_confirm_users"]) ~meth:(Get unit) ();;
 let admin_message_service = create ~path:(Path ["admin_message"]) ~meth:(Get unit) ();;
+let admin_login_service = create ~path:(Path ["admin_login"]) ~meth:(Get unit) ();;
+let admin_logout_service = create ~path:No_path ~meth:(Get unit) ();;
 let cancel_service = create ~path:(Path ["cancel"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let cast_service = create ~path:(Path ["cast"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 let confirm_user_service = create ~path:(Path ["confirm"]) ~meth:(Get (suffix (int32 "user_id" ** string "random"))) ();;

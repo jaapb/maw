@@ -50,8 +50,13 @@ let database_el = Ocsigen_extensions.Configuration.element
 
 (* References *)
 
+type login_type =
+	Not_logged_in
+| User of int32 * string * string * bool
+| Admin of (int32 * string * string) * (int32 * string * string * bool)
+
 let user = Eliom_reference.eref ~scope:Eliom_common.default_session_scope
-	None;;
+	Not_logged_in;;
 let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 	None;;
 
@@ -60,15 +65,18 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 let login_action () (name, password) =
 	let%lwt u = Database.check_password name password in
 	match u with
-	| Some (uid, fname, lname, is_admin) -> Eliom_reference.set user (Some (uid, fname, lname, is_admin))
-	| None -> Eliom_reference.set login_err (Some "Unknown user or wrong password")
+	| Some (uid, fname, lname, is_admin) -> Eliom_reference.set user (User (uid, fname, lname, is_admin))
+	| None -> begin
+			Eliom_reference.set user Not_logged_in;
+			Eliom_reference.set login_err (Some "Unknown user or wrong password")
+		end
 ;;
 
 let login_box () =
 	let%lwt u = Eliom_reference.get user in
 	let%lwt err = Eliom_reference.get login_err in
 	Lwt.return (match u with
-	| None -> [Form.post_form ~service:login_service (fun (name, password) ->
+	| Not_logged_in -> [Form.post_form ~service:login_service (fun (name, password) ->
 		[table (
 			tr [
 				td [pcdata "E-mail"];
@@ -91,7 +99,7 @@ let login_box () =
 			| Some e -> [tr [td ~a:[a_colspan 3; a_class ["error"]] [pcdata e]]]
 			)
 		)]) ()]
-	| Some (_, fn, ln, _) -> [Form.post_form ~service:logout_service (fun () ->
+	| User (_, fn, ln, _) -> [Form.post_form ~service:logout_service (fun () ->
 		[table [
 			tr [
 			 	td [pcdata (Printf.sprintf "Logged in as %s %s" fn ln)]
@@ -100,6 +108,15 @@ let login_box () =
 				td [Form.input ~input_type:`Submit ~value:"Logout" Form.string]
 			]
 		]]) ()]
+	| Admin (_, (_, fn, ln, _)) -> [Form.get_form ~service:admin_logout_service (fun () ->
+		[table [
+			tr [
+				td [i [pcdata (Printf.sprintf "Temporarily logged in as %s %s" fn ln)]]
+			];
+			tr [
+				td [Form.input ~input_type:`Submit ~value:"Logout" Form.string]
+			]
+		]])]
 	);;	
 
 (* The standard webpage container *)
@@ -107,8 +124,9 @@ let login_box () =
 let standard_menu extra_rows = 
 	let%lwt u = Eliom_reference.get user in
 	match u with
-	| None -> Lwt.return []
-	| Some (_, _, _, is_admin) -> Lwt.return [
+	| Not_logged_in -> Lwt.return []
+	| User (_, _, _, is_admin)
+	| Admin (_, (_, _, _, is_admin)) -> Lwt.return [
 		table (
 			tr [
 				td [a ~service:dashboard_service [pcdata "Dashboard"] ()]
@@ -122,10 +140,12 @@ let standard_menu extra_rows =
 			then 
 				List.rev
 				(
+					tr [td [a ~service:admin_login_service [b [pcdata "Login as another user"]] ()]]::
 					tr [td [a ~service:admin_message_service [b [pcdata "Send messages"]] ()]]::
 					tr [td [a ~service:admin_confirm_users_service [b [pcdata "Manually confirm users"]] ()]]::
 					tr [td [a ~service:set_game_data_service [b [pcdata "Set game data"]] ()]]::
 					tr [td [a ~service:new_game_service [b [pcdata "Create a new game"]] ()]]::
+					tr [td [i [pcdata "Admin menu"]]]::
 					tr ~a:[a_class ["separator"]] []::
 					(List.rev extra_rows)
 				)
@@ -223,8 +243,9 @@ let dashboard_page () () =
 	 	let%lwt ug = Database.get_upcoming_games () in
 		let%lwt u = Eliom_reference.get user in
 		let%lwt mg_fmt = match u with
-		| None -> Lwt.return []
-		| Some (uid, _, _, _) -> Database.get_user_games uid >>=
+		| Not_logged_in -> Lwt.return []
+		| User (uid, _, _, _)
+		| Admin (_, (uid, _, _, _)) -> Database.get_user_games uid >>=
 				fun mg -> Database.get_designer_games uid >>=
 				fun dg -> format_my_games mg dg
 		in
@@ -239,7 +260,7 @@ let dashboard_page () () =
 
 let do_logout_page () () =
 begin
-	ignore (Eliom_reference.set user None);
+	ignore (Eliom_reference.set user Not_logged_in);
 	dashboard_page () ()
 end;;
 

@@ -30,8 +30,9 @@ let rec set_game_data_page () () =
 		~service:set_game_data_service do_set_game_data;
   Lwt.catch (fun () -> let%lwt u = Eliom_reference.get Maw.user in
     match u with
-    | None -> not_logged_in ()
-    | Some (_, _, _, is_admin) -> if not is_admin
+    | Not_logged_in -> not_logged_in ()
+    | User (_, _, _, is_admin)
+    | Admin (_, (_, _, _, is_admin)) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
       let%lwt games = Database.get_upcoming_games ~all:true () in

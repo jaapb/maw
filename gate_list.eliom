@@ -70,8 +70,9 @@ let gate_list_page game_id () =
 		| Some d -> Printer.Date.sprint "%d %B %Y" d in
 		let%lwt is_closed = Database.get_gate_list_status game_id in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, is_admin) ->
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, is_admin)
+		| Admin (_, (uid, _, _, is_admin)) ->
 			if not (is_admin || is_designer uid dsgs)
 			then error_page "You are not the designer of this game (or an admin)."
 			else if is_closed
@@ -155,8 +156,9 @@ let print_gate_list_page game_id () =
 		| Some d -> Printer.Date.sprint "%d %B %Y" d in
 		let%lwt is_closed = Database.get_gate_list_status game_id in
 		match u with
-		| None -> not_logged_in ()
-		| Some (uid, _, _, is_admin) ->
+		| Not_logged_in -> not_logged_in ()
+		| User (uid, _, _, is_admin)
+		| Admin (_, (uid, _, _, is_admin)) ->
 			if not (is_admin || is_designer uid dsgs)
 			then error_page "You are not the designer of this game (or an admin)."
 			else if is_closed

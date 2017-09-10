@@ -16,8 +16,9 @@
 let do_message_page game_id () (dest_type, (dest_team, (dest_role_class, (dest_player, (subject, contents))))) =
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
-  | None -> not_logged_in ()
-  | Some (uid, dsg_fn, dsg_ln, _) -> 
+  | Not_logged_in -> not_logged_in ()
+  | User (uid, dsg_fn, dsg_ln, _)
+  | Admin (_, (uid, dsg_fn, dsg_ln, _)) -> 
 		let%lwt dsgs = Database.get_game_designers game_id in
 		let%lwt roles = Database.get_game_roles game_id in
 		if not (is_designer uid dsgs)
@@ -43,7 +44,7 @@ let do_message_page game_id () (dest_type, (dest_team, (dest_role_class, (dest_p
 				match dest_player with
 				| None -> Lwt.return []
 				| Some d -> Database.get_user_data d >>=
-				  fun (fn, ln, email, _) -> Lwt.return [email, fn, ln]
+				  fun (fn, ln, email, _, _) -> Lwt.return [email, fn, ln]
 				end
 			| _ -> Lwt.return []
 			in
@@ -83,8 +84,9 @@ let designer_message_page game_id () =
 		~service:do_message_service (do_message_page game_id);
   let%lwt u = Eliom_reference.get Maw.user in
   match u with
-  | None -> not_logged_in ()
-  | Some (uid, _, _, _) -> 
+  | Not_logged_in -> not_logged_in ()
+  | User (uid, _, _, _)
+  | Admin (_, (uid, _, _, _)) -> 
 		let%lwt dsgs = Database.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."

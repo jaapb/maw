@@ -138,7 +138,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 		| (uid, (role, note))::tl -> 
 			Lwt.catch (fun () ->
 				Database.get_user_data uid >>=
-				fun (fname, lname, email, _) ->
+				fun (fname, lname, email, _, _) ->
       		Database.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
@@ -166,8 +166,9 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	in
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) -> 
 		let%lwt (game_title, game_date, game_loc, _, _, max_pl, _) =
 			Database.get_game_data game_id  in
 		let%lwt dsgs = Database.get_game_designers game_id in
@@ -178,7 +179,7 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
 		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_str (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> let%lwt users_ex = Lwt_list.map_s (fun (uid, (role, note)) ->
-			let%lwt (fn, ln, _, _) = Database.get_user_data uid in
+			let%lwt (fn, ln, _, _, _) = Database.get_user_data uid in
 			Lwt.return (uid, fn, ln, role, note)) users in 
 		send_signup_notification dsgs game_title group_name users_ex;
 		container (standard_menu [])
@@ -316,8 +317,9 @@ let%client change_team roles ev =
 let do_switch_page game_id () (new_group) =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (uid, _, _, _) -> Lwt.catch (
+	| Not_logged_in -> not_logged_in ()
+	| User (uid, _, _, _)
+	| Admin (_, (uid, _, _, _)) -> Lwt.catch (
 		fun () -> Database.find_group game_id new_group >>=
 		fun ids -> if not (List.mem uid ids) then
 			Database.move_group game_id uid new_group >>=
@@ -350,8 +352,9 @@ let signup_page game_id () =
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:do_switch_service (do_switch_page game_id);
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () -> match u with
-	| None -> not_logged_in ()
-	| Some (my_uid, fname, lname, _) -> 
+	| Not_logged_in -> not_logged_in ()
+	| User (my_uid, fname, lname, _)
+	| Admin (_, (my_uid, fname, lname, _)) -> 
 		let%lwt (title, date, loc, d, _, max_pl, _)  =
 			Database.get_game_data game_id in
 		let%lwt dsgs = Database.get_game_designers game_id in

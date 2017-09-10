@@ -87,7 +87,7 @@ end;;
 	);;*)
 
 let user_history_page uid () =
-	let%lwt (fname, lname, _, _) = Database.get_user_data uid in
+	let%lwt (fname, lname, _, _, _) = Database.get_user_data uid in
 	let%lwt history = Database.get_user_history uid in
 	Lwt.return (Eliom_tools.F.html ~title:"Player"
 	(body
