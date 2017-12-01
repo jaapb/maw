@@ -33,14 +33,6 @@ let get_db () =
 		end
 ;;
 
-let crypt_password pwd salt =
-	Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.hash_string (Cryptokit.Hash.sha3 512) (salt ^ pwd))
-;;
-
-let random_string length =
-	String.sub (Cryptokit.transform_string (Cryptokit.Base64.encode_compact ()) (Cryptokit.Random.string Cryptokit.Random.secure_rng length)) 0 length
-;;
-
 let int32_of_inscr_status s =
 	match s with
 	| `No_show -> 0l
@@ -121,14 +113,13 @@ let get_game_data game_id =
 
 let check_password email password =
 	get_db () >>= fun dbh ->
-	PGSQL(dbh) "SELECT id, password, password_salt, first_name, last_name, \
+	PGSQL(dbh) "SELECT password = crypt($password, password), id, first_name, last_name, \
 	  is_admin \
 		FROM users \
 		WHERE email = $email AND confirmation IS NULL" >>=
 	function
-	| [(id, db_password, db_salt, first_name, last_name, is_admin)] ->
-		if crypt_password password db_salt = db_password then Lwt.return (Some (id, first_name, last_name, is_admin))
-		else Lwt.return None
+	| [(Some true, id, first_name, last_name, is_admin)] ->
+			Lwt.return (Some (id, first_name, last_name, is_admin))
 	| _ -> Lwt.return None (* don't want to fail with Inconsistent database here
 	  as it would give away information *)
 ;;
@@ -291,22 +282,18 @@ let get_extra_user_data uid =
 ;;
 
 let update_user_data uid fname lname email password address postcode town country phone =
-	let salt = random_string 8 in
-	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET email = $email, password = $c_password, password_salt = $salt, \
+		SET email = $email, password = crypt($password, gen_salt('md5')), \
 		first_name = $fname, last_name = $lname, address = $address, town = $town, \
 		phone_number = $phone, postcode = $postcode, country = $country \
 		WHERE id = $uid"
 ;;
 
 let update_user_password uid password =
-	let salt = random_string 8 in
-	let c_password = crypt_password password salt in
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "UPDATE users \
-		SET password = $c_password, password_salt = $salt \
+		SET password = crypt($password, gen_salt('md5')) \
 		WHERE id = $uid";;
 
 (* CLears and re-adds, not ideal *)
@@ -365,19 +352,11 @@ let get_casting game_id =
 ;;
 
 let add_user ?id ?(confirm=true) fname lname email password address postcode town country phone =
-	let c_random = 
-		if confirm then Some (random_string 32)
-		else None in
-	let salt = random_string 8 in
-	let c_password = crypt_password password salt in
-	get_db () >>= fun dbh -> PGOCaml.begin_work dbh >>=
-	fun () -> PGSQL(dbh) "SELECT id FROM users \
+	get_db () >>= fun dbh -> PGOCaml.transact dbh (fun dbh ->
+		PGSQL(dbh) "SELECT id FROM users \
 		WHERE email = $email" >>=
 		function
-		| [_] -> begin
-				PGOCaml.rollback dbh >>=
-				fun () -> Lwt.fail_with "A user with this e-mail address already exists"
-			end
+		| [_] -> Lwt.fail_with "A user with this e-mail address already exists"
 		| [] -> begin
 			match id with
 			| None -> begin
@@ -385,27 +364,31 @@ let add_user ?id ?(confirm=true) fname lname email password address postcode tow
 					fun () -> PGSQL(dbh) "SELECT MAX(id) FROM user_ids" >>=
 					function 
 					| [Some uid] -> Lwt.return uid
- 		     	| _ -> begin
-						PGOCaml.rollback dbh >>=
-						fun () -> Lwt.fail_with "User creation did not succeed"
-					end
+ 		     	| _ -> Lwt.fail_with "User creation did not succeed"
 				end
 			| Some uid -> begin
 					PGSQL(dbh) "DELETE FROM provisional_users WHERE id = $uid" >>=
 					fun () -> Lwt.return uid
 				end
 		end >>=
-	fun uid -> Lwt.catch (fun () ->
-		PGSQL(dbh) "INSERT INTO users \
-		(id, first_name, last_name, email, password, password_salt, confirmation, \
-		address, postcode, town, country, phone_number) \
-		VALUES \
-		($uid, $fname, $lname, $email, $c_password, $salt, $?c_random, $address, \
-		$postcode, $town, $country, $phone)")
-	(fun e -> PGOCaml.rollback dbh >>=
-		fun () -> Lwt.fail_with "User insertion did not succeed") >>=
-	fun () -> PGOCaml.commit dbh >>=
-	fun () -> Lwt.return (uid, c_random)
+		fun uid -> Lwt.catch
+			(fun () -> PGSQL(dbh) "INSERT INTO users \
+				(id, first_name, last_name, email, password, \
+				address, postcode, town, country, phone_number) \
+				VALUES \
+				($uid, $fname, $lname, $email, crypt($password, gen_salt('md5')), \
+				$address, $postcode, $town, $country, $phone)" >>=
+			fun () ->
+				if confirm then
+					PGSQL(dbh) "UPDATE users SET confirmation = substring(encode(gen_random_bytes(32), 'base64') for 32) \
+					WHERE id = $uid RETURNING confirmation" >>=
+					function
+					| [x] -> Lwt.return x
+					| _ -> Lwt.fail_with "Could not insert provisional user confirmation string"
+				else
+					Lwt.return None)
+			(fun e -> Lwt.fail_with "User insertion did not succeed") >>=
+		fun confirmation -> Lwt.return (uid, confirmation))
 ;;
 
 let confirm_user user_id random =
@@ -661,11 +644,15 @@ let find_user_by_email email =
 	| _ -> fail_with "Inconsistent database"
 ;;
 
-let save_reset_request uid code =
+let save_reset_request uid =
 	get_db () >>= fun dbh ->
 	PGSQL(dbh) "INSERT INTO reset_requests \
 		(user_id, code) VALUES \
-		($uid, $code)"
+		($uid, substring(encode(gen_random_bytes(32),'base64') for 32)) \
+	RETURNING code" >>=
+	function
+	| [c] -> Lwt.return c
+	| _ -> fail_with "Could not insert reset request"
 ;;
 
 let check_reset_request uid code =
