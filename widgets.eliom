@@ -1,3 +1,18 @@
+[%%shared
+	open Eliom_lib
+	open Eliom_content
+	open Html.D
+	open Eliom_service
+	open Eliom_parameter
+	open Utils
+	open Services
+]
+
+[%%server
+	open CalendarLib
+	open Maw
+]
+
 let user_select_widget param =
  	let%lwt users = Database.get_users () in
 	match users with
