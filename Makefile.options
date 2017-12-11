@@ -33,7 +33,8 @@ ELIOM_FILES=	\
 	show_casting.eliom \
 	services.eliom \
 	unhide_account.eliom \
-	user_history.eliom
+	user_history.eliom \
+	widgets.eliom
 # Source files for the server
 SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
 # Source files for the client

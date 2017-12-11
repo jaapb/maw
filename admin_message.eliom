@@ -118,13 +118,7 @@ let admin_message_page () () =
 						td [
 							Form.radio ~name:dest_type ~value:"user" Form.string;
 							pcdata " User: ";
-							match users with
-							| [] -> p [b [pcdata "no users yet"]]
-							| (id, fn, ln, _, _)::tl -> Form.select ~name:dest_user Form.int32
-								(Form.Option ([], id, Some (pcdata (Printf.sprintf "%s %s" fn ln)), false))
-								(List.map (fun (tid, tfn, tln, _, _) ->
-									Form.Option ([], tid, Some (pcdata (Printf.sprintf "%s %s" tfn tln)), false)
-								) tl)
+							Widgets.user_select_widget dest_user
 						]
 					];
 					tr [
