@@ -118,7 +118,7 @@ let admin_message_page () () =
 						td [
 							Form.radio ~name:dest_type ~value:"user" Form.string;
 							pcdata " User: ";
-							Widgets.user_select_widget dest_user
+							Widgets.user_select_widget users dest_user
 						]
 					];
 					tr [
