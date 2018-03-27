@@ -69,7 +69,7 @@ let get_upcoming_games ?(all=false) () =
 	get_db () >>= fun dbh ->
 	if all then PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
     FROM games \
-    WHERE date >= current_date \
+    WHERE date >= current_date OR date IS NULL \
     ORDER BY date ASC"
 	else PGSQL(dbh) "SELECT id, title, date, location, visible, bookable \
     FROM games \
