@@ -14,6 +14,20 @@ module Maw_app =
 			let global_data_path = None
     end)
 
+(* Random stuff *)
+
+let bool_checkbox name value =
+	Form.input ~input_type:`Checkbox ~a:(if value then [a_checked ()] else []) ~name:name Form.bool
+	;;
+
+let date_or_tbd date =
+	match date with
+	| None -> "date TBD"
+	| Some d -> CalendarLib.Printer.Date.sprint "%d %B %Y" d
+;;
+
+(* Configuration *)
+
 let mail_server_el = Ocsigen_extensions.Configuration.element
 	~name:"server" ~obligatory:true ~pcdata:(fun s -> Mail.mail_server := s) ();;
 let mail_port_el = Ocsigen_extensions.Configuration.element
@@ -279,15 +293,10 @@ let unknown_game () =
 		p [pcdata "Sorry, that game does not exist."]
 	];;
 
-(* Random stuff *)
-
-let bool_checkbox name value =
-	Form.input ~input_type:`Checkbox ~a:(if value then [a_checked ()] else []) ~name:name Form.bool
-	;;
-
 let () =
 	Eliom_config.parse_config [mail_el; database_el];
 	Eliom_registration.Action.register ~service:login_service login_action;
 	Maw_app.register ~service:logout_service do_logout_page;
 	Maw_app.register ~service:dashboard_service dashboard_page
 ;;
+

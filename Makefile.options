@@ -43,7 +43,7 @@ CLIENT_FILES := $(ELIOM_FILES) utils.ml
 # OCamlfind packages for the server
 SERVER_PACKAGES := lwt.ppx js_of_ocaml-ppx.deriving netclient pgocaml.syntax
 # OCamlfind packages for the client
-CLIENT_PACKAGES := lwt.ppx js_of_ocaml-ppx js_of_ocaml-ppx.deriving calendar
+CLIENT_PACKAGES := lwt.ppx js_of_ocaml-ppx js_of_ocaml-ppx.deriving # calendar
 
 # Directory with files to be statically served
 LOCAL_STATIC = static
