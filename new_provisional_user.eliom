@@ -13,7 +13,7 @@
 ]
 
 let do_new_provisional_user () (email, (first_name, (last_name, game_id))) =
-	Database.add_provisional_user email first_name last_name game_id >>=
+	Maw_db.add_provisional_user email first_name last_name game_id >>=
 	fun pid -> container (standard_menu [])
 	[
 		h1 [pcdata "Provisional user created"];

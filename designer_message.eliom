@@ -19,31 +19,31 @@ let do_message_page game_id () (dest_type, (dest_team, (dest_role_class, (dest_p
   | Not_logged_in -> not_logged_in ()
   | User (uid, dsg_fn, dsg_ln, _)
   | Admin (_, (uid, dsg_fn, dsg_ln, _)) -> 
-		let%lwt dsgs = Database.get_game_designers game_id in
-		let%lwt roles = Database.get_game_roles game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
+		let%lwt roles = Maw_db.get_game_roles game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."
-		else let%lwt (title, _, _, _, _, _, _) = Database.get_game_data game_id in
+		else let%lwt (title, _, _, _, _, _, _) = Maw_db.get_game_data game_id in
 	 	let%lwt addressees =
 			match dest_type with
-			| Some "all" -> let%lwt l = Database.get_inscription_list game_id in
+			| Some "all" -> let%lwt l = Maw_db.get_inscription_list game_id in
 					Lwt.return (List.map (fun (fn, ln, email, _, _, _, _, _, _) ->
 						(email, fn, ln)
 					) l)
 			| Some "team" -> begin
 				match dest_team with
 				| None -> Lwt.return []
-				| Some d -> Database.get_team_members game_id d
+				| Some d -> Maw_db.get_team_members game_id d
 				end
 			| Some "role_class" -> begin	
 				match dest_role_class with
 				| None -> Lwt.return []
-				| Some d -> Database.get_role_class_members game_id d
+				| Some d -> Maw_db.get_role_class_members game_id d
 				end		
 			| Some "player" -> begin
 				match dest_player with
 				| None -> Lwt.return []
-				| Some d -> Database.get_user_data d >>=
+				| Some d -> Maw_db.get_user_data d >>=
 				  fun (fn, ln, email, _, _) -> Lwt.return [email, fn, ln]
 				end
 			| _ -> Lwt.return []
@@ -87,18 +87,18 @@ let designer_message_page game_id () =
   | Not_logged_in -> not_logged_in ()
   | User (uid, _, _, _)
   | Admin (_, (uid, _, _, _)) -> 
-		let%lwt dsgs = Database.get_game_designers game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."
     else
 		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
-			Database.get_game_data game_id in
-		let%lwt teams = Database.get_game_teams game_id in
-		let%lwt x = Database.get_game_roles game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt teams = Maw_db.get_game_teams game_id in
+		let%lwt x = Maw_db.get_game_roles game_id in
 		let role_classes = List.sort_uniq compare
 			(remove_null (List.flatten (List.map (fun (t, l) -> List.map snd l) x)))
 			in
-		let%lwt y = Database.get_inscription_list game_id in
+		let%lwt y = Maw_db.get_inscription_list game_id in
 		let players = List.map (fun (fn, ln, _, uid, _, _, _, _, _) ->
 			(uid, fn, ln)) y in
 		container (standard_menu [])

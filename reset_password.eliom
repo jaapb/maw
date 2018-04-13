@@ -11,12 +11,12 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let do_reset_password_page () (uid, password) =
 	Lwt.catch (fun () ->
-		let%lwt () = Database.update_user_password uid password in
+		let%lwt () = Maw_db.update_user_password uid password in
 		container (standard_menu [])
 		[
 			h1 [pcdata "Password reset"];
@@ -64,7 +64,7 @@ let reset_password_page (my_uid, code) () =
 	Maw_app.register ~scope:Eliom_common.default_session_scope
 		~service:do_reset_password_service do_reset_password_page;
 	Lwt.catch (fun () ->
-		let%lwt () = Database.check_reset_request my_uid code in
+		let%lwt () = Maw_db.check_reset_request my_uid code in
 		container (standard_menu [])
 		[
 			h1 [pcdata "Reset password"];

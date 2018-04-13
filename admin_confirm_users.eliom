@@ -19,10 +19,10 @@ let admin_confirm_users_page () () =
 		| Admin (_, (_, _, _, is_admin)) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
-      let%lwt users = Database.get_users ~unconfirmed:true () in
+      let%lwt users = Maw_db.get_users ~unconfirmed:true () in
 			let nonconf = List.filter (fun (_, _, _, _, s) -> s = Some "U") users in
 			let%lwt confirm_strs = Lwt_list.map_s (fun (id, _, _, _, _) ->
-				Database.get_confirmation id) nonconf in
+				Maw_db.get_confirmation id) nonconf in
       begin
         container (standard_menu [])
         [

@@ -13,7 +13,7 @@
 ]
 
 let do_new_game () (title, (abbr, designers)) =
-	Database.add_game title abbr designers
+	Maw_db.add_game title abbr designers
 ;;
 
 let%client add_designer users ev =
@@ -45,7 +45,7 @@ let rec new_game_page () () =
     | Admin (_, (_, _, _, is_admin)) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
-      let%lwt users = Database.get_users ~unconfirmed:true () in
+      let%lwt users = Maw_db.get_users ~unconfirmed:true () in
       let (uhid, uhfname, uhlname, _, _) = List.hd users in
       begin
         container (standard_menu [])

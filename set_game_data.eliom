@@ -16,7 +16,7 @@ let do_set_game_data () games =
 	(try
 		Lwt_list.iter_s (fun (game_id, (date_str, (location, (visible, bookable)))) ->
 			let date = Printer.Date.from_fstring "%Y-%m-%d" date_str in
-			Database.set_game_data game_id date location visible bookable
+			Maw_db.set_game_data game_id date location visible bookable
 		) games
 	with Invalid_argument s ->
 		Lwt.return (ignore ([%client (Eliom_lib.alert "Error: %s" ~%s: unit)])))
@@ -35,7 +35,7 @@ let rec set_game_data_page () () =
     | Admin (_, (_, _, _, is_admin)) -> if not is_admin
       then error_page "You must be an administrator to access this page."
       else
-      let%lwt games = Database.get_upcoming_games ~all:true () in
+      let%lwt games = Maw_db.get_upcoming_games ~all:true () in
       begin
         container (standard_menu [])
         [

@@ -11,7 +11,7 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let update_notifications_page () (casting, (before, (signup, cancel))) =
@@ -21,9 +21,9 @@ let update_notifications_page () (casting, (before, (signup, cancel))) =
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, _)
 		| Admin (_, (uid, _, _, _)) -> 
-			let%lwt (_, _, _, hidden, _) = Database.get_user_data uid in
+			let%lwt (_, _, _, hidden, _) = Maw_db.get_user_data uid in
 			let not_period = Calendar.Period.day (int_of_string before) in 
-			Database.set_notifications uid casting not_period signup cancel >>=
+			Maw_db.set_notifications uid casting not_period signup cancel >>=
 			fun () -> container (standard_menu (Account.account_menu hidden))
 			[
 				h1 [pcdata "Notifications"];
@@ -47,8 +47,8 @@ let notifications_page () () =
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, _)
 		| Admin (_, (uid, _, _, _)) -> 
-			let%lwt (_, _, _, hidden, _) = Database.get_user_data uid in
-			let%lwt (n_c, n_b, n_sgn, n_cnc) = Database.get_notifications uid in
+			let%lwt (_, _, _, hidden, _) = Maw_db.get_user_data uid in
+			let%lwt (n_c, n_b, n_sgn, n_cnc) = Maw_db.get_notifications uid in
 			let nr_days = match n_b with
 			| None -> ""
 			| Some d -> string_of_int (Date.Period.nb_days (Calendar.Period.to_date d)) in

@@ -11,7 +11,7 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let account_menu hidden =
@@ -30,7 +30,7 @@ let update_user_page () (fname, (lname, (email, (password, (address, (postcode, 
 		match u with
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, _) 
-		| Admin (_, (uid, _, _, _))-> Database.update_user_data uid fname lname email password address postcode town country phone>>=
+		| Admin (_, (uid, _, _, _))-> Maw_db.update_user_data uid fname lname email password address postcode town country phone>>=
 		fun () -> container (standard_menu [])
 		[
 			p [pcdata "Changes successfully saved."]
@@ -146,8 +146,8 @@ let account_page () () =
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, _)
 		| Admin (_, (uid, _, _, _)) -> 
-			let%lwt (ex_fname, ex_lname, ex_email, hidden, _) = Database.get_user_data uid in
-			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Database.get_extra_user_data uid in
+			let%lwt (ex_fname, ex_lname, ex_email, hidden, _) = Maw_db.get_user_data uid in
+			let%lwt (ex_address, ex_postcode, ex_town, ex_country, ex_phone) = Maw_db.get_extra_user_data uid in
 			container (standard_menu (account_menu hidden))
 			[
 				h1 [pcdata "Your account"];

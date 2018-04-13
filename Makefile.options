@@ -36,14 +36,17 @@ ELIOM_FILES=	\
 	user_history.eliom \
 	widgets.eliom
 # Source files for the server
-SERVER_FILES := $(ELIOM_FILES) database.ml mail.ml utils.ml
+SERVER_FILES := $(ELIOM_FILES) maw_db.ml mail.ml utils.ml
 # Source files for the client
 CLIENT_FILES := $(ELIOM_FILES) utils.ml
 
 # OCamlfind packages for the server
-SERVER_PACKAGES := lwt.ppx js_of_ocaml-ppx.deriving netclient pgocaml.syntax
+SERVER_PACKAGES := lwt_ppx js_of_ocaml-ppx.deriving calendar
+SERVER_DB_PACKAGES := pgocaml.syntax lwt.unix
+SERVER_MAIL_PACKAGES := netclient nettls-gnutls
+
 # OCamlfind packages for the client
-CLIENT_PACKAGES := lwt.ppx js_of_ocaml-ppx js_of_ocaml-ppx.deriving # calendar
+CLIENT_PACKAGES := lwt_ppx js_of_ocaml-ppx js_of_ocaml-ppx.deriving
 
 # Directory with files to be statically served
 LOCAL_STATIC = static

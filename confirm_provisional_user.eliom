@@ -11,11 +11,11 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let update_provisional_user_page user_id () (first_name, (last_name, (old_email, (email, (password, (address, (postcode, (town, (country, phone))))))))) =
-	Lwt.catch (fun () ->	Database.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password address postcode town country phone >>=
+	Lwt.catch (fun () ->	Maw_db.add_user ~id:user_id ~confirm:(old_email <> email) first_name last_name email password address postcode town country phone >>=
 	fun (_, c_random) -> container (standard_menu [])
 	[
 		h1 [pcdata "Success"];
@@ -31,7 +31,7 @@ let update_provisional_user_service = create_attached_post
 	~fallback:(preapply confirm_provisional_user_service user_id)
 	~post_params:(string "first_name" ** string "last_name" ** string "old_email" ** string "email" ** string "password" ** string "address" ** string "postcode" ** string "town" ** string "country" ** string "phone") () in
 	Maw_app.register ~scope:Eliom_common.default_session_scope ~service:update_provisional_user_service (update_provisional_user_page user_id);
-	Lwt.catch (fun () -> Database.get_provisional_user_data user_id >>=
+	Lwt.catch (fun () -> Maw_db.get_provisional_user_data user_id >>=
 	fun (ex_email, ex_fname, ex_lname) ->
 	container (standard_menu [])
 	[

@@ -78,7 +78,7 @@ let do_role_page game_id () teams =
 		(n, List.map (fun (rn, rc) ->
 			(rn, if rc = "" then None else Some rc)
 		) r)) teams in
-	Database.update_teams game_id reblerp_teams >>=
+	Maw_db.update_teams game_id reblerp_teams >>=
 	fun () -> container (standard_menu [])
 	(
 		h1 [pcdata "Your teams"]::
@@ -103,13 +103,13 @@ let role_page game_id () =
 	| Not_logged_in -> not_logged_in ()
   | User (uid, _, _, _)
   | Admin (_, (uid, _, _, _)) ->
-		let%lwt dsgs = Database.get_game_designers game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."
     else
 		let%lwt (title, _, _, _, _, _, _) =
-      Database.get_game_data game_id in
-			let%lwt roles = Database.get_game_roles game_id in
+      Maw_db.get_game_data game_id in
+			let%lwt roles = Maw_db.get_game_roles game_id in
 			let nr = ref 0 in
 			container (standard_menu [])
 			[

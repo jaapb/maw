@@ -15,7 +15,7 @@
 
 let do_admin_login_page () user_id =
   let%lwt u = Eliom_reference.get Maw.user in
-	let%lwt (ufn, uln, _, _, user_is_admin) = Database.get_user_data user_id in
+	let%lwt (ufn, uln, _, _, user_is_admin) = Maw_db.get_user_data user_id in
   match u with
   | Not_logged_in -> not_logged_in ()
 	| Admin _ -> error_page "You are already logged in as another user, please log out first."
@@ -41,7 +41,7 @@ let admin_login_page () () =
 		if not is_admin then error_page "You must be an administrator to access this page."
     else
 		begin
-			let%lwt users = Database.get_users () in
+			let%lwt users = Maw_db.get_users () in
 			container (standard_menu []) 
 			[	
 				h1 [pcdata "Login as another user"];

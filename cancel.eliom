@@ -25,11 +25,11 @@ let do_cancel_page game_id () user_id =
 	| Not_logged_in -> not_logged_in ()
 	| User (my_uid, _, _, _)
 	| Admin (_, (my_uid, _, _, _)) -> 
-		let%lwt () = Database.cancel_inscription game_id user_id in
-		let%lwt (fn, ln, email, _, _) = Database.get_user_data user_id in
-		let%lwt dsg = Database.get_game_designers game_id in
+		let%lwt () = Maw_db.cancel_inscription game_id user_id in
+		let%lwt (fn, ln, email, _, _) = Maw_db.get_user_data user_id in
+		let%lwt dsg = Maw_db.get_game_designers game_id in
 		let%lwt (title, date, location, _, _, _, _) =
-			Database.get_game_data game_id in
+			Maw_db.get_game_data game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in
@@ -55,9 +55,9 @@ let cancel_page game_id () =
 	| Not_logged_in -> not_logged_in ()
 	| User (my_uid, _, _, _)
 	| Admin (_, (my_uid, _, _, _)) ->
-		let%lwt isu = Database.sign_up_status my_uid game_id in
-		let%lwt (title, date, location, _, _, _, _) = Database.get_game_data game_id in
-		let%lwt (_, cd, _) = Database.get_game_deadlines game_id in
+		let%lwt isu = Maw_db.sign_up_status my_uid game_id in
+		let%lwt (title, date, location, _, _, _, _) = Maw_db.get_game_data game_id in
+		let%lwt (_, cd, _) = Maw_db.get_game_deadlines game_id in
 		let game_dstr = match date with
 		| Some d -> Printer.Date.sprint "%d %B %Y" d
 		| None -> "TBD" in

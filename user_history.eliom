@@ -11,7 +11,7 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let%client handle_search users ev =
@@ -66,7 +66,7 @@ begin
 end;;
 
 (*let find_user_page id () =
-	let%lwt users = Database.get_users () in
+	let%lwt users = Maw_db.get_users () in
 	Lwt.return (Eliom_tools.F.html
 		~title:"Find a user"
 		~css:[["css";"maw.css"]]
@@ -87,8 +87,8 @@ end;;
 	);;*)
 
 let user_history_page uid () =
-	let%lwt (fname, lname, _, _, _) = Database.get_user_data uid in
-	let%lwt history = Database.get_user_history uid in
+	let%lwt (fname, lname, _, _, _) = Maw_db.get_user_data uid in
+	let%lwt history = Maw_db.get_user_history uid in
 	Lwt.return (Eliom_tools.F.html ~title:"Player"
 	(body
 		[

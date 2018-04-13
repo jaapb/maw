@@ -11,7 +11,7 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let do_hide_account_page () () =
@@ -21,7 +21,7 @@ let do_hide_account_page () () =
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, _)
 		| Admin (_, (uid, _, _, _)) -> 
-			let%lwt () = Database.hide_user uid in
+			let%lwt () = Maw_db.hide_user uid in
 			container (standard_menu []) 
 			[
 				h1 [pcdata "Account hidden"];

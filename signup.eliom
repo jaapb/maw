@@ -137,9 +137,9 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 		match users with
 		| (uid, (role, note))::tl -> 
 			Lwt.catch (fun () ->
-				Database.get_user_data uid >>=
+				Maw_db.get_user_data uid >>=
 				fun (fname, lname, email, _, _) ->
-      		Database.add_inscription game_id uid group_name status
+      		Maw_db.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
 						fun () -> 
@@ -147,9 +147,9 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 							Mail.send_simple_inscription_mail fname lname email game_title game_loc game_dstr dsg_str;
 						Lwt.return ())
 				(function
-				| Not_found -> Database.get_provisional_user_data uid >>=
+				| Not_found -> Maw_db.get_provisional_user_data uid >>=
 					fun (email, fname, lname) ->
-      		Database.add_inscription game_id uid group_name status
+      		Maw_db.add_inscription game_id uid group_name status
   		  		(if String.lowercase_ascii team = "any" then None else Some team)
 			  		(if String.lowercase_ascii role = "any" then None else Some role) note >>=
 						fun () -> 
@@ -170,16 +170,16 @@ let do_signup_page game_id () (edit, (group_name, (team, users))) =
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) -> 
 		let%lwt (game_title, game_date, game_loc, _, _, max_pl, _) =
-			Database.get_game_data game_id  in
-		let%lwt dsgs = Database.get_game_designers game_id in
+			Maw_db.get_game_data game_id  in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		let dsg_str = designer_string dsgs in
 		let game_dstr = match game_date with
 			| Some d -> Printer.Date.sprint "%d %B %Y" d
 			| _ -> "TBD" in
-		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
+		let%lwt nr_inscr = Maw_db.get_nr_inscriptions game_id in
 		handle_inscriptions edit group_name users game_title game_loc game_dstr dsg_str (if nr_inscr >= max_pl then `Waiting else `Interested) >>=
 		fun () -> let%lwt users_ex = Lwt_list.map_s (fun (uid, (role, note)) ->
-			let%lwt (fn, ln, _, _, _) = Database.get_user_data uid in
+			let%lwt (fn, ln, _, _, _) = Maw_db.get_user_data uid in
 			Lwt.return (uid, fn, ln, role, note)) users in 
 		send_signup_notification dsgs game_title group_name users_ex;
 		container (standard_menu [])
@@ -320,9 +320,9 @@ let do_switch_page game_id () (new_group) =
 	| Not_logged_in -> not_logged_in ()
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) -> Lwt.catch (
-		fun () -> Database.find_group game_id new_group >>=
+		fun () -> Maw_db.find_group game_id new_group >>=
 		fun ids -> if not (List.mem uid ids) then
-			Database.move_group game_id uid new_group >>=
+			Maw_db.move_group game_id uid new_group >>=
 			fun () -> container (standard_menu [])
 			[
 				h1 [pcdata "Request successful"];
@@ -356,14 +356,14 @@ let signup_page game_id () =
 	| User (my_uid, fname, lname, _)
 	| Admin (_, (my_uid, fname, lname, _)) -> 
 		let%lwt (title, date, loc, d, _, max_pl, _)  =
-			Database.get_game_data game_id in
-		let%lwt dsgs = Database.get_game_designers game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		let dsg_str = designer_string dsgs in
-    let%lwt roles = Database.get_game_roles game_id in
-		let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		let%lwt inscr = Database.get_inscription_data my_uid game_id in
-		let%lwt users = Database.get_users ~unconfirmed:true ~provisional:true () in
-		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
+    let%lwt roles = Maw_db.get_game_roles game_id in
+		let%lwt nr_inscr = Maw_db.get_nr_inscriptions game_id in
+		let%lwt inscr = Maw_db.get_inscription_data my_uid game_id in
+		let%lwt users = Maw_db.get_users ~unconfirmed:true ~provisional:true () in
+		let%lwt (id, cd, pd) = Maw_db.get_game_deadlines game_id in
 		let me_inscr = if List.exists (fun (u, _, _, _, _, _, _, _) -> u = my_uid) inscr
 			then inscr 
 			else (my_uid, fname, lname, None, None, "", None, `Interested)::inscr in

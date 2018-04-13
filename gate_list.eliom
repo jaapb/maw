@@ -7,7 +7,7 @@ open Utils
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let gate_list_service =
@@ -16,11 +16,11 @@ let print_gate_list_service =
 	create ~path:(Path ["gate_list"; "printable"]) ~meth:(Get (suffix (int32 "game_id"))) ();;
 
 let do_book_in game_id () uid =
-	Database.change_status game_id uid `Attended
+	Maw_db.change_status game_id uid `Attended
 	;;
 
 let do_close_gate_list game_id () () =
-	let%lwt cast = Database.get_casting game_id in
+	let%lwt cast = Maw_db.get_casting game_id in
 	let%lwt () = Lwt_list.iter_s (fun (t, roles) ->
 		Lwt_list.iter_s (fun (rn, fn, ln, x, _, _) ->
 			match x with
@@ -29,11 +29,11 @@ let do_close_gate_list game_id () () =
 				let%lwt status = sign_up_status uid game_id in
 				match status with
 				| `Yes (_, _, `Attended) -> Lwt.return ()
-				| `Yes (_, _, _) -> Database.change_status game_id uid `No_show
+				| `Yes (_, _, _) -> Maw_db.change_status game_id uid `No_show
 				| _ -> Lwt.return ()
 		) roles
 	) cast in
-	let%lwt () = Database.close_gate_list game_id in
+	let%lwt () = Maw_db.close_gate_list game_id in
 	Maw.dashboard_page () ()
 ;;	
 
@@ -51,10 +51,10 @@ let gate_list_page game_id () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		let%lwt (title, date, loc, _, _, _, _) =
-			Database.get_game_data game_id in
-		let%lwt dsgs = Database.get_game_designers game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		let dsg_str = designer_string dsgs in 
-		let%lwt cast = Database.get_casting game_id in
+		let%lwt cast = Maw_db.get_casting game_id in
 		let%lwt cast_status = Lwt_list.map_s (fun (t, roles) ->
 			let%lwt new_roles = Lwt_list.map_s (fun (rn, fn, ln, x, _, _) ->
 				match x with
@@ -68,7 +68,7 @@ let gate_list_page game_id () =
 		let date_str = match date with
 		| None -> "NO DATE"
 		| Some d -> Printer.Date.sprint "%d %B %Y" d in
-		let%lwt is_closed = Database.get_gate_list_status game_id in
+		let%lwt is_closed = Maw_db.get_gate_list_status game_id in
 		match u with
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, is_admin)
@@ -137,10 +137,10 @@ let print_gate_list_page game_id () =
 	Lwt.catch (fun () ->
 		let%lwt u = Eliom_reference.get Maw.user in
 		let%lwt (title, date, loc, _, _, _, _) =
-			Database.get_game_data game_id in
-		let%lwt dsgs = Database.get_game_designers game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		let dsg_str = designer_string dsgs in
-		let%lwt cast = Database.get_casting game_id in
+		let%lwt cast = Maw_db.get_casting game_id in
 		let%lwt cast_status = Lwt_list.map_s (fun (t, roles) ->
 			let%lwt new_roles = Lwt_list.map_s (fun (rn, fn, ln, uid, _, _) ->
 				match uid with
@@ -154,7 +154,7 @@ let print_gate_list_page game_id () =
 		let date_str = match date with
 		| None -> "NO DATE"
 		| Some d -> Printer.Date.sprint "%d %B %Y" d in
-		let%lwt is_closed = Database.get_gate_list_status game_id in
+		let%lwt is_closed = Maw_db.get_gate_list_status game_id in
 		match u with
 		| Not_logged_in -> not_logged_in ()
 		| User (uid, _, _, is_admin)

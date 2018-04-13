@@ -136,14 +136,14 @@ let%client cast_init ev =
 ;;
 
 let send_casting_notification game_id teams =
-	let%lwt (game_title, _, _, _, _, _, _) = Database.get_game_data game_id in
+	let%lwt (game_title, _, _, _, _, _, _) = Maw_db.get_game_data game_id in
 	Lwt_list.iter_s (fun (t_name, roles) ->
 		Lwt_list.iter_s (fun (r_name, user_id) ->
 			match user_id with
 			| None -> Lwt.return ()
 			| Some u ->
-				let%lwt (c, _, _, _) = Database.get_notifications u in
-				let%lwt (fname, lname, email, _, _) = Database.get_user_data u in
+				let%lwt (c, _, _, _) = Maw_db.get_notifications u in
+				let%lwt (fname, lname, email, _, _) = Maw_db.get_user_data u in
 				let uri = Eliom_uri.make_string_uri ~absolute:true
 					~service:show_casting_service game_id in
 					Mail.send_casting_notification fname lname email game_title uri;
@@ -158,9 +158,9 @@ let do_cast_page game_id () (teams, publish) =
 	| Not_logged_in -> not_logged_in ()
 	| User (uid, _, _, _) 
 	| Admin (_, (uid, _, _, _)) -> 
-		let%lwt was_published = Database.is_published game_id in
-		Database.update_casting game_id teams >>=
-		fun () -> Database.set_published game_id publish >>=
+		let%lwt was_published = Maw_db.is_published game_id in
+		Maw_db.update_casting game_id teams >>=
+		fun () -> Maw_db.set_published game_id publish >>=
 		fun () -> begin
 			if (not was_published) && publish then
 				send_casting_notification game_id teams
@@ -199,15 +199,15 @@ let cast_page game_id () =
   | Not_logged_in -> not_logged_in ()
   | User (uid, _, _, _)
   | Admin (_, (uid, _, _, _)) ->
-		let%lwt dsg_ids = Database.get_game_designers game_id in
+		let%lwt dsg_ids = Maw_db.get_game_designers game_id in
     if not (is_designer uid dsg_ids)
 		then error_page "You are not the designer of this game."
     else
 		let%lwt (title, _, _, _, _, _, _) =
-      Database.get_game_data game_id in
-    let%lwt inscr = Database.get_inscription_list ~filter_cast:true game_id in
-		let%lwt casting = Database.get_casting game_id in
-		let%lwt pub = Database.is_published game_id in
+      Maw_db.get_game_data game_id in
+    let%lwt inscr = Maw_db.get_inscription_list ~filter_cast:true game_id in
+		let%lwt casting = Maw_db.get_casting game_id in
+		let%lwt pub = Maw_db.is_published game_id in
     container ~onload:[%client cast_init] (standard_menu [])
     [
       Form.post_form ~service:do_cast_service (fun (team, publish) ->

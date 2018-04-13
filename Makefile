@@ -18,6 +18,9 @@ JS_OF_ELIOM       := js_of_eliom -ppx
 ELIOMDEP          := eliomdep
 OCSIGENSERVER     := ocsigenserver
 OCSIGENSERVER.OPT := ocsigenserver.opt
+OCAMLC						:= ocamlfind ocamlc
+OCAMLOPT					:= ocamlfind ocamlopt
+OCAMLDEP					:= ocamlfind ocamldep
 
 ## Where to put intermediate object files.
 ## - ELIOM_{SERVER,CLIENT}_DIR must be distinct
@@ -127,6 +130,10 @@ SED_ARGS += -e "s|%%LIBDIR%%|%%PREFIX%%$(LIBDIR)|g"
 SED_ARGS += -e "s|%%WARNING%%|$(EDIT_WARNING)|g"
 SED_ARGS += -e "s|%%PACKAGES%%|$(FINDLIB_PACKAGES)|g"
 SED_ARGS += -e "s|%%ELIOMSTATICDIR%%|%%PREFIX%%$(ELIOMSTATICDIR)|g"
+SED_ARGS += -e "s|%%PGHOST%%|$(PGHOST)|g"
+SED_ARGS += -e "s|%%PGDATABASE%%|$(PGDATABASE)|g"
+SED_ARGS += -e "s|%%PGUSER%%|$(PGUSER)|g"
+SED_ARGS += -e "s|%%PGPASSWORD%%|$(PGPASSWORD)|g"
 ifeq ($(DEBUG),yes)
   SED_ARGS += -e "s|%%DEBUGMODE%%|\<debugmode /\>|g"
 else
@@ -153,6 +160,8 @@ $(TEST_PREFIX)${ETCDIR}/${PROJECT_NAME}-test.conf: ${PROJECT_NAME}.conf.in Makef
 ## Server side compilation
 
 SERVER_INC  := ${addprefix -package ,${SERVER_PACKAGES}}
+SERVER_DB_INC := ${addprefix -package ,${SERVER_DB_PACKAGES}}
+SERVER_MAIL_INC := ${addprefix -package ,${SERVER_MAIL_PACKAGES}}
 
 ${ELIOM_TYPE_DIR}/%.type_mli: %.eliom
 	${ELIOMC} -infer ${SERVER_INC} $<
@@ -168,41 +177,33 @@ $(TEST_PREFIX)$(LIBDIR)/$(PROJECT_NAME).cmxa: $(call objs,$(ELIOM_SERVER_DIR),cm
 %.cmxs: %.cmxa
 	$(ELIOMOPT) -shared -linkall -o $@ $(GENERATE_DEBUG) $<
 
+${ELIOM_SERVER_DIR}/%_db.cmi: %_db.mli
+	${OCAMLC} -o $@ -c ${SERVER_DB_INC} $(GENERATE_DEBUG) $<
+${ELIOM_SERVER_DIR}/mail.cmi: mail.mli
+	${OCAMLC} -o $@ -c ${SERVER_MAIL_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/%.cmi: %.mli
-	${ELIOMC} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
+	${OCAMLC} -o %@ -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 
 ${ELIOM_SERVER_DIR}/%.cmi: %.eliomi
 	${ELIOMC} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 
-## Special rule for SQL files
-${ELIOM_SERVER_DIR}/database.cmo: database.ml
-	ocamlfind ocamlc -package pgocaml.syntax,lwt.unix \
-    -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
-${ELIOM_SERVER_DIR}/database.cmx: database.ml
-	ocamlfind ocamlopt -package pgocaml.syntax,lwt,lwt.unix \
-    -syntax camlp4o -I ${ELIOM_SERVER_DIR} -o $@ -c $<
-$(DEPSDIR)/database.ml.server: database.ml | $(DEPSDIR)
-	ocamlfind ocamldep -package pgocaml.syntax \
-    -syntax camlp4o -I ${ELIOM_SERVER_DIR} $< > $@
-
-## Special rule for mail component
+${ELIOM_SERVER_DIR}/%_db.cmo: %_db.ml
+	PGHOST=${PGHOST} PGDATABASE=${PGDATABASE} PGUSER=${PGUSER} PGPASSWORD=${PGPASSWORD} \
+	${OCAMLC} -syntax camlp4o -thread -o $@ -c ${SERVER_DB_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/mail.cmo: mail.ml
-	ocamlfind ocamlc -package netclient,nettls-gnutls \
-    -I ${ELIOM_SERVER_DIR} -o $@ -c $<
-${ELIOM_SERVER_DIR}/mail.cmx: mail.ml
-	ocamlfind ocamlopt -package netclient,nettls-gnutls \
-    -I ${ELIOM_SERVER_DIR} -o $@ -c $<
-$(DEPSDIR)/mail.ml.server: mail.ml | $(DEPSDIR)
-	ocamlfind ocamldep -package netclient,nettls-gnutls \
-    -I ${ELIOM_SERVER_DIR} $< > $@
-
+	${OCAMLC} -o $@ -c ${SERVER_MAIL_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/%.cmo: %.ml
-	${ELIOMC} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
+	${OCAMLC} -o $@ -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/%.cmo: %.eliom
 	${ELIOMC} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 
+${ELIOM_SERVER_DIR}/%_db.cmx: %_db.ml
+	PGHOST=${PGHOST} PGDATABASE=${PGDATABASE} PGUSER=${PGUSER} PGPASSWORD=${PGPASSWORD} \
+	${OCAMLOPT} -syntax camlp4o -thread -o $@ -c ${SERVER_DB_INC} $(GENERATE_DEBUG) $<
+${ELIOM_SERVER_DIR}/mail.cmx: mail.ml
+	${OCAMLOPT} -o $@ -c ${SERVER_MAIL_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/%.cmx: %.ml
-	${ELIOMOPT} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
+	${OCAMLOPT} -o $@ -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 ${ELIOM_SERVER_DIR}/%.cmx: %.eliom
 	${ELIOMOPT} -c ${SERVER_INC} $(GENERATE_DEBUG) $<
 
@@ -219,7 +220,7 @@ CLIENT_OBJS := $(patsubst %.ml,${ELIOM_CLIENT_DIR}/%.cmo, ${CLIENT_OBJS})
 
 $(TEST_PREFIX)$(ELIOMSTATICDIR)/$(PROJECT_NAME).js: $(call objs,$(ELIOM_CLIENT_DIR),cmo,$(CLIENT_FILES)) | $(TEST_PREFIX)$(ELIOMSTATICDIR)
 	${JS_OF_ELIOM} -o $@ $(GENERATE_DEBUG) $(CLIENT_INC) $(DEBUG_JS) \
-          $(call depsort,$(ELIOM_CLIENT_DIR),cmo,-client,$(CLIENT_INC),$(CLIENT_FILES))
+		$(call depsort,$(ELIOM_CLIENT_DIR),cmo,-client,$(CLIENT_INC),$(CLIENT_FILES))
 
 ${ELIOM_CLIENT_DIR}/%.cmi: %.mli
 	${JS_OF_ELIOM} -c ${CLIENT_INC} $(GENERATE_DEBUG) $<
@@ -239,6 +240,12 @@ include .depend
 
 .depend: $(patsubst %,$(DEPSDIR)/%.server,$(SERVER_FILES)) $(patsubst %,$(DEPSDIR)/%.client,$(CLIENT_FILES))
 	cat $^ > $@
+
+$(DEPSDIR)/%_db.ml.server: %_db.ml | $(DEPSDIR)
+	$(OCAMLDEP) -syntax caml4po $(SERVER_DB_INC) $< > $@
+
+$(DEPSDIR)/mail.ml.server: mail.ml | $(DEPSDIR)
+	$(OCAMLDEP) $(SERVER_MAIL_INC) $< > $@
 
 $(DEPSDIR)/%.server: % | $(DEPSDIR)
 	$(ELIOMDEP) -server -ppx $(SERVER_INC) $< > $@

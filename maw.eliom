@@ -45,18 +45,18 @@ let mail_el = Ocsigen_extensions.Configuration.element
 
 let database_server_el = Ocsigen_extensions.Configuration.element
 	~name:"server" ~obligatory:true
-	~pcdata:(fun s -> Database.database_server := s) ();;
+	~pcdata:(fun s -> Maw_db.database_server := s) ();;
 let database_port_el = Ocsigen_extensions.Configuration.element
 	~name:"port"
-	~pcdata:(fun s -> Database.database_port := Some (int_of_string s)) ();;
+	~pcdata:(fun s -> Maw_db.database_port := Some (int_of_string s)) ();;
 let database_name_el = Ocsigen_extensions.Configuration.element
 	~name:"name" ~obligatory:true
-	~pcdata:(fun s -> Database.database_name := s) ();;
+	~pcdata:(fun s -> Maw_db.database_name := s) ();;
 let database_user_el = Ocsigen_extensions.Configuration.element
 	~name:"user" ~obligatory:true
-	~pcdata:(fun s -> Database.database_user := s) ();;
+	~pcdata:(fun s -> Maw_db.database_user := s) ();;
 let database_password_el = Ocsigen_extensions.Configuration.element
-	~name:"password" ~pcdata:(fun s -> Database.database_password := Some s) ();;
+	~name:"password" ~pcdata:(fun s -> Maw_db.database_password := Some s) ();;
 let database_el = Ocsigen_extensions.Configuration.element
 	~name:"database" ~obligatory:true ~elements:[database_server_el;
 		database_port_el; database_name_el; database_user_el; database_password_el]
@@ -77,7 +77,7 @@ let login_err = Eliom_reference.eref ~scope:Eliom_common.request_scope
 (* Login bits and pieces *)
 
 let login_action () (name, password) =
-	let%lwt u = Database.check_password name password in
+	let%lwt u = Maw_db.check_password name password in
 	match u with
 	| Some (uid, fname, lname, is_admin) -> Eliom_reference.set user (User (uid, fname, lname, is_admin))
 	| None -> begin
@@ -254,13 +254,13 @@ let format_my_games mg dg =
 
 let dashboard_page () () =
 	Lwt.catch (fun () ->
-	 	let%lwt ug = Database.get_upcoming_games () in
+	 	let%lwt ug = Maw_db.get_upcoming_games () in
 		let%lwt u = Eliom_reference.get user in
 		let%lwt mg_fmt = match u with
 		| Not_logged_in -> Lwt.return []
 		| User (uid, _, _, _)
-		| Admin (_, (uid, _, _, _)) -> Database.get_user_games uid >>=
-				fun mg -> Database.get_designer_games uid >>=
+		| Admin (_, (uid, _, _, _)) -> Maw_db.get_user_games uid >>=
+				fun mg -> Maw_db.get_designer_games uid >>=
 				fun dg -> format_my_games mg dg
 		in
 		container (standard_menu [])

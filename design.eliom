@@ -36,9 +36,9 @@ let update_game_data game_id () (descr, (min, (max, (id, (cd, pd))))) =
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) -> 
 		begin
-			Database.set_game_description game_id descr >>=
-			fun () -> Database.set_game_numbers game_id min max >>=
-			fun () -> Database.set_game_deadlines game_id inscr_date cancel_date pay_date
+			Maw_db.set_game_description game_id descr >>=
+			fun () -> Maw_db.set_game_numbers game_id min max >>=
+			fun () -> Maw_db.set_game_deadlines game_id inscr_date cancel_date pay_date
 		end
 ;;
 
@@ -58,7 +58,7 @@ let upload_picture game_id () picture =
 				Unix.unlink new_path
 			with _ -> ());
 			Lwt_unix.link old_path new_path >>=
-			fun () -> Database.set_picture_filename game_id new_name
+			fun () -> Maw_db.set_picture_filename game_id new_name
 		end
 		
 let design_page game_id () = 
@@ -77,13 +77,13 @@ let design_page game_id () =
 	| Not_logged_in -> not_logged_in ()
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) -> 
-		let%lwt dsgs = Database.get_game_designers game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
 		if not (is_designer uid dsgs)
 		then error_page "You are not the designer of this game."
 		else
 		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
-			Database.get_game_data game_id in
-		let%lwt (id, cd, pd) = Database.get_game_deadlines game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt (id, cd, pd) = Maw_db.get_game_deadlines game_id in
 		let idate = match id with
 		| None -> ""
 		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
@@ -93,9 +93,9 @@ let design_page game_id () =
 		let pdate = match pd with
 		| None -> ""
 		| Some d -> Printer.Date.sprint "%Y-%m-%d" d in
-		let%lwt teams = Database.get_game_teams game_id in
-		let%lwt roles = Database.get_game_roles game_id in
-		let%lwt fn = Database.get_picture_filename game_id in
+		let%lwt teams = Maw_db.get_game_teams game_id in
+		let%lwt roles = Maw_db.get_game_roles game_id in
+		let%lwt fn = Maw_db.get_picture_filename game_id in
 		let nr_roles = List.fold_left (fun acc (_, r) -> acc + List.length r) 0 roles in
 			container (standard_menu (design_menu game_id))
 			[

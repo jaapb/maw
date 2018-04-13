@@ -11,11 +11,11 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let confirm_user_page (user_id, random) () =
-	Lwt.catch (fun () -> Database.confirm_user user_id random >>=
+	Lwt.catch (fun () -> Maw_db.confirm_user user_id random >>=
 	fun res -> container (standard_menu [])
 	[
 		h1 [pcdata "Account activated"];

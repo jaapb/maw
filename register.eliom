@@ -11,11 +11,11 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let add_user_page () (first_name, (last_name, (email, (password, (address, (postcode, (town, (country, phone)))))))) =
-	Lwt.catch (fun () -> Database.add_user first_name last_name email password address postcode town country phone >>=
+	Lwt.catch (fun () -> Maw_db.add_user first_name last_name email password address postcode town country phone >>=
 	fun (uid, random) -> begin
 	match random with
 		| None -> Lwt.fail_with "Did not generate confirmation code"

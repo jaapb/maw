@@ -51,13 +51,13 @@ let game_page game_id () =
 	let%lwt u = Eliom_reference.get Maw.user in
 	Lwt.catch (fun () ->
 		let%lwt (title, date, loc, d, _, max_pl, _) =
-			Database.get_game_data game_id in
-		let%lwt dsgs = Database.get_game_designers game_id in
-    let%lwt nr_inscr = Database.get_nr_inscriptions game_id in
-		let%lwt (id, _, _) = Database.get_game_deadlines game_id in
-		let%lwt (visible, bookable) = Database.get_game_visibility game_id in
-		let%lwt roles = Database.get_game_roles game_id in
-		let%lwt fn = Database.get_picture_filename game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
+    let%lwt nr_inscr = Maw_db.get_nr_inscriptions game_id in
+		let%lwt (id, _, _) = Maw_db.get_game_deadlines game_id in
+		let%lwt (visible, bookable) = Maw_db.get_game_visibility game_id in
+		let%lwt roles = Maw_db.get_game_roles game_id in
+		let%lwt fn = Maw_db.get_picture_filename game_id in
 		let dsg_str = designer_string dsgs in
 		if not visible then
 			unknown_game ()
@@ -68,7 +68,7 @@ let game_page game_id () =
 	  | User (uid, _, _, _)
 	  | Admin (_, (uid, _, _, _)) ->
 			let is_dsg = is_designer uid dsgs in
-			let%lwt sus = Database.sign_up_status uid game_id in
+			let%lwt sus = Maw_db.sign_up_status uid game_id in
 			if not (visible || is_dsg)
 			then unknown_game ()
 			else container (standard_menu (game_menu game_id (match sus with | `Yes (_, _, _) -> true | _ -> false) is_dsg bookable))

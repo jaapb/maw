@@ -38,9 +38,9 @@
 					<password>r@mpj4ar</password>
 				</mail>
 				<database>
-					<server>localhost</server>
-					<name>maw</name>
-					<user>jaapb</user>
+					<server>%%PGHOST%%</server>
+					<name>%%PGDATABASE%%</name>
+					<user>%%PGUSER%%</user>
 				</database>
 	</eliommodule>
       <eliom/>

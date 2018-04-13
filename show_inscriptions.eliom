@@ -19,7 +19,7 @@ let rec confirm_page game_id () user_id =
 	| Not_logged_in -> not_logged_in ()
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) -> 
-		Database.change_status game_id user_id `Confirmed >>=
+		Maw_db.change_status game_id user_id `Confirmed >>=
 		fun () -> show_inscriptions_page game_id ())
 	(fun e -> error_page (Printexc.to_string e))
 and show_inscriptions_page game_id () =
@@ -27,7 +27,7 @@ and show_inscriptions_page game_id () =
 		~fallback:(preapply show_inscriptions_service game_id)
 		~post_params:(int32 "user_id") () in
 	let status_word st =
-		match (Database.inscr_status_of_int32 st) with
+		match (Maw_db.inscr_status_of_int32 st) with
 		| `Potential-> "Potential"
 		| `Interested-> "Interested"
 		| `Waiting -> "Waiting"
@@ -43,9 +43,9 @@ and show_inscriptions_page game_id () =
 	| User (uid, _, _, _)
 	| Admin (_, (uid, _, _, _)) ->
 		let%lwt (title, date, loc, d, min_nr, max_nr, _) =
-			Database.get_game_data game_id in
-		let%lwt dsgs = Database.get_game_designers game_id in
-		let%lwt inscr = Database.get_inscription_list game_id in
+			Maw_db.get_game_data game_id in
+		let%lwt dsgs = Maw_db.get_game_designers game_id in
+		let%lwt inscr = Maw_db.get_inscription_list game_id in
 		if is_designer uid dsgs then
 			container (standard_menu [])
 			(
@@ -64,7 +64,7 @@ and show_inscriptions_page game_id () =
 						]::
 						List.map (fun (fname, lname, _, ex_uid, t, r, nt, g, st) ->
 							tr [
-								td (match (Database.inscr_status_of_int32 st) with
+								td (match (Maw_db.inscr_status_of_int32 st) with
 									| `Potential | `Interested | `Waiting ->
 										[Form.post_form ~service:confirm_service
 										(fun u ->

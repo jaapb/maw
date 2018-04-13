@@ -11,13 +11,13 @@
 [%%server
 	open CalendarLib
 	open Maw
-	open Database
+	open Maw_db
 ]
 
 let reset_password_mail_page () (email) =
 	Lwt.catch (fun () ->
-		let%lwt (uid, fname, lname) = Database.find_user_by_email email in
-		let%lwt rstr = Database.save_reset_request uid in
+		let%lwt (uid, fname, lname) = Maw_db.find_user_by_email email in
+		let%lwt rstr = Maw_db.save_reset_request uid in
 		let uri = Eliom_uri.make_string_uri ~absolute:true ~service:reset_password_service (uid, rstr) in
 		Mail.send_reset_mail fname lname email uri;
 		container (standard_menu [])
