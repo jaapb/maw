@@ -32,10 +32,10 @@
       <static dir="%%ELIOMSTATICDIR%%" />
       <eliommodule module="%%LIBDIR%%/%%PROJECT_NAME%%.cma">
 				<mail>
-					<server>smtp.kerguelen.org</server>
-					<port>587</port>
-					<user>megagames</user>
-					<password>r@mpj4ar</password>
+					<server></server>
+					<port></port>
+					<user></user>
+					<password></password>
 				</mail>
 				<database>
 					<server>%%PGHOST%%</server>
