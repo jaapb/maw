@@ -4,13 +4,13 @@
 	open Maw_utils
 ]
 
-let%server get_games ?(upcoming=false) () =
+let%server get_games upcoming =
 	if upcoming
 	then Maw_games_db.get_upcoming_games ()
 	else Maw_games_db.get_games ()
 
 let%client get_games =
-	~%(Eliom_client.server_function [%derive.json : unit]
+	~%(Eliom_client.server_function [%derive.json : bool]
 			(Os_session.connected_wrapper get_games))
 
 let%server get_game_info game_id =

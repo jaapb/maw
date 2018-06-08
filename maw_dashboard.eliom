@@ -8,8 +8,8 @@ let%shared format_games_list () =
 	let%lwt games = Maw_game.get_games true in
 	let%lwt game_rows = Lwt_list.map_s (fun (id, title, location, date) ->
 		Lwt.return @@ tr [
-			td [pcdata title; pcdata " ("; pcdata (default "TBD" location); pcdata ", "; pcdata (match date with None -> "TBD" | Some d -> Printer.Date.sprint "%D/%M/%Y" d); pcdata ")"];
-			td [a ~service:Maw_services.game_info_service [pcdata "info"] id]
+			td [pcdata title; pcdata " ("; pcdata (default "TBD" location); pcdata ", "; pcdata (match date with None -> "TBD" | Some d -> Printer.Date.sprint "%B %d, %Y" d); pcdata ")"];
+			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ()] id]
 		]
 	) games in
 	Lwt.return (table game_rows)
