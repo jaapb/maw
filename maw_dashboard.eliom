@@ -14,17 +14,33 @@ let%shared format_games_list () =
 	) games in
 	Lwt.return (table game_rows)
 
+let%shared format_my_games =
+	function
+	| None -> Lwt.return []
+	| Some myid ->
+		let%lwt my_games = Maw_game.get_designed_games myid in
+			Lwt.return @@ [div ~a:[a_class ["content-box"]] [
+				h2 [pcdata "My games"];
+				table (List.map (fun (game_id, title) ->
+					tr [
+						td [pcdata title]
+					]
+				) my_games)
+			]]
+
 let%shared dashboard_handler myid_o () () =
 	let%lwt is_admin = try%lwt
 		Maw_user.is_admin myid_o
 	with
 	| Not_found -> Lwt.return false in
 	let%lwt games_list = format_games_list () in
+	let%lwt my_games = format_my_games myid_o in
   Maw_container.page
     ~a:[ a_class ["os-page-main"] ]
-    myid_o ([
+    myid_o (
 			div ~a:[a_class ["content-box"]] [
 				h2 [pcdata "Upcoming games"];
 				games_list
-			]
-		])
+			]::
+			my_games
+		)
