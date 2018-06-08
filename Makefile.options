@@ -17,7 +17,7 @@ SERVER_FILES          := $(wildcard *.eliomi *.eliom *.ml) \
 
 # Source files for the client. By default, it's all eliom and eliomi files
 # in the project root directory.
-CLIENT_FILES          := $(wildcard *.eliomi *.eliom) \
+CLIENT_FILES          := maw_utils.ml $(wildcard *.eliomi *.eliom) \
                          maw_i18n.eliom
 
 # OCamlfind packages for the server (for modules which defines services)
