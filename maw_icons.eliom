@@ -30,6 +30,8 @@ module Make(A : module type of Eliom_content.Html.F) = struct
   (* Add your own icons here. See http://fontawesome.io/icons/ for the
      complete list of CSS classes available by default. *)
 
+	let info = icon ["fa-info-circle"; "fa-fw"]
+	let edit = icon ["fa-wrench"; "fa-fw"]
 end
 
 module F = Make(Eliom_content.Html.F)
