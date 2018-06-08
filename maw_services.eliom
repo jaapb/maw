@@ -38,6 +38,17 @@ let%server game_info_service =
 		~meth:(Eliom_service.Get Eliom_parameter.(suffix (int64 "game_id")))
 		()
 
+let%server edit_game_service =
+	Eliom_service.create
+		~path:(Eliom_service.Path ["edit_game"])
+		~meth:(Eliom_service.Get Eliom_parameter.(suffix (int64 "game_id")))
+		()
+
+let%server edit_game_action =
+	Eliom_service.create
+		~meth:(Eliom_service.Post (Eliom_parameter.unit, Eliom_parameter.(int64 "game_id" ** string "blurb")))
+		~path:(Eliom_service.No_path) ()
+
 let%client about_service =
   ~%about_service
 
@@ -55,6 +66,12 @@ let%client os_github_service =
 
 let%client game_info_service =
 	~%game_info_service
+
+let%client edit_game_service =
+	~%edit_game_service
+
+let%client edit_game_action =
+	~%edit_game_action
 
 (* The OS lib needs access to the settings service to perform
    redirections to it. We need to register it *)

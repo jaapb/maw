@@ -111,3 +111,7 @@ my_games	My games	Mes jeux
 upcoming_games	Upcoming games	Jeux à venir
 designed_by	Designed by	Conçu par
 no_description	No game description has yet been entered.	Aucune description n'a encore été fournie.
+not_game_designer	You are not the designer of this game.	Vous n'êtes pas le concepteur de ce jeu.
+game_location	Location	Lieu
+game_date	Date	Date
+game_description	Description	Description

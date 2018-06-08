@@ -47,3 +47,47 @@ let%shared game_info_handler myid_o game_id () =
 				p [pcdata (default [%i18n S.no_description] blurb)]
 			]
     ]
+
+let%shared do_edit_game () (game_id, blurb) =
+	Lwt.return_unit
+
+let%shared edit_game_handler myid_o game_id () =
+	Eliom_registration.Action.register ~scope:Eliom_common.default_session_scope ~service:Maw_services.edit_game_action do_edit_game;	
+	match myid_o with
+	| None -> Maw_container.page None
+			[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
+	| Some myid -> 
+		let%lwt designers = get_game_designers game_id in
+		if List.exists (fun (id, _, _) -> id = myid) designers then
+		let%lwt (title, location, date, blurb) = get_game_info game_id in
+			Maw_container.page (Some myid)
+			[
+				div ~a:[a_class ["content-box"]]
+				[
+					h1 [pcdata title];
+					Form.post_form ~service:Maw_services.edit_game_action (fun (p_game_id, new_blurb) -> [
+						Form.input ~input_type:`Hidden ~name:p_game_id ~value:game_id Form.int64;
+						table [
+							tr [
+								th [pcdata [%i18n S.game_location]];
+								td [Raw.input ~a:[a_disabled (); a_input_type `Text; a_value (default [%i18n S.tbc] location)] ()]
+							];
+							tr [
+								th [pcdata [%i18n S.game_date]];
+								td [Raw.input ~a:[a_disabled (); a_input_type `Text;
+									a_value (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)] ()]
+							];
+							tr [
+								th [pcdata [%i18n S.game_description]];
+								td [Form.textarea ~a:[a_rows 20; a_cols 60] ~name:new_blurb ~value:(default "" blurb) ()]
+							]	
+						]
+					]) ()
+				]
+			]
+		else
+			Maw_container.page None
+			[p [pcdata [%i18n S.not_game_designer]]]
+			
+
+	

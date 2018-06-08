@@ -80,3 +80,33 @@ val game_info_service :
     unit,
     Eliom_service.non_ocaml
   ) Eliom_service.t
+
+val edit_game_service :
+  (
+    int64,
+    unit,
+    Eliom_service.get,
+    Eliom_service.att,
+    Eliom_service.non_co,
+    Eliom_service.non_ext,
+    Eliom_service.reg,
+    [ `WithSuffix ],
+    [ `One of int64 ] Eliom_parameter.param_name,
+    unit,
+    Eliom_service.non_ocaml
+  ) Eliom_service.t
+
+val edit_game_action :
+  (
+    unit,
+    int64 * string,
+    Eliom_service.post,
+    Eliom_service.att,
+    Eliom_service.non_co,
+    Eliom_service.non_ext,
+    Eliom_service.reg,
+    [ `WithoutSuffix ],
+    [ `None ],
+    unit,
+    Eliom_service.non_ocaml
+  ) Eliom_service.t

@@ -25,7 +25,8 @@ let%shared format_my_games =
 				h2 [pcdata [%i18n S.my_games]];
 				table (List.map (fun (game_id, title) ->
 					tr [
-						td [pcdata title]
+						td [pcdata title];
+						td [a ~service:Maw_services.edit_game_service [Maw_icons.D.edit ()] game_id]
 					]
 				) my_games)
 			]]
