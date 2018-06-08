@@ -42,8 +42,8 @@ let%shared game_info_handler myid_o game_id () =
     myid_o [
 			div ~a:[a_class ["content-box"]] [
 				h1 [pcdata title];
-				p [i [pcdata (default "TBD" location); pcdata ", "; pcdata (match date with None -> "TBD" | Some date -> Printer.Date.sprint "%B %d, %Y" date)]];
-				p [pcdata "Designed by "; pcdata (String.concat " and " (List.map (fun (_, fn, ln) -> Printf.sprintf "%s %s" fn ln) designers))];
-				p [pcdata (default "No game description has yet been entered." blurb)]
+				p [i [pcdata (default [%i18n S.tbc] location); pcdata ", "; pcdata (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)]];
+				p [pcdata [%i18n S.designed_by]; pcdata " "; pcdata (String.concat " and " (List.map (fun (_, fn, ln) -> Printf.sprintf "%s %s" fn ln) designers))];
+				p [pcdata (default [%i18n S.no_description] blurb)]
 			]
     ]

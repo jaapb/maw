@@ -8,7 +8,9 @@ let%shared format_games_list () =
 	let%lwt games = Maw_game.get_games true in
 	let%lwt game_rows = Lwt_list.map_s (fun (id, title, location, date) ->
 		Lwt.return @@ tr [
-			td [pcdata title; pcdata " ("; pcdata (default "TBD" location); pcdata ", "; pcdata (match date with None -> "TBD" | Some d -> Printer.Date.sprint "%B %d, %Y" d); pcdata ")"];
+			td [pcdata title; pcdata " ("; pcdata (default [%i18n S.tbc] location); pcdata ", ";
+				pcdata (match date with None -> [%i18n S.tbc] | Some d -> Printer.Date.sprint "%B %d, %Y" d);
+				pcdata ")"];
 			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ()] id]
 		]
 	) games in
@@ -20,7 +22,7 @@ let%shared format_my_games =
 	| Some myid ->
 		let%lwt my_games = Maw_game.get_designed_games myid in
 			Lwt.return @@ [div ~a:[a_class ["content-box"]] [
-				h2 [pcdata "My games"];
+				h2 [pcdata [%i18n S.my_games]];
 				table (List.map (fun (game_id, title) ->
 					tr [
 						td [pcdata title]
@@ -39,7 +41,7 @@ let%shared dashboard_handler myid_o () () =
     ~a:[ a_class ["os-page-main"] ]
     myid_o (
 			div ~a:[a_class ["content-box"]] [
-				h2 [pcdata "Upcoming games"];
+				h2 [pcdata [%i18n S.upcoming_games]];
 				games_list
 			]::
 			my_games
