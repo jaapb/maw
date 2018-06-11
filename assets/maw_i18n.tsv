@@ -1,6 +1,5 @@
-about_handler_template	This template provides a skeleton for an Ocsigen application.	Ce template fournit une base pour une application Ocsigen.
-about_handler_template	This template provides a skeleton for an Ocsigen application.	Ce template fournit une base pour une application Ocsigen.
-about_handler_license	Feel free to modify the generated code and use it or redistribute it in any way you want.	Vous êtes libres de modifier le code généré et de l'utiliser ou le redistribuer comme vous le souhaitez.
+about_handler_template	This is the Megagames Administration Website.	Ceci est le Site d'Administration des Megagame.
+about_handler_license	This software is distributed under an MIT license.	Ce logiciel est distribué sous une licence MIT.
 footer_generated	This application has been generated using the	Cette application a été générée en utilisant le template d'
 footer_eliom_distillery	template for Eliom-distillery and uses the	avec Eliom-distillery et utilise les technologies
 footer_technology	 technology.	.
