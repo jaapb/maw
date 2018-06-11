@@ -115,3 +115,6 @@ game_location	Location	Lieu
 game_date	Date	Date
 game_description	Description	Description
 data_saved	Data saved	Données sauvegardées.
+administration	{{{capitalize?A||a}}}dministration	{{{capitalize?A||a}}}dministration
+add_admin	Add new administrator	Ajouter un nouveau administrateur
+not_admin	You are not an administrator.	Vous n'êtes pas un administrateur.

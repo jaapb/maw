@@ -110,3 +110,19 @@ val edit_game_action :
     [ `One of int64 ] Eliom_parameter.param_name * [ `One of string ] Eliom_parameter.param_name,
     Eliom_service.non_ocaml
   ) Eliom_service.t
+
+val admin_service :
+  (
+    unit,
+    unit,
+    Eliom_service.get,
+    Eliom_service.att,
+    Eliom_service.non_co,
+    Eliom_service.non_ext,
+    Eliom_service.reg,
+    [ `WithoutSuffix ],
+    unit,
+    unit,
+    Eliom_service.non_ocaml
+  ) Eliom_service.t
+

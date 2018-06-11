@@ -46,8 +46,14 @@ let%server edit_game_service =
 
 let%server edit_game_action =
 	Eliom_service.create
-		~meth:(Eliom_service.Post (Eliom_parameter.unit, Eliom_parameter.(int64 "game_id" ** string "blurb")))
-		~path:(Eliom_service.No_path) ()
+		~path:(Eliom_service.No_path)
+		~meth:(Eliom_service.Post (Eliom_parameter.unit, Eliom_parameter.(int64 "game_id" ** string "blurb"))) ()
+
+let%server admin_service =
+	Eliom_service.create
+		~path:(Eliom_service.Path ["admin"])
+		~meth:(Eliom_service.Get Eliom_parameter.unit)
+		()
 
 let%client about_service =
   ~%about_service
@@ -72,6 +78,9 @@ let%client edit_game_service =
 
 let%client edit_game_action =
 	~%edit_game_action
+
+let%client admin_service =
+	~%admin_service
 
 (* The OS lib needs access to the settings service to perform
    redirections to it. We need to register it *)

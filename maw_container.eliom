@@ -92,10 +92,11 @@ let%shared page ?html_a ?a ?title ?head myid_o content =
       Lwt.return @@ content
   in
   let%lwt h = os_header ?user:me () in
+	let%lwt drawer = Maw_drawer.make ?user:me () in
   Lwt.return
     (Os_page.content ?html_a ?a ?title ?head
        [ h
        ; Eliom_content.Html.F.(div ~a:[a_class ["os-body"]] content)
        ; os_footer ()
-       ; Maw_drawer.make ?user:me ()
+       ; drawer
        ])

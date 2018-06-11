@@ -10,20 +10,22 @@
 let%shared item text service =
   li [ a ~a:[ a_class ["os-drawer-item"] ] ~service [pcdata text] () ]
 
-let%shared user_menu () =
-  [ item [%i18n S.settings ~capitalize:true] Maw_services.settings_service
-  ; Eliom_content.Html.F.li
+let%shared user_menu user =
+	let%lwt is_admin = Maw_user.is_admin (Some user.Os_types.User.userid) in
+  Lwt.return @@ item [%i18n S.settings ~capitalize:true] Maw_services.settings_service
+	:: Maw_utils.conditional is_admin
+		(item [%i18n S.administration ~capitalize:true] Maw_services.admin_service)
+   	[Eliom_content.Html.F.li
       [ Os_user_view.disconnect_link
           ~text_logout:[%i18n S.logout ~capitalize:true]
           ~a:[ a_class ["os-drawer-item"] ] ()
-      ]
-  ]
+      ]]
 
 let%shared make ?user () =
-  let items =
-    if user = None
-    then []
-    else user_menu ()
+  let%lwt items =
+		match user with
+		| None -> Lwt.return []
+		| Some user -> user_menu user
   in
   let items =
     item [%i18n S.home ~capitalize:true] Os_services.main_service
@@ -38,4 +40,4 @@ let%shared make ?user () =
       [ user_box ; menu ]
   in
   let drawer, _, _ = Ot_drawer.drawer contents in
-  drawer
+  Lwt.return drawer
