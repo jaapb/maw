@@ -49,7 +49,7 @@ let%shared game_info_handler myid_o game_id () =
     ]
 
 let%shared do_edit_game () (game_id, blurb) =
-	Os_msg.msg ~level:`Msg ~onload:true "Data saved.";
+	Os_msg.msg ~level:`Msg ~onload:true [%i18n S.data_saved];
 	Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 
 let%shared edit_game_handler myid_o game_id () =
