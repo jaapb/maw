@@ -101,12 +101,12 @@ val edit_game_action :
     unit,
     int64 * string,
     Eliom_service.post,
-    Eliom_service.att,
-    Eliom_service.non_co,
+    Eliom_service.non_att,
+    Eliom_service.co,
     Eliom_service.non_ext,
     Eliom_service.reg,
     [ `WithoutSuffix ],
-    [ `None ],
     unit,
+    [ `One of int64 ] Eliom_parameter.param_name * [ `One of string ] Eliom_parameter.param_name,
     Eliom_service.non_ocaml
   ) Eliom_service.t
