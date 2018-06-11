@@ -3,7 +3,7 @@ open Lwt
 
 let is_admin userid =
 	full_transaction_block (fun dbh ->
-		PGSQL(dbh) "SELECT is_admin FROM maw.user_info WHERE userid = $userid") >>=
+		PGSQL(dbh) "SELECT is_admin FROM ocsigen_start.users WHERE userid = $userid") >>=
 	function
 	| [] -> Lwt.fail Not_found
 	| [x] -> Lwt.return x

@@ -16,6 +16,7 @@ CREATE SCHEMA ocsigen_start
          password text,
          avatar text,
          language text,
+         admin boolean NOT NULL DEFAULT(false)
   )
 
   CREATE TABLE emails ( -- DEFAULT
@@ -56,11 +57,6 @@ CREATE SCHEMA ocsigen_start
   );
 
 CREATE SCHEMA maw
-	CREATE TABLE user_info (
-         userid bigint primary key references ocsigen_start.users(userid),
-         is_admin boolean NOT NULL DEFAULT(false)
-  )
-
 	CREATE TABLE games (
          id bigserial primary key,
          title text NOT NULL,
