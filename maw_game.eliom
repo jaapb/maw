@@ -10,6 +10,14 @@ let%server sign_up_action = Eliom_service.create_attached_post
 
 let%client sign_up_action = ~%sign_up_action
 
+let%server edit_game_action =
+	Eliom_service.create_attached_post
+		~fallbacK:Maw_services.edit_game_service
+		~post_params:(Eliom_parameter.string "blurb") ()
+
+let%client edit_game_action =
+	~%edit_game_action
+
 let%server get_games upcoming =
 	if upcoming
 	then Maw_games_db.get_upcoming_games ()
@@ -64,6 +72,8 @@ let%shared do_edit_game () (game_id, blurb) =
 let%shared edit_game_handler myid_o game_id () =
 	Eliom_registration.Any.register ~service:Maw_services.edit_game_action 
 		do_edit_game;
+
+let%shared real_edit_game_handler myid_o game_id () =
 	match myid_o with
 	| None -> Maw_container.page None
 			[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
@@ -76,7 +86,7 @@ let%shared edit_game_handler myid_o game_id () =
 				div ~a:[a_class ["content-box"]]
 				[
 					h1 [pcdata title];
-					Form.post_form ~service:Maw_services.edit_game_action (fun (p_game_id, new_blurb) -> [
+					Form.post_form ~service:edit_game_action (fun (p_game_id, new_blurb) -> [
 						Form.input ~input_type:`Hidden ~name:p_game_id ~value:game_id Form.int64;
 						table ~a:[a_class ["form-table"]] [
 							tr [
@@ -242,3 +252,11 @@ let%server sign_up_handler myid_o game_id () =
 
 let%client sign_up_handler =
 	real_sign_up_handler
+			
+let%server edit_game_handler myid_o game_id () =
+	Eliom_registration.Any.register ~scope:Eliom_common.default_session_scope
+		~service:edit_game_action do_edit_game;
+	real_edit_game_handler myid_o game_id ()
+
+let%client edit_game_handler =
+	real_edit_game_handler

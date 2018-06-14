@@ -1,5 +1,5 @@
 [%%shared
-  open Eliom_content.Html.F
+  open Eliom_content.Html.D
 ]
 
 let%server is_admin =
