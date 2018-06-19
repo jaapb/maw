@@ -55,6 +55,12 @@ let%server admin_service =
 		~meth:(Eliom_service.Get Eliom_parameter.unit)
 		()
 
+let%server sign_up_service =
+	Eliom_service.create
+		~path:(Eliom_service.Path ["sign_up"])
+		~meth:(Eliom_service.Get Eliom_parameter.(suffix (int64 "game_id")))
+		()
+
 let%client about_service =
   ~%about_service
 
@@ -81,6 +87,9 @@ let%client edit_game_action =
 
 let%client admin_service =
 	~%admin_service
+
+let%client sign_up_service =
+	~%sign_up_service
 
 (* The OS lib needs access to the settings service to perform
    redirections to it. We need to register it *)

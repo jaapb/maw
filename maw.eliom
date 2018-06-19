@@ -68,6 +68,10 @@ let%shared () =
 		~service:Maw_services.admin_service
 		(Maw_page.Opt.connected_page Maw_admin.admin_handler)
 
+	Maw_base.App.register
+		~service:Maw_services.sign_up_service
+		(Maw_page.Opt.connected_page Maw_game.sign_up_handler)
+
 let%server () =
   Eliom_registration.Ocaml.register
     ~service:Maw_services.upload_user_avatar_service

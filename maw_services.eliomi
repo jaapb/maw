@@ -126,3 +126,17 @@ val admin_service :
     Eliom_service.non_ocaml
   ) Eliom_service.t
 
+val sign_up_service :
+  (
+    int64,
+    unit,
+    Eliom_service.get,
+    Eliom_service.att,
+    Eliom_service.non_co,
+    Eliom_service.non_ext,
+    Eliom_service.reg,
+    [ `WithSuffix ],
+    [ `One of int64 ] Eliom_parameter.param_name,
+    unit,
+    Eliom_service.non_ocaml
+  ) Eliom_service.t

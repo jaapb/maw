@@ -92,6 +92,9 @@ let%shared edit_game_handler myid_o game_id () =
 		else
 			Maw_container.page None
 			[p [pcdata [%i18n S.not_game_designer]]]
-			
 
-	
+let%shared sign_up_handler myid_o game_id () =
+	Maw_container.page myid_o
+	[
+		h1 [pcdata (Printf.sprintf "Signing up for game %Ld" game_id)]
+	]
