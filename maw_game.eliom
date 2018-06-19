@@ -120,11 +120,27 @@ let%shared add_to_group_form f =
 	Eliom_content.Html.D.div [btn]
 
 let%shared display_group_table l =
+	let user_input_widget =
+		let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text] ()) in
+		ignore [%client
+			((Lwt_js_events.async @@ fun () ->
+				let inp = Eliom_content.Html.To_dom.of_input ~%inp in
+				Lwt_js_events.inputs inp @@ fun _ _ ->
+				Eliom_lib.jsalert inp##.value;
+				Lwt.return_unit)
+			: unit)
+		];
+		Eliom_content.Html.D.(div [
+			inp;
+			div ~a:[a_class ["dropdown"; "hidden"]]
+			[
+			]
+		]) in
 	let rows = Eliom_shared.ReactiveData.RList.map
 		[%shared
 				((fun s -> Eliom_content.Html.(
 						D.tr [
-							D.td [Raw.input ~a:[a_input_type `Text] ()]
+							D.td [~%user_input_widget]
 						]
 				)) : _ -> _)
 		]
