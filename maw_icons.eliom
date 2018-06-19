@@ -33,6 +33,7 @@ module Make(A : module type of Eliom_content.Html.F) = struct
 	let info = icon ["fa-info-circle"; "fa-fw"]
 	let edit = icon ["fa-wrench"; "fa-fw"]
 	let ticket = icon ["fa-ticket"; "fa-fw"]
+	let expand = icon ["fa-caret-square-o-down"; "fa-fw"]
 end
 
 module F = Make(Eliom_content.Html.F)
