@@ -120,21 +120,41 @@ let%shared add_to_group_form f =
 	Eliom_content.Html.D.div [btn]
 
 let%shared display_group_table l =
+	let (user_l, user_h) = Eliom_shared.ReactiveData.RList.create [] in
+	let user_rows = Eliom_shared.ReactiveData.RList.map 
+		[%shared
+			((fun s -> Eliom_content.Html.(
+				D.li [pcdata s]
+			)) : _ -> _)
+		]
+		user_l in
 	let user_input_widget =
 		let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text] ()) in
+		let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
+			R.ul user_rows
+		]) in
 		ignore [%client
 			((Lwt_js_events.async @@ fun () ->
 				let inp = Eliom_content.Html.To_dom.of_input ~%inp in
 				Lwt_js_events.inputs inp @@ fun _ _ ->
-				Eliom_lib.jsalert inp##.value;
-				Lwt.return_unit)
+				let ddd = Eliom_content.Html.To_dom.of_element ~%ddd in
+				if (Js.to_string inp##.value) = ""
+				then
+				begin
+					ddd##.classList##add (Js.string "hidden");
+					Lwt.return_unit
+				end
+				else
+				begin
+					ddd##.classList##remove (Js.string "hidden");
+					let%lwt users = Maw_user.get_users (Js.to_string inp##.value) in
+					Lwt.return (Eliom_shared.ReactiveData.RList.set ~%user_h (List.map (fun x -> Printf.sprintf "%s %s" x.Os_user.fn x.Os_user.ln) users));
+				end)
 			: unit)
 		];
-		Eliom_content.Html.D.(div [
+		Eliom_content.Html.D.(div ~a:[a_class ["dropdown"]] [
 			inp;
-			div ~a:[a_class ["dropdown"; "hidden"]]
-			[
-			]
+			ddd
 		]) in
 	let rows = Eliom_shared.ReactiveData.RList.map
 		[%shared
