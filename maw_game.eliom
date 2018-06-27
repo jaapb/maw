@@ -6,7 +6,7 @@
 
 let%server sign_up_action = Eliom_service.create_attached_post
 	~fallback:Maw_services.sign_up_service
-	~post_params:(Eliom_parameter.list "users" (Eliom_parameter.int64 "id")) ()
+	~post_params:(Eliom_parameter.any) ()
 
 let%client sign_up_action = ~%sign_up_action
 
@@ -62,7 +62,8 @@ let%shared do_edit_game () (game_id, blurb) =
 	Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 
 let%shared edit_game_handler myid_o game_id () =
-	Eliom_registration.Any.register ~service:Maw_services.edit_game_action do_edit_game;
+	Eliom_registration.Any.register ~service:Maw_services.edit_game_action 
+		do_edit_game;
 	match myid_o with
 	| None -> Maw_container.page None
 			[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
@@ -103,11 +104,23 @@ let%shared edit_game_handler myid_o game_id () =
 			[p [pcdata [%i18n S.not_game_designer]]]
 
 let%shared do_sign_up game_id users =
-	Eliom_registration.Action.send ()
+	Eliom_registration.Html.send (
+		Eliom_content.Html.F.(html 
+			(head (title (pcdata "DSU")) [])
+			(body [
+				table (
+					List.map (fun (x, y) ->
+						tr [
+							td [pcdata x]; td [pcdata y]
+						]
+					) users
+				)
+			])
+		))
 
-let%shared add_to_group_form f =
+let%shared add_to_group_button f =
 	let btn = Eliom_content.Html.(
-		D.button ~a:[D.a_class ["button"]] [D.pcdata "Add group member"]
+		D.button ~a:[D.a_class ["button"]; D.a_button_type `Button] [D.pcdata "Add group member"]
 	) in
 	ignore [%client 
 		((Lwt.async @@ fun () ->
@@ -129,8 +142,8 @@ let%shared user_input_widget () =
 		]
 		user_l in
 	let (id_s, id_f) = Eliom_shared.React.S.create 0L in
-	let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text] ()) in
-	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden;
+	let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text; a_name "user_name"; a_autocomplete false] ()) in
+	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden; D.a_name "user_id";
 		R.a_value (Eliom_shared.React.S.map [%shared Int64.to_string] id_s)] ()) in
 	let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
 		R.ul user_rows
@@ -192,29 +205,34 @@ let%shared real_sign_up_handler myid_o game_id () =
 	let (group_l, group_h) = Eliom_shared.ReactiveData.RList.create [] in
 	let%lwt (title, location, date, _) = get_game_info game_id in
 	let group_table = display_group_table group_l in
-	let form = add_to_group_form 
+	let add_btn = add_to_group_button
 		[%client ((fun v -> Lwt.return (Eliom_shared.ReactiveData.RList.snoc v
-			~%group_h))
+				~%group_h))
 			: unit -> unit Lwt.t)
 		] in 
 	Maw_container.page myid_o
 	[
-		div ~a:[a_class ["content-box"]] [
-			h1 [pcdata "Signing up for "; pcdata title];
-			location_line location date;
-		];
-		div ~a:[a_class ["content-box"]] [
-			div ~a:[a_class ["text-bar"]] [ 
-				table [
-					tr [
-						td [pcdata "Group inscription"];
-						td [Maw_icons.D.expand ~a:[a_title "Expand"] ()]
+		Form.post_form ~service:sign_up_action (fun () -> [
+			div ~a:[a_class ["content-box"]] [
+				h1 [pcdata "Signing up for "; pcdata title];
+				location_line location date;
+				div ~a:[a_class ["group-inscription-box"]] [
+					div ~a:[a_class ["text-bar"]] [ 
+						table [
+							tr [
+								td [pcdata "Group inscription"];
+								td [Maw_icons.D.expand ~a:[a_title "Expand"] ()]
+							]
+						]
+					];
+					div ~a:[a_class ["group-form"]] [
+						group_table;
+						add_btn
 					]
-				]
-			];
-			group_table;
-			form
-		]
+				];
+				button ~a:[a_class ["button"]] [pcdata "Sign up"]
+			]
+		]) game_id
 	]
 
 let%server sign_up_handler myid_o game_id () =

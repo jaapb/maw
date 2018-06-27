@@ -17,6 +17,16 @@ div.content-box h1,h2
 	text-align: center;
 }
 
+div.group-inscription-box
+{
+	position: relative;
+	width: 95%;
+	left: 2.5%;
+	border-style: solid;
+	border-width: thin;
+	border-radius: 5px;
+}
+
 div.text-bar table
 {
 	width: 100%;
