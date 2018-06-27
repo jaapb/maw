@@ -128,7 +128,10 @@ let%shared user_input_widget () =
 			)) : _ -> _)
 		]
 		user_l in
+	let (id_s, id_f) = Eliom_shared.React.S.create 0L in
 	let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text] ()) in
+	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden;
+		R.a_value (Eliom_shared.React.S.map [%shared Int64.to_string] id_s)] ()) in
 	let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
 		R.ul user_rows
 	]) in
@@ -160,7 +163,8 @@ let%shared user_input_widget () =
 			ddd##.classList##add (Js.string "hidden");
 			Js.Opt.iter (e##.textContent) (fun t ->
 				inp##.value := t
-			)
+			);
+			~%id_f (Int64.of_string (Js.to_string e##.id))
 		);
 		Lwt.return_unit
 		)
@@ -168,6 +172,7 @@ let%shared user_input_widget () =
 	];
 	Eliom_content.Html.D.(div ~a:[a_class ["dropdown"]] [
 		inp;
+		inp_id;
 		ddd
 	])
 
