@@ -91,7 +91,7 @@ ELIOMSTATICDIR        := var/www/${PROJECT_NAME}
 LOCAL_STATIC          := static
 LOCAL_STATIC_CSS      := $(LOCAL_STATIC)/css
 LOCAL_STATIC_IMAGES      := $(LOCAL_STATIC)/images
-LOCAL_STATIC_FONTS      := $(LOCAL_STATIC)/fonts
+LOCAL_STATIC_FONTS      := $(LOCAL_STATIC)/webfonts
 # Default CSS if not using SASS:
 LOCAL_STATIC_DEFAULTCSS      := $(LOCAL_STATIC)/defaultcss
 
@@ -129,7 +129,7 @@ EXTERNAL_CSS_FILES    := $(SHAREDIR_OT_CSS)/ot_buttons.css \
 # This variable is only used if SASS is deactivated.
 # The order is important because it will be used when concataining all CSS
 # files.
-CSS_FILES             := $(LOCAL_STATIC_CSS)/font-awesome.min.css \
+CSS_FILES             := $(LOCAL_STATIC_CSS)/font-awesome.all.css \
                          $(EXTERNAL_CSS_FILES) \
                          $(LOCAL_STATIC_DEFAULTCSS)/os.css \
 												 $(LOCAL_STATIC_CSS)/main.css 

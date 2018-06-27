@@ -12,7 +12,7 @@ let%shared format_games_list () =
 				pcdata (match date with None -> [%i18n S.tbc] | Some d -> Printer.Date.sprint "%B %d, %Y" d);
 				pcdata ")"];
 			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ~a:[a_title "Game information"] ()] id];
-			td [a ~service:Maw_services.sign_up_service [Maw_icons.D.ticket ~a:[a_title "Sign up"] ()] id]
+			td [a ~service:Maw_services.sign_up_service [Maw_icons.D.signup ~a:[a_title "Sign up"] ()] id]
 		]
 	) games in
 	Lwt.return (table game_rows)
