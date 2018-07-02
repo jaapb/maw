@@ -22,9 +22,9 @@ let%shared real_admin_handler myid_o () () =
 	| Some myid ->
 		let%lwt admin = Maw_user.is_admin (Some myid) in
 		let%lwt form = Form.lwt_post_form ~service:add_admin_action
-			(fun (user_id) -> let%lwt user_widget = Maw_user.user_widget user_id in
+			(fun (user_id) -> 
 				Lwt.return [
-					user_widget
+					Maw_user.user_input_widget ()
 				]
 			) () in
 		if admin then

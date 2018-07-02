@@ -12,7 +12,7 @@ let%client sign_up_action = ~%sign_up_action
 
 let%server edit_game_action =
 	Eliom_service.create_attached_post
-		~fallbacK:Maw_services.edit_game_service
+		~fallback:Maw_services.edit_game_service
 		~post_params:(Eliom_parameter.string "blurb") ()
 
 let%client edit_game_action =
@@ -65,13 +65,13 @@ let%shared game_info_handler myid_o game_id () =
 			]
     ]
 
-let%shared do_edit_game () (game_id, blurb) =
+let%shared do_edit_game game_id blurb =
 	Os_msg.msg ~level:`Msg ~onload:true [%i18n S.data_saved];
 	Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 
 let%shared edit_game_handler myid_o game_id () =
-	Eliom_registration.Any.register ~service:Maw_services.edit_game_action 
-		do_edit_game;
+	Eliom_registration.Any.register ~service:edit_game_action 
+		do_edit_game
 
 let%shared real_edit_game_handler myid_o game_id () =
 	match myid_o with
@@ -86,8 +86,7 @@ let%shared real_edit_game_handler myid_o game_id () =
 				div ~a:[a_class ["content-box"]]
 				[
 					h1 [pcdata title];
-					Form.post_form ~service:edit_game_action (fun (p_game_id, new_blurb) -> [
-						Form.input ~input_type:`Hidden ~name:p_game_id ~value:game_id Form.int64;
+					Form.post_form ~service:edit_game_action (fun (new_blurb) -> [
 						table ~a:[a_class ["form-table"]] [
 							tr [
 								th [pcdata [%i18n S.game_location]];
@@ -106,7 +105,7 @@ let%shared real_edit_game_handler myid_o game_id () =
 								td ~a:[a_colspan 2] [Form.input ~a:[a_class ["button"]] ~input_type:`Submit ~value:"Save" Form.string]
 							]
 						]
-					]) ()
+					]) game_id
 				]
 			]
 		else
@@ -142,69 +141,12 @@ let%shared add_to_group_button f =
 	];
 	Eliom_content.Html.D.div [btn]
 
-let%shared user_input_widget () =
-	let (user_l, user_h) = Eliom_shared.ReactiveData.RList.create [] in
-	let user_rows = Eliom_shared.ReactiveData.RList.map 
-		[%shared
-			((fun (id, fn, ln) -> Eliom_content.Html.(
-				D.li ~a:[a_id (Int64.to_string id)] [pcdata fn; pcdata " "; pcdata ln]
-			)) : _ -> _)
-		]
-		user_l in
-	let (id_s, id_f) = Eliom_shared.React.S.create 0L in
-	let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text; a_name "user_name"; a_autocomplete false] ()) in
-	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden; D.a_name "user_id";
-		R.a_value (Eliom_shared.React.S.map [%shared Int64.to_string] id_s)] ()) in
-	let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
-		R.ul user_rows
-	]) in
-	ignore [%client
-		((Lwt_js_events.async @@ fun () ->
-			let inp = Eliom_content.Html.To_dom.of_input ~%inp in
-			Lwt_js_events.inputs inp @@ fun _ _ ->
-			let ddd = Eliom_content.Html.To_dom.of_element ~%ddd in
-			if (Js.to_string inp##.value) = ""
-			then
-			begin
-				ddd##.classList##add (Js.string "hidden");
-				Lwt.return_unit
-			end
-			else
-			begin
-				ddd##.classList##remove (Js.string "hidden");
-				let%lwt users = Maw_user.get_users (Js.to_string inp##.value) in
-				Lwt.return (Eliom_shared.ReactiveData.RList.set ~%user_h (List.map (fun x -> (x.Os_user.userid, x.Os_user.fn, x.Os_user.ln)) users));
-			end)
-		: unit)
-	];
-	ignore [%client
-		((Lwt_js_events.async @@ fun () ->
-		let inp = Eliom_content.Html.To_dom.of_input ~%inp in
-		let ddd = Eliom_content.Html.To_dom.of_element ~%ddd in
-		Lwt_js_events.clicks ddd @@ fun ev _ ->
-		Js.Opt.iter (ev##.target) (fun e ->
-			ddd##.classList##add (Js.string "hidden");
-			Js.Opt.iter (e##.textContent) (fun t ->
-				inp##.value := t
-			);
-			~%id_f (Int64.of_string (Js.to_string e##.id))
-		);
-		Lwt.return_unit
-		)
-		: unit)
-	];
-	Eliom_content.Html.D.(div ~a:[a_class ["dropdown"]] [
-		inp;
-		inp_id;
-		ddd
-	])
-
 let%shared display_group_table l =
 	let rows = Eliom_shared.ReactiveData.RList.map
 		[%shared
 				((fun s -> Eliom_content.Html.(
 						D.tr [
-							D.td [user_input_widget ()]
+							D.td [Maw_user.user_input_widget ()]
 						]
 				)) : _ -> _)
 		]

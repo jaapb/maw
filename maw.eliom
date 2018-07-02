@@ -66,7 +66,7 @@ let%shared () =
 
 	Maw_base.App.register
 		~service:Maw_services.admin_service
-		(Maw_page.Opt.connected_page Maw_admin.admin_handler)
+		(Maw_page.Opt.connected_page Maw_admin.admin_handler);
 
 	Maw_base.App.register
 		~service:Maw_services.sign_up_service
