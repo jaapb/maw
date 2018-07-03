@@ -35,7 +35,8 @@ let%client get_users =
 	~%(Eliom_client.server_function [%derive.json : string]
 			(Os_session.connected_wrapper get_users))
 
-let%shared user_input_widget () =
+(* User widget *)
+let%shared user_input_widget ?nr () =
 	let (user_l, user_h) = Eliom_shared.ReactiveData.RList.create [] in
 	let user_rows = Eliom_shared.ReactiveData.RList.map 
 		[%shared
@@ -45,8 +46,14 @@ let%shared user_input_widget () =
 		]
 		user_l in
 	let (id_s, id_f) = Eliom_shared.React.S.create 0L in
-	let inp = Eliom_content.Html.D.(Raw.input ~a:[a_input_type `Text; a_name "user_name"; a_autocomplete false] ()) in
-	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden; D.a_name "user_id";
+	let inp_name = match nr with
+	| None -> "user_name"
+	| Some n -> Printf.sprintf "user_name[%d]" n in
+	let inp_id_name = match nr with
+	| None -> "user_id"
+	| Some n -> Printf.sprintf "user_id[%d]" n in
+	let inp = Raw.input ~a:[a_input_type `Text; a_name inp_name; a_autocomplete false] () in
+	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden; D.a_name inp_id_name;
 		R.a_value (Eliom_shared.React.S.map [%shared Int64.to_string] id_s)] ()) in
 	let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
 		R.ul user_rows
