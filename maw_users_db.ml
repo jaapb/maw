@@ -8,3 +8,7 @@ let is_admin userid =
 	| [] -> Lwt.fail Not_found
 	| [x] -> Lwt.return x
 	| _ -> Lwt.fail_with (Printf.sprintf "Multiple users with id %Ld" userid)
+
+let set_admin userid =
+	full_transaction_block (fun dbh ->
+		PGSQL(dbh) "UPDATE ocsigen_start.users SET is_admin = true WHERE userid = $userid")

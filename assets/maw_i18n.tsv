@@ -75,7 +75,8 @@ change_profile_picture	Change profile picture	Changer votre photo de profil.
 users	Users	Utilisateurs
 you_are_not_connected	You are not connected.	Vous n'êtes pas connecté.
 you_are	You are	Vous êtes
-your_user_id	Your user id	Votre ID utilisateur
+your_user_id	Your user ID	Votre ID utilisateur
+user_id	User ID	ID utilisateur	
 the_module	The module	Le module
 allows_get_information_currently_connected_user	provides information about the currently connected user (server or client side).	vous autorise à obtenir les information de l'utilisateur courant connecté (côté serveur ou côté client).
 these_functions_called_server_or_client_side	These functions can be called from either server- or client-side.	Ces fonctions peuvent être appelées aussi bien côté client que côté serveur.
@@ -118,3 +119,4 @@ data_saved	Data saved	Données sauvegardées.
 administration	{{{capitalize?A||a}}}dministration	{{{capitalize?A||a}}}dministration
 add_admin	Add new administrator	Ajouter un nouveau administrateur
 not_admin	You are not an administrator.	Vous n'êtes pas un administrateur.
+user_name	User name	Nom d'utilisateur
