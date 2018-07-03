@@ -4,7 +4,7 @@
 	open Maw_utils
 ]
 
-let%shared format_games_list () =
+let%shared format_games_list myid_o =
 	let%lwt games = Maw_game.get_games true in
 	let%lwt game_rows = Lwt_list.map_s (fun (id, title, location, date) ->
 		Lwt.return @@ tr [
@@ -12,7 +12,10 @@ let%shared format_games_list () =
 				pcdata (match date with None -> [%i18n S.tbc] | Some d -> Printer.Date.sprint "%B %d, %Y" d);
 				pcdata ")"];
 			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ~a:[a_title "Game information"] ()] id];
-			td [a ~service:Maw_services.sign_up_service [Maw_icons.D.signup ~a:[a_title "Sign up"] ()] id]
+			td (match myid_o with
+			| None -> []
+			| Some _ -> [a ~service:Maw_services.sign_up_service [Maw_icons.D.signup ~a:[a_title "Sign up"] ()] id]
+			)
 		]
 	) games in
 	Lwt.return (table game_rows)
@@ -37,7 +40,7 @@ let%shared dashboard_handler myid_o () () =
 		Maw_user.is_admin myid_o
 	with
 	| Not_found -> Lwt.return false in
-	let%lwt games_list = format_games_list () in
+	let%lwt games_list = format_games_list myid_o in
 	let%lwt my_games = format_my_games myid_o in
   Maw_container.page
     ~a:[ a_class ["os-page-main"] ]
