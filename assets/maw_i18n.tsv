@@ -66,6 +66,18 @@ thursday	Thursday	Jeudi
 friday	Friday	Vendredi
 saturday	Saturday	Samedi
 sunday	Sunday	Dimanche
+january	January	Janvier
+february	February	Février
+march	March	Mars
+april	April	Avril
+may	May	Mai
+june	June	Juin
+july	July	Juillet
+august	August	Août
+september	September	Septembre
+october	October	Octobre
+november	November	Novembre
+december	December	Décembre
 exchange_msg_between_users	Module {{os_notif}} enables sending information to client applications (notifications, new messages ...).	Le module {{os_notif}} permet des données aux applications client (notifications, nouveaux messages,...).
 open_multiple_tabs_browsers	Open this page in multiple tabs or browsers.	Ouvrez cette page dans plusieurs onglets et fenêtres.
 fill_input_form_send_message	Fill in the input form to send a message to all other tabs.	Remplissez le formulaire pour envoyer un message à tous vos autres onglets ouverts.
