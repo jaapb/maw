@@ -35,3 +35,9 @@ let get_game_designers game_id =
 			FROM maw.game_designers d JOIN ocsigen_start.users u \
 				ON d.userid = u.userid \
 			WHERE game_id = $game_id")
+
+let sign_up game_id user_id message =
+	full_transaction_block (fun dbh ->
+		PGSQL(dbh) "INSERT INTO maw.game_inscriptions \
+			(game_id, userid, message) VALUES \
+			($game_id, $user_id, $?message)")

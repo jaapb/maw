@@ -66,7 +66,15 @@ CREATE SCHEMA maw
   );
 
 	CREATE TABLE game_designers (
-         game_id bigint references games(id),
-         userid bigint references users(userid)
+         game_id bigint NOT NULL references games(id),
+         userid bigint NOT NULL references users(userid),
          primary key (game_id, userid)
+  );
+
+  CREATE TABLE game_inscriptions (
+				 game_id bigint NOT NULL refereces games(id),
+         userid bigint NOT NULL references users(userid),
+         message text,
+				 inscription_time timestamp NOT NULL,
+				 primary key (game_id, userid)
   );

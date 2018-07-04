@@ -75,3 +75,25 @@ div.dropdown-content ul li:hover
 {
 	background-color: lightgrey;
 }
+
+table.signup-table
+{
+	width: 100%;
+}
+
+table.signup-table td,th
+{
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+.no-expand
+{
+	width: 1px;
+	white-space: nowrap;
+}	
+
+table.signup-table input
+{
+	width: 100%;
+}

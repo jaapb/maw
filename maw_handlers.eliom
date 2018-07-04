@@ -91,7 +91,7 @@ let%shared action_link_handler myid_o akey () =
         let page = [ div ~a:[ a_class ["login-signup-box"] ]
                        [ Os_user_view.sign_up_form
                            ~a_placeholder_email:[%i18n S.your_email]
-                           ~text:[%i18n S.sign_up]
+                           ~text:[%i18n S.register]
                            ~email
                            ()
                        ]

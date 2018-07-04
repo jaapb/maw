@@ -11,10 +11,10 @@ let%shared format_games_list myid_o =
 			td [pcdata title; pcdata " ("; pcdata (default [%i18n S.tbc] location); pcdata ", ";
 				pcdata (match date with None -> [%i18n S.tbc] | Some d -> Printer.Date.sprint "%B %d, %Y" d);
 				pcdata ")"];
-			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ~a:[a_title "Game information"] ()] id];
+			td [a ~service:Maw_services.game_info_service [Maw_icons.D.info ~a:[a_title [%i18n S.game_information]] ()] id];
 			td (match myid_o with
 			| None -> []
-			| Some _ -> [a ~service:Maw_services.sign_up_service [Maw_icons.D.signup ~a:[a_title "Sign up"] ()] id]
+			| Some _ -> [a ~service:Maw_services.sign_up_service [Maw_icons.D.signup ~a:[a_title [%i18n S.sign_up]] ()] id]
 			)
 		]
 	) games in

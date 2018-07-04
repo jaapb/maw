@@ -4,6 +4,7 @@
 	open Maw_utils
 ]
 
+(* Local actions *)
 let%server sign_up_action = Eliom_service.create_attached_post
 	~fallback:Maw_services.sign_up_service
 	~post_params:(Eliom_parameter.any) ()
@@ -18,6 +19,7 @@ let%server edit_game_action =
 let%client edit_game_action =
 	~%edit_game_action
 
+(* Database functions *)
 let%server get_games upcoming =
 	if upcoming
 	then Maw_games_db.get_upcoming_games ()
@@ -47,6 +49,13 @@ let%server get_designed_games user_id =
 let%client get_designed_games =
 	~%(Eliom_client.server_function [%derive.json : int64]
 			(Os_session.connected_wrapper get_designed_games))
+
+let%server sign_up (game_id, userid, message) =
+	Maw_games_db.sign_up game_id userid message
+
+let%client sign_up =
+	~%(Eliom_client.server_function [%derive.json : int64 * int64 * string option]
+			(Os_session.connected_wrapper sign_up))
 
 let%shared location_line location date =
 	p [i [pcdata (default [%i18n S.tbc] location); pcdata ", "; pcdata (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)]]
@@ -102,7 +111,7 @@ let%shared real_edit_game_handler myid_o game_id () =
 								td [Form.textarea ~a:[a_rows 20; a_cols 60] ~name:new_blurb ~value:(default "" blurb) ()]
 							];
 							tr [
-								td ~a:[a_colspan 2] [Form.input ~a:[a_class ["button"]] ~input_type:`Submit ~value:"Save" Form.string]
+								td ~a:[a_colspan 2] [Form.input ~a:[a_class ["button"]] ~input_type:`Submit ~value:[%i18n S.save] Form.string]
 							]
 						]
 					]) game_id
@@ -112,24 +121,18 @@ let%shared real_edit_game_handler myid_o game_id () =
 			Maw_container.page None
 			[p [pcdata [%i18n S.not_game_designer]]]
 
-let%shared do_sign_up game_id users =
-	Eliom_registration.Html.send (
-		Eliom_content.Html.F.(html 
-			(head (title (pcdata "DSU")) [])
-			(body [
-				table (
-					List.map (fun (x, y) ->
-						tr [
-							td [pcdata x]; td [pcdata y]
-						]
-					) users
-				)
-			])
-		))
+let%shared do_sign_up =
+	Os_session.Opt.connected_fun (fun myid_o game_id params ->
+		let message = List.assoc_opt "message" params in
+		let%lwt () = match myid_o with
+			| None -> Lwt.return_unit
+			| Some myid -> sign_up (game_id, myid, message) in
+		Eliom_registration.Action.send ()
+	)
 
 let%shared add_to_group_button nr_s f =
 	let btn = Eliom_content.Html.(
-		D.button ~a:[D.a_class ["button"]; D.a_button_type `Button] [D.pcdata "Add group member"]
+		D.button ~a:[D.a_class ["button"]; D.a_button_type `Button] [D.pcdata [%i18n S.add_group_member]]
 	) in
 	ignore [%client 
 		((Lwt.async @@ fun () ->
@@ -152,7 +155,7 @@ let%shared display_group_table nr l =
 				)) : _ -> _)
 		]
 		l in
-	Eliom_content.Html.R.table rows
+	Eliom_content.Html.R.table ~thead:(Eliom_shared.React.S.const (thead [tr [th [pcdata "Name"]]])) rows
 
 let%shared real_sign_up_handler myid_o game_id () = 
 	let (group_l, group_h) = Eliom_shared.ReactiveData.RList.create [] in
@@ -164,7 +167,6 @@ let%shared real_sign_up_handler myid_o game_id () =
 		[%client ((fun v ->
 				Eliom_shared.ReactiveData.RList.snoc v ~%group_h;
 				~%nr_f (v + 1);
-				Eliom_lib.alert "v: %d nr_value: %d" v (Eliom_shared.React.S.value ~%nr_s);
 				Lwt.return_unit
 			)
 			: int -> unit Lwt.t)
@@ -172,11 +174,11 @@ let%shared real_sign_up_handler myid_o game_id () =
 	let title_bar = Eliom_content.Html.D.div ~a:[a_class ["text-bar"]] [
 		table [
 			tr [
-				td [pcdata "Group inscription"];
+				td [pcdata [%i18n S.group_inscription]];
 				td [Eliom_content.Html.R.node (Eliom_shared.React.S.map
 					[%shared ((fun h -> if h
-						then Maw_icons.D.expand ~a:[a_title "Expand"] ()
-						else Maw_icons.D.collapse ~a:[a_title "Collapse"] ()
+						then Maw_icons.D.expand ~a:[a_title [%i18n S.expand]] ()
+						else Maw_icons.D.collapse ~a:[a_title [%i18n S.collapse]] ()
 					) : _ -> _)
 					] gh_s)
 				]
@@ -194,16 +196,31 @@ let%shared real_sign_up_handler myid_o game_id () =
 	[
 		Form.post_form ~service:sign_up_action (fun () -> [
 			div ~a:[a_class ["content-box"]] [
-				h1 [pcdata "Signing up for "; pcdata title];
+				h1 [pcdata [%i18n S.sign_up_for]; pcdata " "; pcdata title];
 				location_line location date;
+				p [pcdata [%i18n S.signup_text]];
+				table ~a:[a_class ["signup-table"]] [
+					tr [
+						th ~a:[a_class ["no-expand"]] [pcdata [%i18n S.message_for_designer]];
+						td [Raw.input ~a:[a_input_type `Text; a_name "message"] ()]
+					]
+				];
+				p [pcdata [%i18n S.signup_group_text]];
 				div ~a:[a_class ["group-inscription-box"]] [
 					title_bar;
 					div ~a:[Eliom_content.Html.R.filter_attrib (a_class ["hidden"]) gh_s] [
+						table [
+							tr [
+								th [pcdata [%i18n S.group_name]];
+								td [Raw.input ~a:[a_input_type `Text; a_name "group_name"] ()]
+							]
+						];
 						group_table;
 						add_btn
 					]
 				];
-				button ~a:[a_class ["button"]] [pcdata "Sign up"]
+				p [pcdata [%i18n S.signup_warning]];
+				button ~a:[a_class ["button"]] [pcdata [%i18n S.sign_up]]
 			]
 		]) game_id
 	]
