@@ -6,4 +6,5 @@ val get_game_info : int64 -> (string * string option * CalendarLib.Date.t option
 
 val get_game_designers : int64 -> (int64 * string * string) list Lwt.t
 
+val get_inscription : int64 -> int64 -> string Lwt.t
 val sign_up : int64 -> int64 -> string option -> unit Lwt.t

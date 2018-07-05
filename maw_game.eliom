@@ -43,12 +43,22 @@ let%client get_game_designers =
 	~%(Eliom_client.server_function [%derive.json : int64]
 			(Os_session.connected_wrapper get_game_designers))
 
-let%server get_designed_games user_id =
-	Maw_games_db.get_designed_games user_id
+let%server get_designed_games userid =
+	Maw_games_db.get_designed_games userid
 
 let%client get_designed_games =
 	~%(Eliom_client.server_function [%derive.json : int64]
 			(Os_session.connected_wrapper get_designed_games))
+
+let%server get_inscription_opt (game_id, userid) =
+	try
+		Lwt.return_some (Maw_games_db.get_inscription game_id userid)
+	with
+	| Not_found -> Lwt.return_none
+
+let%client get_inscription_opt =
+	~%(Eliom_client.server_function [%derive.json : int64 * int64]
+			(Os_session.connected_wrapper get_inscription_opt))
 
 let%server sign_up (game_id, userid, message) =
 	Maw_games_db.sign_up game_id userid message
@@ -78,48 +88,44 @@ let%shared do_edit_game game_id blurb =
 	Os_msg.msg ~level:`Msg ~onload:true [%i18n S.data_saved];
 	Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 
-let%shared edit_game_handler myid_o game_id () =
+let%shared edit_game_handler myid game_id () =
 	Eliom_registration.Any.register ~service:edit_game_action 
 		do_edit_game
 
-let%shared real_edit_game_handler myid_o game_id () =
-	match myid_o with
-	| None -> Maw_container.page None
-			[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
-	| Some myid -> 
-		let%lwt designers = get_game_designers game_id in
-		if List.exists (fun (id, _, _) -> id = myid) designers then
-		let%lwt (title, location, date, blurb) = get_game_info game_id in
-			Maw_container.page (Some myid)
+let%shared real_edit_game_handler myid game_id () =
+	let%lwt designers = get_game_designers game_id in
+	if List.exists (fun (id, _, _) -> id = myid) designers then
+	let%lwt (title, location, date, blurb) = get_game_info game_id in
+		Maw_container.page (Some myid)
+		[
+			div ~a:[a_class ["content-box"]]
 			[
-				div ~a:[a_class ["content-box"]]
-				[
-					h1 [pcdata title];
-					Form.post_form ~service:edit_game_action (fun (new_blurb) -> [
-						table ~a:[a_class ["form-table"]] [
-							tr [
-								th [pcdata [%i18n S.game_location]];
-								td [Raw.input ~a:[a_disabled (); a_input_type `Text; a_value (default [%i18n S.tbc] location)] ()]
-							];
-							tr [
-								th [pcdata [%i18n S.game_date]];
-								td [Raw.input ~a:[a_disabled (); a_input_type `Text;
-									a_value (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)] ()]
-							];
-							tr [
-								th [pcdata [%i18n S.game_description]];
-								td [Form.textarea ~a:[a_rows 20; a_cols 60] ~name:new_blurb ~value:(default "" blurb) ()]
-							];
-							tr [
-								td ~a:[a_colspan 2] [Form.input ~a:[a_class ["button"]] ~input_type:`Submit ~value:[%i18n S.save] Form.string]
-							]
+				h1 [pcdata title];
+				Form.post_form ~service:edit_game_action (fun (new_blurb) -> [
+					table ~a:[a_class ["form-table"]] [
+						tr [
+							th [pcdata [%i18n S.game_location]];
+							td [Raw.input ~a:[a_disabled (); a_input_type `Text; a_value (default [%i18n S.tbc] location)] ()]
+						];
+						tr [
+							th [pcdata [%i18n S.game_date]];
+							td [Raw.input ~a:[a_disabled (); a_input_type `Text;
+								a_value (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)] ()]
+						];
+						tr [
+							th [pcdata [%i18n S.game_description]];
+							td [Form.textarea ~a:[a_rows 20; a_cols 60] ~name:new_blurb ~value:(default "" blurb) ()]
+						];
+						tr [
+							td ~a:[a_colspan 2] [Form.input ~a:[a_class ["button"]] ~input_type:`Submit ~value:[%i18n S.save] Form.string]
 						]
-					]) game_id
-				]
+					]
+				]) game_id
 			]
-		else
-			Maw_container.page None
-			[p [pcdata [%i18n S.not_game_designer]]]
+		]
+	else
+		Maw_container.page None
+		[p [pcdata [%i18n S.not_game_designer]]]
 
 let%shared do_sign_up =
 	Os_session.Opt.connected_fun (fun myid_o game_id params ->
@@ -157,11 +163,12 @@ let%shared display_group_table nr l =
 		l in
 	Eliom_content.Html.R.table ~thead:(Eliom_shared.React.S.const (thead [tr [th [pcdata "Name"]]])) rows
 
-let%shared real_sign_up_handler myid_o game_id () = 
+let%shared real_sign_up_handler myid game_id () = 
 	let (group_l, group_h) = Eliom_shared.ReactiveData.RList.create [] in
 	let (nr_s, nr_f) = Eliom_shared.React.S.create 0 in
 	let (gh_s, gh_f) = Eliom_shared.React.S.create true in
 	let%lwt (title, location, date, _) = get_game_info game_id in
+	let%lwt message = get_inscription_opt (game_id, myid) in
 	let group_table = display_group_table nr_s group_l in
 	let add_btn = add_to_group_button nr_s
 		[%client ((fun v ->
@@ -192,7 +199,7 @@ let%shared real_sign_up_handler myid_o game_id () =
 			Lwt.return_unit)
 		: unit)
 	];
-	Maw_container.page myid_o
+	Maw_container.page (Some myid)
 	[
 		Form.post_form ~service:sign_up_action (fun () -> [
 			div ~a:[a_class ["content-box"]] [

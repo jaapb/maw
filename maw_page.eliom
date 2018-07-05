@@ -51,11 +51,19 @@ let%shared the_local_css = [
 
     let default_error_page _ _ exn =
       Maw_container.page None
-         [p [pcdata (Printexc.to_string exn)]]
+			(match exn with
+			| Os_session.Not_connected ->
+				[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
+			| e -> [p [pcdata (Printexc.to_string e)]]
+			)
 
     let default_connected_error_page myid_o _ _ exn =
       Maw_container.page myid_o
-         [p [pcdata (Printexc.to_string exn)]]
+			(match exn with
+			| Os_session.Not_connected ->
+				[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
+			| e -> [p [pcdata (Printexc.to_string e)]]
+			)
 
   end
 

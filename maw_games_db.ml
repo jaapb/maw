@@ -36,6 +36,15 @@ let get_game_designers game_id =
 				ON d.userid = u.userid \
 			WHERE game_id = $game_id")
 
+let get_inscription game_id user_id =
+	full_transaction_block (fun dbh -> PGSQL(dbh) "SELECT message \
+		FROM maw.game_inscriptions \
+		WHERE game_id = $game_id AND userid = $user_id") >>=
+	function
+	| [] -> Lwt.fail Not_found
+	| [x] -> Lwt.return x
+	| _ -> Lwt.fail_with (Printf.sprintf "Multiple inscriptions of user %Ld for game %Ld" user_id game_id)
+
 let sign_up game_id user_id message =
 	full_transaction_block (fun dbh ->
 		PGSQL(dbh) "INSERT INTO maw.game_inscriptions \

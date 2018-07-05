@@ -38,39 +38,35 @@ let%shared do_add_admin myid_o () params =
 	with
 	| Not_found -> Eliom_registration.Action.send ()
 
-let%shared real_admin_handler myid_o () () =
-	match myid_o with
-	| None -> Maw_container.page None
-			[p [pcdata [%i18n S.must_be_connected_to_see_page]]]
-	| Some myid ->
-		let%lwt admin = Maw_user.is_admin (Some myid) in
-		if admin then
-			Maw_container.page (Some myid)
+let%shared real_admin_handler myid () () =
+	let%lwt admin = Maw_user.is_admin (Some myid) in
+	if admin then
+		Maw_container.page (Some myid)
+		[
+			div ~a:[a_class ["content-box"]]
 			[
-				div ~a:[a_class ["content-box"]]
-				[
-					h2 [pcdata [%i18n S.add_admin]];
-					Form.post_form ~service:add_admin_action (fun () -> [ 
-						table [
-							tr [
-								td [pcdata [%i18n S.user_name]];
-								td [Maw_user.user_input_widget ()]
-							];
-							tr [
-								td ~a:[a_colspan 2] [button ~a:[a_class ["button"]] [pcdata "Confirm"]]
-							]
+				h2 [pcdata [%i18n S.add_admin]];
+				Form.post_form ~service:add_admin_action (fun () -> [ 
+					table [
+						tr [
+							td [pcdata [%i18n S.user_name]];
+							td [Maw_user.user_input_widget ()]
+						];
+						tr [
+							td ~a:[a_colspan 2] [button ~a:[a_class ["button"]] [pcdata "Confirm"]]
 						]
-					]) ()
-				]
+					]
+				]) ()
 			]
-		else
-			Maw_container.page (Some myid)
-			[p [pcdata [%i18n S.not_admin]]]
+		]
+	else
+		Maw_container.page (Some myid)
+		[p [pcdata [%i18n S.not_admin]]]
 
-let%server admin_handler myid_o () () =
+let%server admin_handler myid () () =
 	Eliom_registration.Any.register ~scope:Eliom_common.default_session_scope ~service:add_admin_action
 		(Os_session.Opt.connected_fun do_add_admin);
-	real_admin_handler myid_o () ()
+	real_admin_handler myid () ()
 
 let%client admin_handler =
 	real_admin_handler
