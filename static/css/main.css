@@ -97,3 +97,15 @@ table.signup-table input
 {
 	width: 100%;
 }
+
+p.edit-inscription
+{
+	border: 1px solid green;
+	background-color: lightgreen;
+}
+
+.cancel-inscription
+{
+	background-color: red;
+	color: white;
+}

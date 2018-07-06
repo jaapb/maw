@@ -11,6 +11,12 @@ let%server sign_up_action = Eliom_service.create_attached_post
 
 let%client sign_up_action = ~%sign_up_action
 
+let%server cancel_inscription_action = Eliom_service.create_attached_post
+	~fallback:Maw_services.sign_up_service
+	~post_params:(Eliom_parameter.unit) ()
+
+let%client cancel_inscription_action = ~%cancel_inscription_action
+
 let%server edit_game_action =
 	Eliom_service.create_attached_post
 		~fallback:Maw_services.edit_game_service
@@ -51,10 +57,13 @@ let%client get_designed_games =
 			(Os_session.connected_wrapper get_designed_games))
 
 let%server get_inscription_opt (game_id, userid) =
-	try
-		Lwt.return_some (Maw_games_db.get_inscription game_id userid)
-	with
+	Lwt.catch (fun () ->
+		let%lwt i = Maw_games_db.get_inscription game_id userid in
+		Lwt.return_some i
+	)
+	(function
 	| Not_found -> Lwt.return_none
+	| e -> Lwt.fail e)
 
 let%client get_inscription_opt =
 	~%(Eliom_client.server_function [%derive.json : int64 * int64]
@@ -67,6 +76,14 @@ let%client sign_up =
 	~%(Eliom_client.server_function [%derive.json : int64 * int64 * string option]
 			(Os_session.connected_wrapper sign_up))
 
+let%server cancel_inscription (game_id, userid) =
+	Maw_games_db.cancel_inscription game_id userid
+
+let%client cancel_inscription =
+	~%(Eliom_client.server_function [%derive.json : int64 * int64]
+			(Os_session.connected_wrapper cancel_inscription))
+
+(* Handlers *)
 let%shared location_line location date =
 	p [i [pcdata (default [%i18n S.tbc] location); pcdata ", "; pcdata (match date with None -> [%i18n S.tbc] | Some date -> Printer.Date.sprint "%B %d, %Y" date)]]
 
@@ -127,12 +144,36 @@ let%shared real_edit_game_handler myid game_id () =
 		Maw_container.page None
 		[p [pcdata [%i18n S.not_game_designer]]]
 
-let%shared do_sign_up =
-	Os_session.Opt.connected_fun (fun myid_o game_id params ->
-		let message = List.assoc_opt "message" params in
-		let%lwt () = match myid_o with
-			| None -> Lwt.return_unit
-			| Some myid -> sign_up (game_id, myid, message) in
+let%shared do_sign_up game_id params =
+	Lwt.catch (fun () ->
+		Os_session.connected_fun (fun myid game_id params ->
+			let message = List.assoc_opt "message" params in
+		  let%lwt () = sign_up (game_id, myid, message) in
+			Os_msg.msg ~level:`Msg ~onload:true [%i18n S.data_saved];
+			Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
+		) game_id params
+	)
+	(function
+	| Maw_games_db.Duplicate_inscription ->
+		Os_msg.msg ~level:`Err ~duration:5.0 ~onload:true
+		  "You have a previous inscription for this game which was cancelled. Please contact the Megagames administration.";
+		Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
+	| e ->
+		Os_msg.msg ~level:`Err ~onload:true (Printexc.to_string e);
+		Eliom_registration.Action.send ()
+	)
+
+let%shared do_cancel_inscription game_id () =
+	Lwt.catch (fun () ->
+		Os_session.connected_fun (fun myid game_id () ->
+			let%lwt () = cancel_inscription (game_id, myid) in
+			Os_msg.msg ~level:`Msg [%i18n S.cancel_inscription];
+			Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)	
+		) game_id ()
+	)
+	(function
+	| e ->
+		Os_msg.msg ~level:`Err ~onload:true (Printexc.to_string e);
 		Eliom_registration.Action.send ()
 	)
 
@@ -168,7 +209,10 @@ let%shared real_sign_up_handler myid game_id () =
 	let (nr_s, nr_f) = Eliom_shared.React.S.create 0 in
 	let (gh_s, gh_f) = Eliom_shared.React.S.create true in
 	let%lwt (title, location, date, _) = get_game_info game_id in
-	let%lwt message = get_inscription_opt (game_id, myid) in
+	let%lwt inscr = get_inscription_opt (game_id, myid) in
+	let%lwt (signed_up, message) = match inscr with
+	| None -> Lwt.return (false, "")
+	| Some x -> Lwt.return (true, x) in
 	let group_table = display_group_table nr_s group_l in
 	let add_btn = add_to_group_button nr_s
 		[%client ((fun v ->
@@ -202,17 +246,20 @@ let%shared real_sign_up_handler myid game_id () =
 	Maw_container.page (Some myid)
 	[
 		Form.post_form ~service:sign_up_action (fun () -> [
-			div ~a:[a_class ["content-box"]] [
-				h1 [pcdata [%i18n S.sign_up_for]; pcdata " "; pcdata title];
-				location_line location date;
-				p [pcdata [%i18n S.signup_text]];
+			div ~a:[a_class ["content-box"]] (
+				h1 [pcdata (if signed_up then [%i18n S.edit_inscription_for] else [%i18n S.sign_up_for]); pcdata " "; pcdata title]::
+				location_line location date::
+				(if signed_up
+				then p ~a:[a_class ["edit-inscription"]] [pcdata [%i18n S.edit_inscription_text]]
+				else p [pcdata [%i18n S.signup_text]])::
 				table ~a:[a_class ["signup-table"]] [
 					tr [
 						th ~a:[a_class ["no-expand"]] [pcdata [%i18n S.message_for_designer]];
-						td [Raw.input ~a:[a_input_type `Text; a_name "message"] ()]
+						td [Raw.input ~a:[a_input_type `Text; a_name "message"; a_value message] ()]
 					]
-				];
-				p [pcdata [%i18n S.signup_group_text]];
+				]::
+				p [pcdata [%i18n S.message_for_designer_text]]::
+				p [pcdata [%i18n S.signup_group_text]]::
 				div ~a:[a_class ["group-inscription-box"]] [
 					title_bar;
 					div ~a:[Eliom_content.Html.R.filter_attrib (a_class ["hidden"]) gh_s] [
@@ -225,16 +272,24 @@ let%shared real_sign_up_handler myid game_id () =
 						group_table;
 						add_btn
 					]
-				];
-				p [pcdata [%i18n S.signup_warning]];
-				button ~a:[a_class ["button"]] [pcdata [%i18n S.sign_up]]
-			]
+				]::
+				p [pcdata [%i18n S.signup_warning]]::
+				button ~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])]::
+				(if signed_up
+				then [Eliom_content.Html.F.Raw.a ~a:[a_class ["button"; "cancel-inscription"]; a_onclick [%client fun _ ->
+					Lwt.async (fun () ->
+						Eliom_client.change_page ~service:cancel_inscription_action ~%game_id ()	
+					)]] [pcdata [%i18n S.cancel_inscription]]]
+				else [])
+			)
 		]) game_id
 	]
 
 let%server sign_up_handler myid_o game_id () =
 	Eliom_registration.Any.register ~scope:Eliom_common.default_session_scope
 		~service:sign_up_action do_sign_up;
+	Eliom_registration.Any.register ~scope:Eliom_common.default_session_scope
+		~service:cancel_inscription_action do_cancel_inscription;
 	real_sign_up_handler myid_o game_id ()
 
 let%client sign_up_handler =

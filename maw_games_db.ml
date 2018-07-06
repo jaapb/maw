@@ -1,6 +1,8 @@
 open Os_db
 open Lwt
 
+exception Duplicate_inscription
+
 let get_games () =
 	full_transaction_block (fun dbh ->
 		PGSQL(dbh) "SELECT id, title, location, date \
@@ -39,7 +41,7 @@ let get_game_designers game_id =
 let get_inscription game_id user_id =
 	full_transaction_block (fun dbh -> PGSQL(dbh) "SELECT message \
 		FROM maw.game_inscriptions \
-		WHERE game_id = $game_id AND userid = $user_id") >>=
+		WHERE game_id = $game_id AND userid = $user_id AND status = 'A'") >>=
 	function
 	| [] -> Lwt.fail Not_found
 	| [x] -> Lwt.return x
@@ -47,6 +49,20 @@ let get_inscription game_id user_id =
 
 let sign_up game_id user_id message =
 	full_transaction_block (fun dbh ->
-		PGSQL(dbh) "INSERT INTO maw.game_inscriptions \
-			(game_id, userid, message) VALUES \
-			($game_id, $user_id, $?message)")
+		PGSQL(dbh) "SELECT status FROM maw.game_inscriptions \
+			WHERE game_id = $game_id AND userid = $user_id" >>=
+		function
+		| [] -> PGSQL(dbh) "INSERT INTO maw.game_inscriptions \
+				(game_id, userid, message, status) VALUES \
+				($game_id, $user_id, $?message, 'A')"
+		| ["A"] -> Lwt.return_unit
+		| ["C"] -> Lwt.fail Duplicate_inscription
+		| [x] -> Lwt.fail_with (Printf.sprintf "Unknown inscription status '%s' in database" x)
+		| _ -> Lwt.fail_with (Printf.sprintf "Multiple inscriptions of user %Ld for game %Ld" user_id game_id)
+		)
+
+let cancel_inscription game_id user_id =
+	full_transaction_block (fun dbh ->
+		PGSQL(dbh) "UPDATE maw.game_inscriptions \
+			SET status = 'C' \
+			WHERE game_id = $game_id AND userid = $user_id")

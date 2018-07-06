@@ -112,10 +112,16 @@ expand	Expand	Montrer
 collapse	Collapse	Cacher
 game_information	Information	Informations
 message_for_designer	Message for the designer	Message au concepteur
-signup_text	If you wish to leave a message for the designer to consider (for example when casting the game), you can do so here, but it is not obligatory.	Si vous voulez laisser un message pour le concepteur (par exemple pour l'allocation des rôles), vous pouvez le faire ici, mais ce n'est pas obligatoire.
+signup_text	Please use this form to sign up for the game.	Veuillez utiliser ce formulaire pour vous inscrire au jeu.
+edit_inscription_text	You are already signed up for this game, but you can edit your inscription details here.	Vous êtes déjà inscrit pour ce jeu, mais vous pouvez modifier les détails de votre inscription ici.
 signup_group_text	To sign up as a group, please click on the bar to expand the group inscription form.	Pour s'inscrire en tant que groupe, cliquez sur la bande pour montrer le formulaire d'inscription en groupe.
 signup_warning	Please note that while your wishes will be taken into account when casting the game, we cannot guarantee that you will be assigned your preferred role.	Veuillez noter que bien que nous tiendrons compte de vos préférences en assignant les rôles, nous ne pouvons pas garantir que vous obtiendrez votre rôle préféré.
 name	Name	Nom
 add_group_member	Add group member	Ajouter un membre
 save	Save	Enregistrer
+save_changes	Save changes	Enregistrer modifications
 group_name	Group name	Nom de groupe
+edit_inscription_for	Edit inscription for	Modifier inscription pour
+message_for_designer_text	If you wish to leave a message for the designer to consider (for example when casting the game), you can do so here, but it is not obligatory.	Si vous voulez laisser un message pour le concepteur (par exemple pour l'allocation des rôles), vous pouvez le faire ici, mais ce n'est pas obligatoire.
+cancel_inscription	Cancel inscription	Annuler inscription
+signed_up	You are now signed up for the game.	Vous êtes maintenant inscrit au jeu.

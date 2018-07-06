@@ -74,7 +74,8 @@ CREATE SCHEMA maw
   CREATE TABLE game_inscriptions (
 				 game_id bigint NOT NULL refereces games(id),
          userid bigint NOT NULL references users(userid),
-         message text,
+         message text NOT NULL,
 				 inscription_time timestamp NOT NULL,
+         status char(1) NOT NULL default('A'),
 				 primary key (game_id, userid)
   );
