@@ -17,7 +17,7 @@ let%client add_admin_action =
 
 (* Service handlers *)
 let%shared do_add_admin myid_o () params =
-	try
+	Lwt.catch (fun () ->
 		let user_id = Int64.of_string (List.assoc "user_id" params) in
 		match myid_o with
 		| None -> Eliom_registration.Action.send ()
@@ -35,8 +35,10 @@ let%shared do_add_admin myid_o () params =
 						end
 					end;
 					Eliom_registration.Action.send ()
-	with
+	)
+	(function
 	| Not_found -> Eliom_registration.Action.send ()
+	| e -> Lwt.fail e)
 
 let%shared real_admin_handler myid () () =
 	let%lwt admin = Maw_user.is_admin (Some myid) in
