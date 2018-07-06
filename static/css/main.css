@@ -85,6 +85,7 @@ table.signup-table td,th
 {
 	padding-left: 5px;
 	padding-right: 5px;
+	text-align: left;
 }
 
 .no-expand

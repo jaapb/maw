@@ -71,12 +71,15 @@ let%shared display_group_table nr l =
 		[%shared
 				((fun s -> Eliom_content.Html.(
 						D.tr [
-							D.td [Maw_user.user_input_widget ~nr:s ()]
+							D.td ~a:[a_class ["no-expand"]] [Maw_user.user_input_widget ~nr:s ()];
+							D.td [Raw.input ~a:[a_name (Printf.sprintf "message[%d]" s)] ()];
+							D.td ~a:[a_class ["no-expand"]] [Maw_icons.D.close ~a:[a_title [%i18n S.remove]] ()]
 						]
 				)) : _ -> _)
 		]
 		l in
-	Eliom_content.Html.R.table ~thead:(Eliom_shared.React.S.const (thead [tr [th [pcdata "Name"]]])) rows
+	Eliom_content.Html.R.table ~a:[a_class ["signup-table"]] ~thead:(Eliom_shared.React.S.const (thead [tr [th [pcdata [%i18n S.name]];
+		th [pcdata [%i18n S.message_for_designer_short]]]])) rows
 
 let%shared real_sign_up_handler myid game_id () = 
 	let (group_l, group_h) = Eliom_shared.ReactiveData.RList.create [] in
