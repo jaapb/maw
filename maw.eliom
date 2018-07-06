@@ -70,7 +70,7 @@ let%shared () =
 
 	Maw_base.App.register
 		~service:Maw_services.sign_up_service
-		(Maw_page.connected_page Maw_game.sign_up_handler)
+		(Maw_page.connected_page Maw_sign_up.sign_up_handler)
 
 let%server () =
   Eliom_registration.Ocaml.register
