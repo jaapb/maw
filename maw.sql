@@ -67,13 +67,13 @@ CREATE SCHEMA maw
 
 	CREATE TABLE game_designers (
          game_id bigint NOT NULL references games(id),
-         userid bigint NOT NULL references users(userid),
+         userid bigint NOT NULL references ocsigen_start.users(userid),
          primary key (game_id, userid)
   );
 
   CREATE TABLE game_inscriptions (
 				 game_id bigint NOT NULL refereces games(id),
-         userid bigint NOT NULL references users(userid),
+         userid bigint NOT NULL references ocsigen_start.users(userid),
          message text NOT NULL,
 				 inscription_time timestamp NOT NULL,
          status char(1) NOT NULL default('A'),
