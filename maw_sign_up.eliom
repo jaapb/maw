@@ -19,20 +19,55 @@ let%client cancel_inscription_action = ~%cancel_inscription_action
 
 (* Handlers *)
 let%shared do_sign_up game_id params =
+	let multiple_sign_up group_name =
+		let id_list = ref [] in
+		let message_list = ref [] in
+		let%lwt () = Lwt_list.iter_s (fun (n, v) ->
+			Ocsigen_messages.console (fun () -> Printf.sprintf "%s = %s" n v);
+			(try
+				Scanf.sscanf n "user_id[%d]" (fun nr -> id_list := (nr, Int64.of_string v)::!id_list);
+			with
+				Scanf.Scan_failure _ | End_of_file -> ());
+			(try
+				Scanf.sscanf n "message[%d]" (fun nr -> message_list := (nr, v)::!message_list);
+			with
+				Scanf.Scan_failure _ | End_of_file -> ());
+			Lwt.return_unit
+		) params in
+		let merged_list =
+			List.map2 (fun (n1, id) (n2, msg) ->
+				if n1 = n2 then (id, msg)
+				else raise (Invalid_argument (Printf.sprintf "unequal ids (%d, %d)" n1 n2))
+			) (List.sort (fun (n1, _) (n2, _) -> compare n1 n2) !id_list)
+				(List.sort (fun (n1, _) (n2, _) -> compare n1 n2) !message_list) in
+		Lwt_list.iter_s (fun (id, message) ->
+			Maw_game.sign_up (game_id, id, message, Some group_name) 
+		) merged_list
+	in
 	Lwt.catch (fun () ->
 		Os_session.connected_fun (fun myid game_id params ->
-			let message = List.assoc_opt "message" params in
-		  let%lwt () = Maw_game.sign_up (game_id, myid, message) in
+			let message = try 
+				List.assoc "message" params
+			with
+				Not_found -> "" in
+			let%lwt () = match List.assoc_opt "group_name" params with
+			| None -> Maw_game.sign_up (game_id, myid, message, None)
+			| Some g -> 
+				let%lwt () = Maw_game.sign_up (game_id, myid, message, Some g) in
+				multiple_sign_up g in
+			Ocsigen_messages.console (fun () -> Printf.sprintf "data saved");
 			Os_msg.msg ~level:`Msg ~onload:true [%i18n S.data_saved];
 			Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 		) game_id params
 	)
 	(function
 	| Maw_games_db.Duplicate_inscription ->
+		Ocsigen_messages.console (fun () -> Printf.sprintf "previous inscription");
 		Os_msg.msg ~level:`Err ~duration:5.0 ~onload:true
 		  "You have a previous inscription for this game which was cancelled. Please contact the Megagames administration.";
 		Eliom_registration.Redirection.send (Eliom_registration.Redirection Os_services.main_service)
 	| e ->
+		Ocsigen_messages.console (fun () -> Printf.sprintf "exception: %s" (Printexc.to_string e));
 		Os_msg.msg ~level:`Err ~onload:true (Printexc.to_string e);
 		Eliom_registration.Action.send ()
 	)
@@ -87,9 +122,9 @@ let%shared real_sign_up_handler myid game_id () =
 	let (gh_s, gh_f) = Eliom_shared.React.S.create true in
 	let%lwt (title, location, date, _) = Maw_game.get_game_info game_id in
 	let%lwt inscr = Maw_game.get_inscription_opt (game_id, myid) in
-	let%lwt (signed_up, message) = match inscr with
-	| None -> Lwt.return (false, "")
-	| Some x -> Lwt.return (true, x) in
+	let%lwt (signed_up, message, group) = match inscr with
+	| None -> Lwt.return (false, "", None)
+	| Some (m, g) -> Lwt.return (true, m, g) in
 	let group_table = display_group_table nr_s group_l in
 	let add_btn = add_to_group_button nr_s
 		[%client ((fun v ->

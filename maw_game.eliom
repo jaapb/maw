@@ -57,11 +57,12 @@ let%client get_inscription_opt =
 	~%(Eliom_client.server_function [%derive.json : int64 * int64]
 			(Os_session.connected_wrapper get_inscription_opt))
 
-let%server sign_up (game_id, userid, message) =
-	Maw_games_db.sign_up game_id userid message
+let%server sign_up (game_id, userid, message, group) =
+	Ocsigen_messages.console (fun () -> Printf.sprintf "[sign_up] game_id: %Ld userid: %Ld message: %s group: %s" game_id userid message (default "<none>" group));
+	Maw_games_db.sign_up game_id userid message group
 
 let%client sign_up =
-	~%(Eliom_client.server_function [%derive.json : int64 * int64 * string option]
+	~%(Eliom_client.server_function [%derive.json : int64 * int64 * string * string option]
 			(Os_session.connected_wrapper sign_up))
 
 let%server cancel_inscription (game_id, userid) =
