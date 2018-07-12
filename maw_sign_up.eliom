@@ -101,14 +101,20 @@ let%shared add_to_group_button nr_s f =
 	];
 	Eliom_content.Html.D.div [btn]
 
-let%shared display_group_table nr l =
+let%shared display_group_table (* nr *) (l, h) =
 	let rows = Eliom_shared.ReactiveData.RList.map
 		[%shared
 				((fun s -> Eliom_content.Html.(
+						let (l, h) = (~%l , ~%h) in
 						D.tr [
 							D.td ~a:[a_class ["no-expand"]] [Maw_user.user_input_widget ~nr:s ()];
 							D.td [Raw.input ~a:[a_name (Printf.sprintf "message[%d]" s)] ()];
-							D.td ~a:[a_class ["no-expand"]] [Maw_icons.D.close ~a:[a_title [%i18n S.remove]] ()]
+							D.td ~a:[a_class ["no-expand"]] [Maw_icons.D.close ~a:[a_class ["remove"]; a_title [%i18n S.remove]; a_id (string_of_int s);
+								a_onclick [%client fun ev ->
+									Js.Opt.iter (ev##.target) (fun e ->
+										Eliom_shared.ReactiveData.RList.remove_eq (~%l, ~%h) (int_of_string (Js.to_string (e##.id)))
+									)
+							  ]] ()] 
 						]
 				)) : _ -> _)
 		]
@@ -125,7 +131,7 @@ let%shared real_sign_up_handler myid game_id () =
 	let%lwt (signed_up, message, group) = match inscr with
 	| None -> Lwt.return (false, "", None)
 	| Some (m, g) -> Lwt.return (true, m, g) in
-	let group_table = display_group_table nr_s group_l in
+	let group_table = display_group_table (* nr_s *) (group_l, group_h) in
 	let add_btn = add_to_group_button nr_s
 		[%client ((fun v ->
 				Eliom_shared.ReactiveData.RList.snoc v ~%group_h;

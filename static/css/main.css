@@ -110,3 +110,8 @@ p.edit-inscription
 	background-color: red;
 	color: white;
 }
+
+.remove
+{
+	color: red;
+}
