@@ -127,3 +127,5 @@ message_for_designer_text	If you wish to leave a message for the designer to con
 cancel_inscription	Cancel inscription	Annuler inscription
 signed_up	You are now signed up for the game.	Vous êtes maintenant inscrit au jeu.
 remove	Remove	Supprimer
+field_not_filled	Field not filled in	Champ non rempli
+duplicate_user	User already in group	Utilisateur déjà dans ce groupe

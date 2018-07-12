@@ -153,8 +153,6 @@ let%shared real_sign_up_handler myid game_id () =
 				]
 			]
 		]] in
-	let submit_btn = Eliom_content.Html.D.button
-		~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])] in
 	ignore [%client
 		((Lwt.async @@ fun () ->
 			let title_bar = Eliom_content.Html.To_dom.of_element ~%title_bar in
@@ -163,12 +161,25 @@ let%shared real_sign_up_handler myid game_id () =
 			Lwt.return_unit)
 		: unit)
 	];
+	let submit_btn = Eliom_content.Html.D.button
+		~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])] in
+	let gn_inp = Eliom_content.Html.D.Raw.input ~a:[a_input_type `Text; a_name "group_name"] () in
 	ignore [%client
 		((Lwt.async @@ fun () ->
 			let btn = Eliom_content.Html.To_dom.of_element ~%submit_btn in
 			let gt = Eliom_content.Html.To_dom.of_element ~%group_table in
+			let gn_inp = Eliom_content.Html.To_dom.of_element ~%gn_inp in
 			let ids = ref [Int64.to_string ~%myid] in
 			Lwt_js_events.clicks ~use_capture:true btn @@ fun ev _ ->
+			Js.Opt.iter (Dom_html.CoerceTo.input gn_inp) (fun i ->
+				if i##.value = (Js.string "") then
+				begin
+					(Js.Unsafe.coerce gn_inp)##(setCustomValidity [%i18n S.field_not_filled]);
+					Dom.preventDefault ev
+				end
+				else
+					(Js.Unsafe.coerce gn_inp)##(setCustomValidity "")
+			);
 			List.iter (fun tr ->
 				if tr##.nodeName = (Js.string "TR") then
 				let ntd::mtd::_ = Dom.list_of_nodeList tr##.childNodes in
@@ -177,13 +188,21 @@ let%shared real_sign_up_handler myid game_id () =
 				Js.Opt.iter (Dom_html.CoerceTo.element id) (fun e ->
 					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp ->
 						let this_id = Js.to_string inp##.value in
-						if List.mem this_id !ids then
+						if this_id = "0" then
 						begin
-							(Js.Unsafe.coerce name)##(setCustomValidity "DUPLICATE ID");
+							(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.field_not_filled]);
+							Dom.preventDefault ev
+						end
+						else if List.mem this_id !ids then
+						begin
+							(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.duplicate_user]);
 							Dom.preventDefault ev
 						end
 						else
+						begin
+							(Js.Unsafe.coerce name)##(setCustomValidity "");
 							ids := this_id::!ids
+						end
 					)	
 				)
 			) (Dom.list_of_nodeList gt##.childNodes); 
@@ -213,7 +232,7 @@ let%shared real_sign_up_handler myid game_id () =
 						table [
 							tr [
 								th [pcdata [%i18n S.group_name]];
-								td [Raw.input ~a:[a_input_type `Text; a_name "group_name"] ()]
+								td [gn_inp]
 							]
 						];
 						group_table;
