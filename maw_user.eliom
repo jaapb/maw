@@ -52,7 +52,7 @@ let%shared user_input_widget ?nr () =
 	let inp_id_name = match nr with
 	| None -> "user_id"
 	| Some n -> Printf.sprintf "user_id[%d]" n in
-	let inp = Raw.input ~a:[a_input_type `Text; a_style "width: 15em;"; a_name inp_name; a_autocomplete false] () in
+	let inp = Raw.input ~a:[a_input_type `Text; a_style "width: 15em;"; a_name inp_name; a_autocomplete false; a_placeholder "Start typing a name to search..."] () in
 	let inp_id = Eliom_content.Html.(D.Raw.input ~a:[D.a_input_type `Hidden; D.a_name inp_id_name;
 		R.a_value (Eliom_shared.React.S.map [%shared Int64.to_string] id_s)] ()) in
 	let ddd =	Eliom_content.Html.(D.div ~a:[a_class ["dropdown-content"; "hidden"]] [
