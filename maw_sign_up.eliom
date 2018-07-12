@@ -153,11 +153,40 @@ let%shared real_sign_up_handler myid game_id () =
 				]
 			]
 		]] in
+	let submit_btn = Eliom_content.Html.D.button
+		~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])] in
 	ignore [%client
 		((Lwt.async @@ fun () ->
 			let title_bar = Eliom_content.Html.To_dom.of_element ~%title_bar in
 			Lwt_js_events.clicks title_bar @@ fun _ _ ->
 			let () = ~%gh_f (not (Eliom_shared.React.S.value ~%gh_s)) in
+			Lwt.return_unit)
+		: unit)
+	];
+	ignore [%client
+		((Lwt.async @@ fun () ->
+			let btn = Eliom_content.Html.To_dom.of_element ~%submit_btn in
+			let gt = Eliom_content.Html.To_dom.of_element ~%group_table in
+			let ids = ref [Int64.to_string ~%myid] in
+			Lwt_js_events.clicks ~use_capture:true btn @@ fun ev _ ->
+			List.iter (fun tr ->
+				if tr##.nodeName = (Js.string "TR") then
+				let ntd::mtd::_ = Dom.list_of_nodeList tr##.childNodes in
+				let ddd::_ = Dom.list_of_nodeList ntd##.childNodes in
+				let name::id::_ = Dom.list_of_nodeList ddd##.childNodes in
+				Js.Opt.iter (Dom_html.CoerceTo.element id) (fun e ->
+					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp ->
+						let this_id = Js.to_string inp##.value in
+						if List.mem this_id !ids then
+						begin
+							(Js.Unsafe.coerce name)##(setCustomValidity "DUPLICATE ID");
+							Dom.preventDefault ev
+						end
+						else
+							ids := this_id::!ids
+					)	
+				)
+			) (Dom.list_of_nodeList gt##.childNodes); 
 			Lwt.return_unit)
 		: unit)
 	];
@@ -192,7 +221,7 @@ let%shared real_sign_up_handler myid game_id () =
 					]
 				]::
 				p [pcdata [%i18n S.signup_warning]]::
-				button ~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])]::
+				submit_btn::
 				(if signed_up
 				then [Eliom_content.Html.F.Raw.a ~a:[a_class ["button"; "cancel-inscription"]; a_onclick [%client fun _ ->
 					Lwt.async (fun () ->
