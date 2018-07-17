@@ -153,6 +153,18 @@ let%shared real_sign_up_handler myid game_id () =
 				]
 			]
 		]] in
+	let gn_inp = Eliom_content.Html.D.Raw.input ~a:[a_input_type `Text; a_name "group_name"] () in
+	let group_form = Eliom_content.Html.D.div
+		~a:[Eliom_content.Html.R.filter_attrib (a_class ["hidden"]) gh_s] [
+		table [
+			tr [
+				th [pcdata [%i18n S.group_name]];
+				td [gn_inp]
+			]
+		];
+		group_table;
+		add_btn
+	] in
 	ignore [%client
 		((Lwt.async @@ fun () ->
 			let title_bar = Eliom_content.Html.To_dom.of_element ~%title_bar in
@@ -163,50 +175,55 @@ let%shared real_sign_up_handler myid game_id () =
 	];
 	let submit_btn = Eliom_content.Html.D.button
 		~a:[a_class ["button"]] [pcdata (if signed_up then [%i18n S.save_changes] else [%i18n S.sign_up])] in
-	let gn_inp = Eliom_content.Html.D.Raw.input ~a:[a_input_type `Text; a_name "group_name"] () in
 	ignore [%client
 		((Lwt.async @@ fun () ->
+			let group_form = Eliom_content.Html.To_dom.of_element ~%group_form in
 			let btn = Eliom_content.Html.To_dom.of_element ~%submit_btn in
 			let gt = Eliom_content.Html.To_dom.of_element ~%group_table in
 			let gn_inp = Eliom_content.Html.To_dom.of_element ~%gn_inp in
 			let ids = ref [Int64.to_string ~%myid] in
 			Lwt_js_events.clicks ~use_capture:true btn @@ fun ev _ ->
-			Js.Opt.iter (Dom_html.CoerceTo.input gn_inp) (fun i ->
-				if i##.value = (Js.string "") then
-				begin
-					(Js.Unsafe.coerce gn_inp)##(setCustomValidity [%i18n S.field_not_filled]);
-					Dom.preventDefault ev
-				end
+				if Js.to_bool (group_form##.classList##contains (Js.string "hidden")) then
+					Lwt.return_unit
 				else
-					(Js.Unsafe.coerce gn_inp)##(setCustomValidity "")
-			);
-			List.iter (fun tr ->
-				if tr##.nodeName = (Js.string "TR") then
-				let ntd::mtd::_ = Dom.list_of_nodeList tr##.childNodes in
-				let ddd::_ = Dom.list_of_nodeList ntd##.childNodes in
-				let name::id::_ = Dom.list_of_nodeList ddd##.childNodes in
-				Js.Opt.iter (Dom_html.CoerceTo.element id) (fun e ->
-					Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp ->
-						let this_id = Js.to_string inp##.value in
-						if this_id = "0" then
-						begin
-							(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.field_not_filled]);
-							Dom.preventDefault ev
-						end
-						else if List.mem this_id !ids then
-						begin
-							(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.duplicate_user]);
-							Dom.preventDefault ev
-						end
-						else
-						begin
-							(Js.Unsafe.coerce name)##(setCustomValidity "");
-							ids := this_id::!ids
-						end
-					)	
-				)
-			) (Dom.list_of_nodeList gt##.childNodes); 
-			Lwt.return_unit)
+				begin
+				Js.Opt.iter (Dom_html.CoerceTo.input gn_inp) (fun i ->
+					if i##.value = (Js.string "") then
+					begin
+						(Js.Unsafe.coerce gn_inp)##(setCustomValidity [%i18n S.field_not_filled]);
+					Dom.preventDefault ev
+					end
+					else
+						(Js.Unsafe.coerce gn_inp)##(setCustomValidity "")
+				);
+				List.iter (fun tr ->
+					if tr##.nodeName = (Js.string "TR") then
+					let ntd::mtd::_ = Dom.list_of_nodeList tr##.childNodes in
+					let ddd::_ = Dom.list_of_nodeList ntd##.childNodes in
+					let name::id::_ = Dom.list_of_nodeList ddd##.childNodes in
+					Js.Opt.iter (Dom_html.CoerceTo.element id) (fun e ->
+						Js.Opt.iter (Dom_html.CoerceTo.input e) (fun inp ->
+							let this_id = Js.to_string inp##.value in
+							if this_id = "0" then
+							begin
+								(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.field_not_filled]);
+								Dom.preventDefault ev
+							end
+							else if List.mem this_id !ids then
+							begin
+								(Js.Unsafe.coerce name)##(setCustomValidity [%i18n S.duplicate_user]);
+								Dom.preventDefault ev
+							end
+							else
+							begin
+								(Js.Unsafe.coerce name)##(setCustomValidity "");
+								ids := this_id::!ids
+							end
+						)	
+					)
+				) (Dom.list_of_nodeList gt##.childNodes); 
+				Lwt.return_unit
+			end)
 		: unit)
 	];
 	Maw_container.page (Some myid)
@@ -228,16 +245,7 @@ let%shared real_sign_up_handler myid game_id () =
 				p [pcdata [%i18n S.signup_group_text]]::
 				div ~a:[a_class ["group-inscription-box"]] [
 					title_bar;
-					div ~a:[Eliom_content.Html.R.filter_attrib (a_class ["hidden"]) gh_s] [
-						table [
-							tr [
-								th [pcdata [%i18n S.group_name]];
-								td [gn_inp]
-							]
-						];
-						group_table;
-						add_btn
-					]
+					group_form
 				]::
 				p [pcdata [%i18n S.signup_warning]]::
 				submit_btn::
