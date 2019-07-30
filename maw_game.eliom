@@ -15,9 +15,7 @@ let%client edit_game_action =
 
 (* Database functions *)
 let%server get_games upcoming =
-	if upcoming
-	then Maw_games_db.get_upcoming_games ()
-	else Maw_games_db.get_games ()
+	Maw_games_db.get_games upcoming
 
 let%client get_games =
 	~%(Eliom_client.server_function [%derive.json : bool]

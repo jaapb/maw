@@ -3,16 +3,31 @@ open Lwt
 
 exception Duplicate_inscription
 
-let get_games () =
-	full_transaction_block (fun dbh ->
-		PGSQL(dbh) "SELECT id, title, location, date \
-			FROM maw.games")
+let get_games upcoming =
+	if upcoming then
+		full_transaction_block (fun dbh ->
+			PGSQL(dbh) "SELECT id, title, location, date \
+				FROM maw.games \
+				WHERE date >= current_date")
+	else
+		full_transaction_block (fun dbh ->
+			PGSQL(dbh) "SELECT id, title, location, date \
+				FROM maw.games")
 
-let get_upcoming_games () =
-	full_transaction_block (fun dbh ->
-		PGSQL(dbh) "SELECT id, title, location, date \
-			FROM maw.games \
-			WHERE date >= current_date")
+let get_user_games user_id upcoming =
+	if upcoming then
+		full_transaction_block (fun dbh ->
+			PGSQL(dbh) "SELECT id, title, location, date \
+				FROM maw.games g JOIN maw.game_inscriptions i \
+					ON g.id = i.game_id \
+				WHERE g.date >= current_date AND \
+				i.userid = $user_id")
+	else
+		full_transaction_block (fun dbh ->
+			PGSQL(dbh) "SELECT id, title, location, date \
+				FROM maw.games g JOIN maw.game_inscriptions i \
+					ON g.id = i.game_id \
+				WHERE i.userid = $user_id")
 
 let get_designed_games user_id =
 	full_transaction_block (fun dbh ->

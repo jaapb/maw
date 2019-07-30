@@ -20,13 +20,13 @@ let%shared format_games_list myid_o =
 	) games in
 	Lwt.return (table game_rows)
 
-let%shared format_my_games =
+let%shared format_my_designs =
 	function
 	| None -> Lwt.return []
 	| Some myid ->
 		let%lwt my_games = Maw_game.get_designed_games myid in
 			Lwt.return @@ [div ~a:[a_class ["content-box"]] [
-				h2 [pcdata [%i18n S.my_games]];
+				h2 [pcdata [%i18n S.my_designs]];
 				table (List.map (fun (game_id, title) ->
 					tr [
 						td [pcdata title];
@@ -41,7 +41,7 @@ let%shared dashboard_handler myid_o () () =
 	with
 	| Not_found -> Lwt.return false in
 	let%lwt games_list = format_games_list myid_o in
-	let%lwt my_games = format_my_games myid_o in
+	let%lwt my_designs = format_my_designs myid_o in
   Maw_container.page
     ~a:[ a_class ["os-page-main"] ]
     myid_o (
@@ -49,5 +49,5 @@ let%shared dashboard_handler myid_o () () =
 				h2 [pcdata [%i18n S.upcoming_games]];
 				games_list
 			]::
-			my_games
+			my_designs
 		)
